@@ -12,7 +12,6 @@ read_verilog -sv defines.sv
 read_verilog -sv cover.sv
 read_verilog -sv wrapper.sv
 read_verilog -sv -defer sbram.sv
-read_verilog -sv -defer camd_ram.v
 read_verilog -sv -defer ser_add.v
 read_verilog -sv -defer ser_eq.v
 read_verilog -sv -defer ser_lt.v
@@ -31,7 +30,6 @@ prep -flatten -nordff -top testbench
 cover.sv
 wrapper.sv
 sbram.sv
-serv-src/rtl/camd_ram.v
 serv-src/rtl/ser_add.v
 serv-src/rtl/ser_eq.v
 serv-src/rtl/ser_lt.v
