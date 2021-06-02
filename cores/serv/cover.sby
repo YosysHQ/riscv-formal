@@ -12,10 +12,6 @@ read_verilog -sv defines.sv
 read_verilog -sv cover.sv
 read_verilog -sv wrapper.sv
 read_verilog -sv -defer sbram.sv
-read_verilog -sv -defer ser_add.v
-read_verilog -sv -defer ser_eq.v
-read_verilog -sv -defer ser_lt.v
-read_verilog -sv -defer ser_shift.v
 read_verilog -sv -defer serv_alu.v
 read_verilog -sv -defer serv_ctrl.v
 read_verilog -sv -defer serv_decode.v
@@ -23,25 +19,20 @@ read_verilog -sv -defer serv_mem_if.v
 read_verilog -sv -defer serv_params.vh
 read_verilog -sv -defer serv_regfile.v
 read_verilog -sv -defer serv_top.v
-read_verilog -sv -defer shift_reg.v
 prep -flatten -nordff -top testbench
 
 [files]
 cover.sv
 wrapper.sv
 sbram.sv
-serv-src/rtl/ser_add.v
-serv-src/rtl/ser_eq.v
-serv-src/rtl/ser_lt.v
-serv-src/rtl/ser_shift.v
 serv-src/rtl/serv_alu.v
 serv-src/rtl/serv_ctrl.v
 serv-src/rtl/serv_decode.v
+serv-src/rtl/serv_immdec.v
 serv-src/rtl/serv_mem_if.v
 serv-src/rtl/serv_params.vh
 serv-src/rtl/serv_regfile.v
 serv-src/rtl/serv_top.v
-serv-src/rtl/shift_reg.v
 ../../checks/rvfi_macros.vh
 
 [file defines.sv]
