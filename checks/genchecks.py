@@ -122,15 +122,21 @@ print("Creating %s directory." % cfgname)
 shutil.rmtree(cfgname, ignore_errors=True)
 os.mkdir(cfgname)
 
-def print_hfmt(f, text, **kwargs):
+def hfmt(text, **kwargs):
+    lines = []
     for line in text.split("\n"):
         match = re.match(r"^\s*: ?(.*)", line)
         if match:
             line = match.group(1)
         elif line.strip() == "":
             continue
-        print(re.sub(r"@([a-zA-Z0-9_]+)@",
-                lambda match: str(kwargs[match.group(1)]), line), file=f)
+        lines.append(re.sub(r"@([a-zA-Z0-9_]+)@",
+                lambda match: str(kwargs[match.group(1)]), line))
+    return lines
+
+def print_hfmt(f, text, **kwargs):
+    for line in hfmt(text, **kwargs):
+        print(line, file=f)
 
 hargs = dict()
 hargs["basedir"] = basedir
@@ -221,7 +227,19 @@ def check_insn(grp, insn, chanidx, csr_mode=False):
         if "script-defines" in config:
             print_hfmt(sby_file, config["script-defines"], **hargs)
 
-        print("read_verilog -sv %s.sv" % check, file=sby_file)
+        sv_files = ["%s.sv" % check]
+        if "verilog-files" in config:
+            sv_files += hfmt(config["verilog-files"], **hargs)
+
+        vhdl_files = []
+        if "vhdl-files" in config:
+            vhdl_files += hfmt(config["vhdl-files"], **hargs)
+
+        if len(sv_files):
+            print("read -sv " + " ".join(sv_files), file=sby_file)
+
+        if len(vhdl_files):
+            print("read -vhdl " + " ".join(vhdl_files), file=sby_file)
 
         if "script-sources" in config:
             print_hfmt(sby_file, config["script-sources"], **hargs)
@@ -417,9 +435,19 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
         if ("script-defines %s" % hargs["check"]) in config:
             print_hfmt(sby_file, config["script-defines %s" % hargs["check"]], **hargs)
 
-        print_hfmt(sby_file, """
-                : read_verilog -sv @checkch@.sv
-        """, **hargs)
+        sv_files = ["%s.sv" % check]
+        if "verilog-files" in config:
+            sv_files += hfmt(config["verilog-files"], **hargs)
+
+        vhdl_files = []
+        if "vhdl-files" in config:
+            vhdl_files += hfmt(config["vhdl-files"], **hargs)
+
+        if len(sv_files):
+            print("read -sv " + " ".join(sv_files), file=sby_file)
+
+        if len(vhdl_files):
+            print("read -vhdl " + " ".join(vhdl_files), file=sby_file)
 
         if "script-sources" in config:
             print_hfmt(sby_file, config["script-sources"], **hargs)
