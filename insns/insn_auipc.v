@@ -26,7 +26,7 @@ module rvfi_insn_auipc (
 );
 
   // U-type instruction format
-  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;
+  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;
   wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({rvfi_insn[31:12], 12'b0});
   wire [4:0] insn_rd     = rvfi_insn[11:7];
   wire [6:0] insn_opcode = rvfi_insn[ 6:0];

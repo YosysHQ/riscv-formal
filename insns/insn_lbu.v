@@ -26,7 +26,7 @@ module rvfi_insn_lbu (
 );
 
   // I-type instruction format
-  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;
+  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;
   wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed(rvfi_insn[31:20]);
   wire [4:0] insn_rs1    = rvfi_insn[19:15];
   wire [2:0] insn_funct3 = rvfi_insn[14:12];

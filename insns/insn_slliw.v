@@ -26,7 +26,7 @@ module rvfi_insn_slliw (
 );
 
   // I-type instruction format (shift variation)
-  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;
+  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;
   wire [6:0] insn_funct6 = rvfi_insn[31:26];
   wire [5:0] insn_shamt  = rvfi_insn[25:20];
   wire [4:0] insn_rs1    = rvfi_insn[19:15];

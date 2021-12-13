@@ -151,7 +151,7 @@ def footer(f):
 def format_r(f):
     print("", file=f)
     print("  // R-type instruction format", file=f)
-    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
     print("  wire [6:0] insn_funct7 = rvfi_insn[31:25];", file=f)
     print("  wire [4:0] insn_rs2    = rvfi_insn[24:20];", file=f)
     print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
@@ -162,7 +162,7 @@ def format_r(f):
 def format_ra(f):
     print("", file=f)
     print("  // R-type instruction format (atomics variation)", file=f)
-    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
     print("  wire [6:0] insn_funct5 = rvfi_insn[31:27];", file=f)
     print("  wire       insn_aq     = rvfi_insn[26];", file=f)
     print("  wire       insn_rl     = rvfi_insn[25];", file=f)
@@ -175,7 +175,7 @@ def format_ra(f):
 def format_i(f):
     print("", file=f)
     print("  // I-type instruction format", file=f)
-    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
     print("  wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed(rvfi_insn[31:20]);", file=f)
     print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
     print("  wire [2:0] insn_funct3 = rvfi_insn[14:12];", file=f)
@@ -185,7 +185,7 @@ def format_i(f):
 def format_i_shift(f):
     print("", file=f)
     print("  // I-type instruction format (shift variation)", file=f)
-    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
     print("  wire [6:0] insn_funct6 = rvfi_insn[31:26];", file=f)
     print("  wire [5:0] insn_shamt  = rvfi_insn[25:20];", file=f)
     print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
@@ -196,7 +196,7 @@ def format_i_shift(f):
 def format_s(f):
     print("", file=f)
     print("  // S-type instruction format", file=f)
-    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
     print("  wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({rvfi_insn[31:25], rvfi_insn[11:7]});", file=f)
     print("  wire [4:0] insn_rs2    = rvfi_insn[24:20];", file=f)
     print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
@@ -206,7 +206,7 @@ def format_s(f):
 def format_sb(f):
     print("", file=f)
     print("  // SB-type instruction format", file=f)
-    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
     print("  wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({rvfi_insn[31], rvfi_insn[7], rvfi_insn[30:25], rvfi_insn[11:8], 1'b0});", file=f)
     print("  wire [4:0] insn_rs2    = rvfi_insn[24:20];", file=f)
     print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
@@ -216,7 +216,7 @@ def format_sb(f):
 def format_u(f):
     print("", file=f)
     print("  // U-type instruction format", file=f)
-    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
     print("  wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({rvfi_insn[31:12], 12'b0});", file=f)
     print("  wire [4:0] insn_rd     = rvfi_insn[11:7];", file=f)
     print("  wire [6:0] insn_opcode = rvfi_insn[ 6:0];", file=f)
@@ -224,7 +224,7 @@ def format_u(f):
 def format_uj(f):
     print("", file=f)
     print("  // UJ-type instruction format", file=f)
-    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 32;", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
     print("  wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({rvfi_insn[31], rvfi_insn[19:12], rvfi_insn[20], rvfi_insn[30:21], 1'b0});", file=f)
     print("  wire [4:0] insn_rd     = rvfi_insn[11:7];", file=f)
     print("  wire [6:0] insn_opcode = rvfi_insn[6:0];", file=f)
