@@ -17,5 +17,5 @@ Other RISC-V formal verification projects and related materials:
 - [Sail: a language for describing instruction semantics](http://www.cl.cam.ac.uk/~pes20/sail/)
 - [riscv-fs: F# RISC-V Instruction Set formal specification](https://github.com/mrLSD/riscv-fs)
 
-Please [open an issue](https://github.com/cliffordwolf/riscv-formal/issues/new) if you know of other RISC-V formal verification projects I should link to in this section.
+Please [open an issue](https://github.com/YosysHQ/riscv-formal/issues/new) if you know of other RISC-V formal verification projects I should link to in this section.
 

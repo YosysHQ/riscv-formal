@@ -29,8 +29,8 @@ in your `$PATH`.
 
 For the 2nd exercise the PicoRV32 Makefile expects a toolchain with certain
 properties in `/opt/riscv32i`. The easiest way to build this is to check out
-the [PicoRV32 github repo](https://github.com/cliffordwolf/picorv32) and run
-`make -j$(nproc) build-riscv32i-tools` (see [this](https://github.com/cliffordwolf/picorv32#building-a-pure-rv32i-toolchain)
+the [PicoRV32 github repo](https://github.com/YosysHQ/picorv32) and run
+`make -j$(nproc) build-riscv32i-tools` (see [this](https://github.com/YosysHQ/picorv32#building-a-pure-rv32i-toolchain)
 for prerequisites and more documentation on the process).
 
 For the 2nd exercise you will also need [Icarus Verilog](http://iverilog.icarus.com/).
@@ -99,7 +99,7 @@ python3 generate.py -i rv32ic -c 1 -a -p picorv32_rvfimon > picorv32_rvfimon.v
 Next we need to clone the PicoRV32 git repository and copy the monitor core:
 
 ```
-git clone https://github.com/cliffordwolf/picorv32.git
+git clone https://github.com/YosysHQ/picorv32.git
 cp picorv32_rvfimon.v picorv32/rvfimon.v
 cd picorv32
 ```
