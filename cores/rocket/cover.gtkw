@@ -2,10 +2,10 @@
 [*] GTKWave Analyzer v3.3.89 (w)1999-2018 BSI
 [*] Wed Mar 28 21:36:23 2018
 [*]
-[dumpfile] "/home/clifford/Work/riscv-formal/cores/rocket/cover/engine_0/trace8.vcd"
+[dumpfile] "/home/claire/Work/riscv-formal/cores/rocket/cover/engine_0/trace8.vcd"
 [dumpfile_mtime] "Wed Mar 28 21:28:42 2018"
 [dumpfile_size] 3363780
-[savefile] "/home/clifford/Work/riscv-formal/cores/rocket/cover.gtkw"
+[savefile] "/home/claire/Work/riscv-formal/cores/rocket/cover.gtkw"
 [timestart] 0
 [size] 1400 947
 [pos] 471 0

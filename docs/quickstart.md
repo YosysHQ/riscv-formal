@@ -5,7 +5,7 @@ Quick Start Guide
 So you want to get your hands dirty with riscv-formal? Install the tools and
 pick one of the exercises below.
 
-See also [this presentation slides](http://www.clifford.at/papers/2017/riscv-formal/) for an introduction to riscv-formal.
+See also [this presentation slides](http://bygone.clairexen.net/papers/2017/riscv-formal/) for an introduction to riscv-formal.
 
 Prerequisites
 -------------
@@ -44,7 +44,7 @@ Formally verify that PicoRV32 complies with the RISC-V ISA:
 
 ```
 cd cores/picorv32
-wget -O picorv32.v https://raw.githubusercontent.com/cliffordwolf/picorv32/master/picorv32.v
+wget -O picorv32.v https://raw.githubusercontent.com/YosysHQ/picorv32/master/picorv32.v
 python3 ../../checks/genchecks.py
 make -C checks -j$(nproc)
 ```
