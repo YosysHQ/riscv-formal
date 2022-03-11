@@ -5,7 +5,7 @@ Quick Start Guide
 So you want to get your hands dirty with riscv-formal? Install the tools and
 pick one of the exercises below.
 
-See also [this presentation slides](http://www.clifford.at/papers/2017/riscv-formal/) for an introduction to riscv-formal.
+See also [this presentation slides](http://bygone.clairexen.net/papers/2017/riscv-formal/) for an introduction to riscv-formal.
 
 Prerequisites
 -------------
