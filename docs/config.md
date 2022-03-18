@@ -62,7 +62,7 @@ For cores supporting the RISC-V Compressed ISA this define must be set.
 RISCV_FORMAL_ALTOPS
 -------------------
 
-This macro must be defined if the core under tests implements [alternative arithmetic semantic](https://github.com/SymbioticEDA/riscv-formal/blob/master/docs/rvfi.md#alternative-arithmetic-operations).
+This macro must be defined if the core under tests implements [alternative arithmetic semantic](https://github.com/YosysHQ/riscv-formal/blob/master/docs/rvfi.md#alternative-arithmetic-operations).
 
 RISCV_FORMAL_ALIGNED_MEM
 ------------------------
