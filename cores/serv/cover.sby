@@ -8,42 +8,44 @@ depth 150
 smtbmc boolector
 
 [script]
-read_verilog -sv defines.sv
-read_verilog -sv cover.sv
-read_verilog -sv wrapper.sv
-read_verilog -sv -defer sbram.sv
-read_verilog -sv -defer camd_ram.v
-read_verilog -sv -defer ser_add.v
-read_verilog -sv -defer ser_eq.v
-read_verilog -sv -defer ser_lt.v
-read_verilog -sv -defer ser_shift.v
-read_verilog -sv -defer serv_alu.v
-read_verilog -sv -defer serv_ctrl.v
-read_verilog -sv -defer serv_decode.v
-read_verilog -sv -defer serv_mem_if.v
-read_verilog -sv -defer serv_params.vh
-read_verilog -sv -defer serv_regfile.v
-read_verilog -sv -defer serv_top.v
-read_verilog -sv -defer shift_reg.v
+read -sv defines.sv \
+    cover.sv \
+    wrapper.sv \
+    sbram.sv \
+    serv_bufreg.v \
+    serv_bufreg2.v \
+    serv_alu.v \
+    serv_csr.v \
+    serv_ctrl.v \
+    serv_decode.v \
+    serv_immdec.v \
+    serv_mem_if.v \
+    serv_rf_if.v \
+    serv_rf_ram.v \
+    serv_rf_ram_if.v \
+    serv_state.v \
+    serv_top.v \
+    serv_rf_top.v
 prep -flatten -nordff -top testbench
 
 [files]
 cover.sv
 wrapper.sv
 sbram.sv
-serv-src/rtl/camd_ram.v
-serv-src/rtl/ser_add.v
-serv-src/rtl/ser_eq.v
-serv-src/rtl/ser_lt.v
-serv-src/rtl/ser_shift.v
+serv-src/rtl/serv_bufreg.v
+serv-src/rtl/serv_bufreg2.v
 serv-src/rtl/serv_alu.v
+serv-src/rtl/serv_csr.v
 serv-src/rtl/serv_ctrl.v
 serv-src/rtl/serv_decode.v
+serv-src/rtl/serv_immdec.v
 serv-src/rtl/serv_mem_if.v
-serv-src/rtl/serv_params.vh
-serv-src/rtl/serv_regfile.v
+serv-src/rtl/serv_rf_if.v
+serv-src/rtl/serv_rf_ram.v
+serv-src/rtl/serv_rf_ram_if.v
+serv-src/rtl/serv_state.v
 serv-src/rtl/serv_top.v
-serv-src/rtl/shift_reg.v
+serv-src/rtl/serv_rf_top.v
 ../../checks/rvfi_macros.vh
 
 [file defines.sv]
