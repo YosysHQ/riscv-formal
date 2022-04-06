@@ -32,9 +32,9 @@ module rvfi_wrapper (
 		.iBus_cmd_valid (iBus_cmd_valid),
 		.iBus_cmd_ready (iBus_cmd_ready),
 		.iBus_cmd_payload_pc  (iBus_cmd_payload_pc ),
-		.iBus_rsp_ready(iBus_rsp_ready),
-		.iBus_rsp_inst (iBus_rsp_inst),
-		.iBus_rsp_error(1'b0),
+		.iBus_rsp_valid(iBus_rsp_ready),
+		.iBus_rsp_payload_inst(iBus_rsp_inst),
+		.iBus_rsp_payload_error(1'b0),
 
 		.dBus_cmd_valid(dBus_cmd_valid),
 		.dBus_cmd_payload_wr(dBus_cmd_payload_wr),
