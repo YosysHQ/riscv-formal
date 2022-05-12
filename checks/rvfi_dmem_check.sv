@@ -1,4 +1,4 @@
-// Copyright (C) 2017  Clifford Wolf <clifford@symbioticeda.com>
+// Copyright (C) 2017  Claire Xenia Wolf <claire@yosyshq.com>
 //
 // Permission to use, copy, modify, and/or distribute this software for any
 // purpose with or without fee is hereby granted, provided that the above
@@ -17,7 +17,7 @@ module rvfi_dmem_check (
 	output [`RISCV_FORMAL_XLEN-1:0] dmem_addr,
 	`RVFI_INPUTS
 );
-	`rvformal_const_rand_reg [`RISCV_FORMAL_XLEN-1:0] dmem_addr_randval;
+	`rvformal_rand_const_reg [`RISCV_FORMAL_XLEN-1:0] dmem_addr_randval;
 	assign dmem_addr = dmem_addr_randval;
 
 	reg [`RISCV_FORMAL_XLEN-1:0] dmem_shadow;

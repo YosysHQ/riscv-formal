@@ -32,9 +32,9 @@ module rvfi_wrapper (
 		.iBus_cmd_valid (iBus_cmd_valid),
 		.iBus_cmd_ready (iBus_cmd_ready),
 		.iBus_cmd_payload_pc  (iBus_cmd_payload_pc ),
-		.iBus_rsp_ready(iBus_rsp_ready),
-		.iBus_rsp_inst (iBus_rsp_inst),
-		.iBus_rsp_error(1'b0),
+		.iBus_rsp_valid(iBus_rsp_ready),
+		.iBus_rsp_payload_inst(iBus_rsp_inst),
+		.iBus_rsp_payload_error(1'b0),
 
 		.dBus_cmd_valid(dBus_cmd_valid),
 		.dBus_cmd_payload_wr(dBus_cmd_payload_wr),
@@ -70,7 +70,7 @@ module rvfi_wrapper (
 			iBusRspPendingValid <= 0;
 			iBusRspPendingCycles <= 0;
 		end
-		if(iBus_cmd_valid && iBus_cmd_ready && !iBus_cmd_payload_wr) begin
+		if(iBus_cmd_valid && iBus_cmd_ready && !dBus_cmd_payload_wr) begin
 			iBusRspPendingValid <= 1;
 		end
 
@@ -90,7 +90,7 @@ module rvfi_wrapper (
 		if(dBus_cmd_valid && dBus_cmd_ready && !dBus_cmd_payload_wr) begin
 			dBusRspPendingValid <= 1;
 		end
-		restrict(~rvfi_trap && dBusCmdPendingCycles < 4 && dBusRspPendingCycles < 4 && iBusCmdPendingCycles < 4 && iBusRspPendingCycles < 4);
+		restrict property(~rvfi_trap && dBusCmdPendingCycles < 4 && dBusRspPendingCycles < 4 && iBusCmdPendingCycles < 4 && iBusRspPendingCycles < 4);
 	end
 `endif
 endmodule

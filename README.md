@@ -34,5 +34,5 @@ Table of contents
 - [Examples of bugs found with riscv-formal](docs/examplebugs.md)
 - [References and related work](docs/references.md)
 
-See also [this presentation slides](http://www.clifford.at/papers/2017/riscv-formal/) for an introduction to riscv-formal.
+See also [this presentation slides](http://bygone.clairexen.net/papers/2017/riscv-formal/) for an introduction to riscv-formal.
 

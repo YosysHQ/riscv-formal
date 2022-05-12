@@ -2,10 +2,10 @@
 [*] GTKWave Analyzer v3.3.65 (w)1999-2015 BSI
 [*] Tue Sep 12 08:17:07 2017
 [*]
-[dumpfile] "/home/clifford/Work/riscv-formal/cores/rocket/checks/pc_fwd_ch0/engine_0/trace.vcd"
+[dumpfile] "/home/claire/Work/riscv-formal/cores/rocket/checks/pc_fwd_ch0/engine_0/trace.vcd"
 [dumpfile_mtime] "Tue Sep 12 00:05:15 2017"
 [dumpfile_size] 4236356
-[savefile] "/home/clifford/Work/riscv-formal/cores/rocket/checks.gtkw"
+[savefile] "/home/claire/Work/riscv-formal/cores/rocket/checks.gtkw"
 [timestart] 218
 [size] 1024 1256
 [pos] 999 -429

@@ -172,7 +172,7 @@ EOT
 
 python3 ../../checks/genchecks.py
 
-# see https://nbviewer.jupyter.org/url/svn.clifford.at/fmbench/2018B/report.ipynb
+# see https://nbviewer.jupyter.org/url/svn.clairexen.net/fmbench/2018B/report.ipynb
 #sed -i '/^smtbmc/ s/boolector/yices/' checks/insn_b{ge,lt,geu,ltu}_ch0.sby
 #sed -i '/^smtbmc/ s/boolector/yices/' checks/{pc_bwd_ch0,unique_ch1,causal_ch0}.sby
 #sed -i '/^smtbmc/ s/boolector/yices/' checks/insn_j*.sby

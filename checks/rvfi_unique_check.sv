@@ -1,4 +1,4 @@
-// Copyright (C) 2017  Clifford Wolf <clifford@symbioticeda.com>
+// Copyright (C) 2017  Claire Xenia Wolf <claire@yosyshq.com>
 //
 // Permission to use, copy, modify, and/or distribute this software for any
 // purpose with or without fee is hereby granted, provided that the above
@@ -16,7 +16,7 @@ module rvfi_unique_check (
 	input clock, reset, trig, check,
 	`RVFI_INPUTS
 );
-	`rvformal_const_rand_reg [63:0] insn_order;
+	`rvformal_rand_const_reg [63:0] insn_order;
 	reg found_other_insn = 0;
 
 	integer channel_idx;

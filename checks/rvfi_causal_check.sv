@@ -1,4 +1,4 @@
-// Copyright (C) 2017  Clifford Wolf <clifford@symbioticeda.com>
+// Copyright (C) 2017  Claire Xenia Wolf <claire@yosyshq.com>
 //
 // Permission to use, copy, modify, and/or distribute this software for any
 // purpose with or without fee is hereby granted, provided that the above
@@ -16,8 +16,8 @@ module rvfi_causal_check (
 	input clock, reset, check,
 	`RVFI_INPUTS
 );
-	`rvformal_const_rand_reg [63:0] insn_order;
-	`rvformal_const_rand_reg [4:0] register_index;
+	`rvformal_rand_const_reg [63:0] insn_order;
+	`rvformal_rand_const_reg [4:0] register_index;
 	reg found_non_causal = 0;
 
 	integer channel_idx;
