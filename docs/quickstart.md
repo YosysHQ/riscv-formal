@@ -43,22 +43,17 @@ Exercise 1: Formally verify a core
 Formally verify that PicoRV32 complies with the RISC-V ISA:
 
 ```
-cd cores/picorv32
-wget -O picorv32.v https://raw.githubusercontent.com/YosysHQ/picorv32/master/picorv32.v
-python3 ../../checks/genchecks.py
-make -C checks -j$(nproc)
+cd riscv-formal
+git clone -b csr https://github.com/yosyshq/nerv.git cores/nerv/
+cd cores/nerv/
+make -j8 check
 ```
-
-This will run on the order of four CPU hours (AMD Bulldozer at 3.6 GHz). It
-is over 60 individual checks than can all run in parallel if the machine has
-sufficient memory and cores. So if you run it on a large server you can
-completely verify the core in just a few minutes.
 
 Now make a random change to `picorv32.v` and re-run the tests:
 
 ```
-python3 ../../checks/genchecks.py
-make -C checks -j$(nproc)
+make clean
+make -j8 check
 ```
 
 The check will likely fail now. (It will if the change did break ISA compliance
@@ -81,7 +76,7 @@ gtkwave checks/liveness_ch0/engine_0/trace.vcd checks.gtkw
 ```
 
 Exercise 2: Build an RVFI Monitor and run it
--------------------------------------------
+--------------------------------------------
 
 An RVFI Monitor can be run side-by-side with your core and will detect when the
 core violates the ISA spec. RVFI monitors are synthesizable, so in addition to
