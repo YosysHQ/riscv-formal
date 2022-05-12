@@ -40,7 +40,7 @@ need to build it from source.
 Exercise 1: Formally verify a core
 ----------------------------------
 
-Formally verify that PicoRV32 complies with the RISC-V ISA:
+Formally verify that the NERV processor complies with the RISC-V ISA:
 
 ```
 cd riscv-formal
@@ -49,7 +49,7 @@ cd cores/nerv/
 make -j8 check
 ```
 
-Now make a random change to `picorv32.v` and re-run the tests:
+Now make a random change to `nerv.v` and re-run the tests:
 
 ```
 make clean
