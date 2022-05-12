@@ -1,6 +1,8 @@
 cover
 complete
 /checks/
+/dmemcheck/
+/imemcheck/
 /picorv32.v
 /disasm.s
 /disasm.o
