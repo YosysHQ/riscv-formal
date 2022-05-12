@@ -32,6 +32,7 @@ basedir = "%s/../.." % os.getcwd()
 corename = os.getcwd().split("/")[-1]
 solver = "boolector"
 dumpsmt2 = False
+abspath = False
 sbycmd = "sby"
 config = dict()
 mode = "bmc"
@@ -94,6 +95,10 @@ if "options" in config:
         elif line[0] == "dumpsmt2":
             assert len(line) == 1
             dumpsmt2 = True
+
+        elif line[0] == "abspath":
+            assert len(line) == 1
+            abspath = True
 
         elif line[0] == "mode":
             assert len(line) == 2
@@ -590,7 +595,10 @@ with open("%s/makefile" % cfgname, "w") as mkfile:
     for check in checks:
         print("%s: %s/status" % (check, check), file=mkfile)
         print("%s/status:" % check, file=mkfile)
-        print("\t%s $(PWD)/%s.sby" % (sbycmd, check), file=mkfile)
+        if abspath:
+            print("\t%s $(shell pwd)/%s.sby" % (sbycmd, check), file=mkfile)
+        else:
+            print("\t%s %s.sby" % (sbycmd, check), file=mkfile)
         print(".PHONY: %s" % check, file=mkfile)
 
 print("Generated %d checks." % (len(consistency_checks) + len(instruction_checks)))
