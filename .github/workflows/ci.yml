@@ -10,7 +10,11 @@ jobs:
       - uses: YosysHQ/setup-oss-cad-suite@v1
       - name: Run checks
         run: |
-          cd cores/picorv32
+          cd cores
+          git clone https://github.com/YosysHQ/nerv
+          cd nerv
+          make check -j$(nproc)
+          cd ../picorv32
           wget -O picorv32.v https://raw.githubusercontent.com/YosysHQ/picorv32/master/picorv32.v
           python3 ../../checks/genchecks.py
           make -C checks -j$(nproc)
