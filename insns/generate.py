@@ -388,6 +388,18 @@ def format_cj(f):
     print("      rvfi_insn[6], rvfi_insn[7], rvfi_insn[2], rvfi_insn[11], rvfi_insn[5], rvfi_insn[4], rvfi_insn[3], 1'b0});", file=f)
     print("  wire [2:0] insn_funct3 = rvfi_insn[15:13];", file=f)
     print("  wire [1:0] insn_opcode = rvfi_insn[1:0];", file=f)
+    
+    
+def format_i_zbb(f):
+    print("", file=f)
+    print("  // I-type instruction format (ZBB variation)", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
+    print("  wire [6:0] insn_funct7 = rvfi_insn[31:25];", file=f)
+    print("  wire [5:0] insn_funct5 = rvfi_insn[24:20];", file=f)
+    print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
+    print("  wire [2:0] insn_funct3 = rvfi_insn[14:12];", file=f)
+    print("  wire [4:0] insn_rd     = rvfi_insn[11: 7];", file=f)
+    print("  wire [6:0] insn_opcode = rvfi_insn[ 6: 0];", file=f)
 
 def insn_lui(insn="lui", misa=0):
     with open("insn_%s.v" % insn, "w") as f:
@@ -701,6 +713,117 @@ def insn_amo(insn, funct5, funct3, expr, misa=MISA_A):
         print("`endif", file=f)
 
         footer(f)
+        
+
+def insn_zbb(insn, funct7, funct5, funct3, verilog, expr, wmode=False, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_i_zbb(f)
+        misa_check(f, misa)
+
+        if wmode:
+            xtra_shamt_check = "!insn_shamt[5]"
+            result_range = "31:0"
+            opcode = "0011011"
+        else:
+            xtra_shamt_check = "(!insn_shamt[5] || `RISCV_FORMAL_XLEN == 64)"
+            result_range = "`RISCV_FORMAL_XLEN-1:0"
+            opcode = "0010011"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  wire [%s] result = %s;" % (result_range, expr), file=f)
+        print("%s" % verilog, file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b %s && insn_funct5 == 5'b %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct7, funct5, funct3, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rd_addr", "insn_rd")
+        if wmode:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-32{result[31]}}, result} : 0")
+        else:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+
+
+# zext.h is the same as packw, and have the same encoding, 
+# but only supports rs1 == 0.
+# it is the same as ins_alu but spec_valid requires spec_rs2_addr == 5'h 0
+def  insn_zbb_zexth(insn, funct7, funct3, expr, wmode=False, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_r(f)
+        misa_check(f, misa)
+
+        if wmode:
+            result_range = "31:0"
+            opcode = "0111011"
+        else:
+            result_range = "`RISCV_FORMAL_XLEN-1:0"
+            opcode = "0110011"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+
+        print("  wire [%s] result = %s;" % (result_range, expr), file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s && spec_rs2_addr == 5'h0" % (funct7, funct3, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        if wmode:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-32{result[31]}}, result} : 0")
+        else:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+
+
+def insn_zbbalu(insn, funct7, funct3, verilog, expr, alt_add=None, alt_sub=None, wmode=False, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_r(f)
+        misa_check(f, misa)
+
+        if wmode:
+            result_range = "31:0"
+            opcode = "0111011"
+        else:
+            result_range = "`RISCV_FORMAL_XLEN-1:0"
+            opcode = "0110011"
+
+        print("%s" % verilog, file=f)
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        if alt_add is not None or alt_sub is not None:
+            print("`ifdef RISCV_FORMAL_ALTOPS", file=f)
+            if alt_add is not None:
+                print("  wire [%s] altops_bitmask = 64'h%016x;" % (result_range, alt_add), file=f)
+                print("  wire [%s] result = (rvfi_rs1_rdata + rvfi_rs2_rdata) ^ altops_bitmask;" % result_range, file=f)
+            else:
+                print("  wire [%s] altops_bitmask = 64'h%016x;" % (result_range, alt_sub), file=f)
+                print("  wire [%s] result = (rvfi_rs1_rdata - rvfi_rs2_rdata) ^ altops_bitmask;" % result_range, file=f)
+            print("`else", file=f)
+            print("  wire [%s] result = %s;" % (result_range, expr), file=f)
+            print("`endif", file=f)
+        else:
+            print("  wire [%s] result = %s;" % (result_range, expr), file=f)
+        
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct7, funct3, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        if wmode:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-32{result[31]}}, result} : 0")
+        else:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
 
 def insn_c_addi4spn(insn="c_addi4spn", misa=MISA_C):
     with open("insn_%s.v" % insn, "w") as f:
@@ -1238,6 +1361,160 @@ insn_alu("remuw",   "0000001", "111", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdat
 # insn_amo("amominu_d", "11000", "011", "rvfi_mem_extamo ? rvfi_rs2_rdata[63:0] : (rvfi_mem_rdata < rvfi_rs2_rdata[63:0] ? rvfi_mem_rdata : rvfi_rs2_rdata[63:0])")
 # insn_amo("amomaxu_d", "11100", "011", "rvfi_mem_extamo ? rvfi_rs2_rdata[63:0] : (rvfi_mem_rdata > rvfi_rs2_rdata[63:0] ? rvfi_mem_rdata : rvfi_rs2_rdata[63:0])")
 
+
+
+## Bit Manipulation ISA (B)
+current_isa = ["rv32ib"]
+# Zba
+insn_alu("sh1add", "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 1)", misa=MISA_B)
+insn_alu("sh2add", "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 2)", misa=MISA_B)
+insn_alu("sh3add", "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 3)", misa=MISA_B)
+# Zbb
+insn_alu("andn",   "0100000", "111", "rvfi_rs1_rdata & ~rvfi_rs2_rdata", misa=MISA_B)
+insn_alu("orn",    "0100000", "110", "rvfi_rs1_rdata | ~rvfi_rs2_rdata", misa=MISA_B)
+insn_alu("xnor",   "0100000", "100", "~(rvfi_rs1_rdata ^ rvfi_rs2_rdata)", misa=MISA_B)
+
+insn_alu("max",    "0000101", "110", "$signed(rvfi_rs1_rdata) > $signed(rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
+insn_alu("maxu",   "0000101", "111", "rvfi_rs1_rdata > rvfi_rs2_rdata ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
+insn_alu("min",    "0000101", "100", "$signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
+insn_alu("minu",   "0000101", "101", "rvfi_rs1_rdata < rvfi_rs2_rdata ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
+insn_alu("rol",    "0110000", "001", "(rvfi_rs1_rdata << rvfi_rs2_rdata[4:0]) | (rvfi_rs1_rdata >> (32 - rvfi_rs2_rdata[4:0]))", misa=MISA_B)
+insn_alu("ror",    "0110000", "101", "(rvfi_rs1_rdata >> rvfi_rs2_rdata[4:0]) | (rvfi_rs1_rdata << (32 - rvfi_rs2_rdata[4:0]))", misa=MISA_B)
+insn_shimm("rori", "011000",  "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (32 - insn_shamt))", misa=MISA_B)
+
+
+
+clz32_function = """ 
+    function logic [31:0] clz32(logic [31:0] x);
+        logic [31:0] r;
+        casez(x)
+        32'b1zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: r =  0;
+        32'b01zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: r =  1;
+        32'b001zzzzzzzzzzzzzzzzzzzzzzzzzzzzz: r =  2;
+        32'b0001zzzzzzzzzzzzzzzzzzzzzzzzzzzz: r =  3;
+        32'b00001zzzzzzzzzzzzzzzzzzzzzzzzzzz: r =  4;
+        32'b000001zzzzzzzzzzzzzzzzzzzzzzzzzz: r =  5;
+        32'b0000001zzzzzzzzzzzzzzzzzzzzzzzzz: r =  6;
+        32'b00000001zzzzzzzzzzzzzzzzzzzzzzzz: r =  7;
+        32'b000000001zzzzzzzzzzzzzzzzzzzzzzz: r =  8;
+        32'b0000000001zzzzzzzzzzzzzzzzzzzzzz: r =  9;
+        32'b00000000001zzzzzzzzzzzzzzzzzzzzz: r = 10;
+        32'b000000000001zzzzzzzzzzzzzzzzzzzz: r = 11;
+        32'b0000000000001zzzzzzzzzzzzzzzzzzz: r = 12;
+        32'b00000000000001zzzzzzzzzzzzzzzzzz: r = 13;
+        32'b000000000000001zzzzzzzzzzzzzzzzz: r = 14;
+        32'b0000000000000001zzzzzzzzzzzzzzzz: r = 15;
+        32'b00000000000000001zzzzzzzzzzzzzzz: r = 16;
+        32'b000000000000000001zzzzzzzzzzzzzz: r = 17;
+        32'b0000000000000000001zzzzzzzzzzzzz: r = 18;
+        32'b00000000000000000001zzzzzzzzzzzz: r = 19;
+        32'b000000000000000000001zzzzzzzzzzz: r = 20;
+        32'b0000000000000000000001zzzzzzzzzz: r = 21;
+        32'b00000000000000000000001zzzzzzzzz: r = 22;
+        32'b000000000000000000000001zzzzzzzz: r = 23;
+        32'b0000000000000000000000001zzzzzzz: r = 24;
+        32'b00000000000000000000000001zzzzzz: r = 25;
+        32'b000000000000000000000000001zzzzz: r = 26;
+        32'b0000000000000000000000000001zzzz: r = 27;
+        32'b00000000000000000000000000001zzz: r = 28;
+        32'b000000000000000000000000000001zz: r = 29;
+        32'b0000000000000000000000000000001z: r = 30;
+        32'b00000000000000000000000000000001: r = 31;
+        32'b00000000000000000000000000000000: r = 32;
+        endcase
+        clz32 = r;
+    endfunction
+"""
+
+ctz32_function = clz32_function + """
+    function logic [31:0] ctz32(logic [31:0] x);
+        logic [31:0] inv;
+        
+        for(int i = 0; i < 32; i++)
+            inv[i] = x[31 - i];
+            
+        ctz32 = clz32(inv);
+    endfunction
+"""
+
+cpop32_function = """
+    function logic [31:0] cpop32(logic [31:0] x);
+        logic [31:0] count;
+        count = 32'h0;
+        
+        for(int i = 0; i < 32; i++)
+            count += x[i];
+        cpop32 = count;
+    endfunction
+"""
+
+orcb32_function = """
+function logic [31:0] orcb32(logic [31:0] x);
+    logic [31:0] out;
+    
+    for(int i =0; i < 32; i+= 8)
+        out[i +:8] = x[i +:8] == 0 ? 8'h00 : 8'hff;
+        
+    orcb32 = out;
+endfunction
+"""
+
+
+rev8_32_function = """
+function logic [31:0] rev8_32(logic [31:0] x);
+    logic [31:0] out;
+    
+    for(int i =0; i < 32; i+= 8)
+        out[i +:8] = x[24 - i +:8];
+    rev8_32 = out;
+endfunction
+"""
+
+clmul32_function = """
+function logic [63:0] clmul64(logic [31:0] rs1, logic [31:0] rs2);
+    logic [63:0] result;
+    logic [63:0] rs1_ext;// = {32'b0, rs1};
+    
+    rs1_ext[31:0]  = rs1;
+    rs1_ext[63:32] = '0;
+    result = '0;
+
+    for(int i = 0; i < 32; i++)
+        if(((rs2 >> i) & 1) != 32'h00)
+            result ^= (rs1_ext << i);
+    clmul64 = result;
+endfunction
+"""
+
+
+insn_zbb("clz",    "0110000", "00000", "001", clz32_function,  "clz32(rvfi_rs1_rdata)")
+insn_zbb("ctz",    "0110000", "00001", "001", ctz32_function,  "ctz32(rvfi_rs1_rdata)")
+insn_zbb("cpop",   "0110000", "00010", "001", cpop32_function, "cpop32(rvfi_rs1_rdata)")
+insn_zbb("sext.b", "0110000", "00100", "001", "",              "$signed(rvfi_rs1_rdata[ 7:0])")
+insn_zbb("sext.h", "0110000", "00101", "001", "",              "$signed(rvfi_rs1_rdata[15:0])")
+insn_zbb_zexth("zext.h", "0000100", "100", "{16'b 0, rvfi_rs1_rdata[15:0]}")
+insn_zbb("orc.b",  "0010100", "00111", "101", orcb32_function, "orcb32(rvfi_rs1_rdata)")
+insn_zbb("rev8",   "0110100", "11000", "101", rev8_32_function,"rev8_32(rvfi_rs1_rdata)")
+
+
+# Zbc
+insn_zbbalu("clmul",  "0000101", "001", clmul32_function, "clmul64(rvfi_rs1_rdata,rvfi_rs2_rdata)")
+insn_zbbalu("clmulh", "0000101", "011", clmul32_function, "clmul64(rvfi_rs1_rdata,rvfi_rs2_rdata) >> 32")
+insn_zbbalu("clmulr", "0000101", "010", clmul32_function, "clmul64(rvfi_rs1_rdata,rvfi_rs2_rdata) >> 31")
+
+# Zbs
+insn_alu("bclr",    "0100100", "001", "rvfi_rs1_rdata  & ~(1 << (rvfi_rs2_rdata & 31))", misa=MISA_B)
+insn_alu("bext",    "0100100", "101", "(rvfi_rs1_rdata  >> (rvfi_rs2_rdata & 31)) & 1", misa=MISA_B)
+insn_alu("binv",    "0110100", "001", "rvfi_rs1_rdata  ^ (1 << (rvfi_rs2_rdata & 31))", misa=MISA_B)
+insn_alu("bset",    "0010100", "001", "rvfi_rs1_rdata  | (1 << (rvfi_rs2_rdata & 31))", misa=MISA_B)
+
+insn_shimm("bclri", "010010", "001", "rvfi_rs1_rdata  & ~(1 << (insn_shamt & 31))", misa=MISA_B)
+insn_shimm("bexti", "010010", "101", "(rvfi_rs1_rdata >> (insn_shamt & 31)) & 1", misa=MISA_B)
+insn_shimm("bseti", "001010", "001", "rvfi_rs1_rdata  | (1 << (insn_shamt & 31))", misa=MISA_B)
+insn_shimm("binvi", "011010", "001", "rvfi_rs1_rdata  ^ (1 << (insn_shamt & 31))", misa=MISA_B)
+
+
+
 ## Compressed Integer ISA (IC)
 
 current_isa = ["rv32ic"]
@@ -1303,6 +1580,9 @@ isa_propagate("")
 isa_propagate("c")
 isa_propagate("m")
 isa_propagate("mc")
+
+# @FIXME rv64ib
+# isa_propagate("b")
 
 ## ISA Fixup
 
