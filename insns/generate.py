@@ -1583,6 +1583,7 @@ isa_propagate("mc")
 
 # @FIXME rv64ib
 # isa_propagate("b")
+isa_propagate_pair("rv32i", "rv32ib")
 
 ## ISA Fixup
 
