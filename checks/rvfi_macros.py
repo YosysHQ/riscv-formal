@@ -22,6 +22,7 @@ class Group:
     signals: List[Tuple[str, str]]
     channels: Optional[str] = None
     condition: Optional[str] = None
+    nosep: bool = False
     csr_conn32: bool = False
     append: List['Group'] = field(default_factory=list)
 
@@ -47,20 +48,26 @@ class Group:
         else:
             return f"[(_idx)*({width:>{self._cw}}) +: {width:>{self._cw}}]"
 
-    def macro_name(self, s):
+    def macro_name(self, s, extra=""):
         if self.name.upper() == self.name:
             if s == "channel":
-                return f"{self.name}_GETCHANNEL(_idx)"
+                return f"{self.name}_GETCHANNEL{extra.upper()}(_idx)"
             else:
-                return f"{self.name}_{s.upper()}"
+                return f"{self.name}_{s.upper()}{extra.upper()}"
         else:
             if s == "channel":
-                return f"{self.name}_channel(_idx)"
+                return f"{self.name}_channel{extra}(_idx)"
             else:
-                return f"{self.name}_{s}"
+                return f"{self.name}_{s}{extra}"
+
+    def macro_name_nosep(self, s):
+        if self.nosep:
+            return self.macro_name(s, extra="_nosep")
+        else:
+            return self.macro_name(s)
 
     def commas(self, parts, suffix=()):
-        if self.condition or len(parts) < 2:
+        if (self.condition and not self.nosep) or len(parts) < 2:
             return " \\\n  ".join([", \\\n  ".join(parts), *suffix])
         else:
             first, *parts = parts
@@ -80,19 +87,19 @@ class Group:
         ] + [
             "`" + group.macro_name('wires') for group in self.append
         ]))
-        print(self.commas([f"`define {self.macro_name('outputs')}"] + [
+        print(self.commas([f"`define {self.macro_name_nosep('outputs')}"] + [
             f"output {self.bitrange(width)} rvfi_{name:<{self._cn}}"
             for width, name in self.signals
         ], [
             "`" + group.macro_name('outputs') for group in self.append
         ]))
-        print(self.commas([f"`define {self.macro_name('inputs')}"] + [
+        print(self.commas([f"`define {self.macro_name_nosep('inputs')}"] + [
             f"input {self.bitrange(width)} rvfi_{name:<{self._cn}}"
             for width, name in self.signals
         ], [
             "`" + group.macro_name('inputs') for group in self.append
         ]))
-        print(self.commas([f"`define {self.macro_name('conn')}"] + [
+        print(self.commas([f"`define {self.macro_name_nosep('conn')}"] + [
             f".rvfi_{name:<{self._cn}} (rvfi_{name:<{self._cn}})"
             for width, name in self.signals
         ], [
@@ -100,7 +107,7 @@ class Group:
         ]))
         if self.csr_conn32:
             cn = self._cn + self.csr_conn32
-            print(self.commas([f"`define {self.macro_name('conn32')}"] + [
+            print(self.commas([f"`define {self.macro_name_nosep('conn32')}"] + [
                 f".rvfi_{name:<{cn}} (rvfi_{name:<{self._cn}}[31: 0])"
                 for width, name in self.signals
             ] + [
@@ -110,7 +117,7 @@ class Group:
                 "`" + group.macro_name('conn32') for group in self.append
             ]))
         elif self._has_conn32:
-            print(self.commas([f"`define {self.macro_name('conn32')}"] + [
+            print(self.commas([f"`define {self.macro_name_nosep('conn32')}"] + [
                 f".rvfi_{name:<{self._cn}} (rvfi_{name:<{self._cn}})"
                 for width, name in self.signals
             ], [
@@ -124,6 +131,20 @@ class Group:
             ] + [
                 "`" + group.macro_name('channel') for group in self.append if group.channels
             ]))
+            print(self.commas([f"`define {self.macro_name('signals')}"], [
+                f"`RISCV_FORMAL_CHANNEL_SIGNAL({self.channels}, {width:>{self._cw}}, {name:<{self._cn}})"
+                for width, name in self.signals
+            ] + [
+                "`" + group.macro_name('signals') for group in self.append if group.channels
+            ]))
+
+        if self.nosep:
+            print(f"`define {self.macro_name('outputs')} , `{self.macro_name_nosep('outputs')}")
+            print(f"`define {self.macro_name('inputs')} , `{self.macro_name_nosep('inputs')}")
+            print(f"`define {self.macro_name('conn')}  , `{self.macro_name_nosep('conn')}")
+            if self._has_conn32:
+                print(f"`define {self.macro_name('conn32')}")
+
 
         if self.condition:
             print("`else")
@@ -265,4 +286,21 @@ rvfi = Group(
         ("`RISCV_FORMAL_XLEN  ", "mem_wdata"),
     ],
     append = [group_extamo, group_rollback, *csr_groups]
+).print_macros()
+
+rvfi = Group(
+    condition="RISCV_FORMAL_BUS",
+    name="RVFI_BUS",
+    channels="`RISCV_FORMAL_NBUS",
+    nosep=True,
+    signals=[
+        ("                   1  ", "bus_valid"),
+        ("                   1  ", "bus_insn "),
+        ("                   1  ", "bus_data "),
+        ("  `RISCV_FORMAL_XLEN  ", "bus_addr "),
+        ("`RISCV_FORMAL_BUSLEN/8", "bus_rmask"),
+        ("`RISCV_FORMAL_BUSLEN/8", "bus_wmask"),
+        ("`RISCV_FORMAL_BUSLEN  ", "bus_rdata"),
+        ("`RISCV_FORMAL_BUSLEN  ", "bus_wdata"),
+    ],
 ).print_macros()

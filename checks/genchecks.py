@@ -20,6 +20,8 @@ nret = 1
 isa = "rv32i"
 ilen = 32
 xlen = 32
+buslen = 32
+nbus = 1
 csrs = set()
 compr = False
 
@@ -105,6 +107,14 @@ if "options" in config:
             assert(line[1] in ("bmc", "prove"))
             mode = line[1]
 
+        elif line[0] == "buslen":
+            assert len(line) == 2
+            buslen = int(line[1])
+
+        elif line[0] == "nbus":
+            assert len(line) == 2
+            nbus = int(line[1])
+
         else:
             print(line)
             assert 0
@@ -149,6 +159,8 @@ hargs["core"] = corename
 hargs["nret"] = nret
 hargs["xlen"] = xlen
 hargs["ilen"] = ilen
+hargs["buslen"] = buslen
+hargs["nbus"] = nbus
 hargs["append"] = 0
 hargs["mode"] = mode
 
@@ -367,7 +379,7 @@ for grp in groups:
 
 # ------------------------------ Consistency Checkers ------------------------------
 
-def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_mode=False):
+def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_mode=False, bus_mode=False):
     pf = "" if grp is None else grp+"_"
     if csr_mode:
         csr_name = check
@@ -512,6 +524,13 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
         if trig is not None:
             print("`define RISCV_FORMAL_TRIG_CYCLE %d" % trig, file=sby_file)
 
+        if bus_mode:
+            print_hfmt(sby_file, """
+                    : `define RISCV_FORMAL_BUS
+                    : `define RISCV_FORMAL_NBUS @nbus@
+                    : `define RISCV_FORMAL_BUSLEN @buslen@
+            """, **hargs)
+
         if hargs["check"] in ("liveness", "hang"):
             print("`define RISCV_FORMAL_FAIRNESS", file=sby_file)
 
@@ -564,6 +583,9 @@ for grp in groups:
         check_cons(grp, "unique", chanidx=i, start=0, trig=1, depth=2)
         check_cons(grp, "causal", chanidx=i, start=0, depth=1)
         check_cons(grp, "ill", chanidx=i, depth=0)
+
+        check_cons(grp, "bus_imem", chanidx=i, start=0, depth=1, bus_mode=True)
+        check_cons(grp, "bus_dmem", chanidx=i, start=0, depth=1, bus_mode=True)
 
     check_cons(grp, "hang", start=0, depth=1)
     check_cons(grp, "cover", start=0, depth=1)

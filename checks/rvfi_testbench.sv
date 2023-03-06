@@ -24,6 +24,7 @@ module rvfi_testbench (
 	input clock, reset
 );
 	`RVFI_WIRES
+	`RVFI_BUS_WIRES
 
 `ifdef YOSYS
 	always_comb assume (reset == $initstate);
@@ -54,12 +55,14 @@ module rvfi_testbench (
 `endif
 `endif
 		`RVFI_CONN
+		`RVFI_BUS_CONN
 	);
 
 	rvfi_wrapper wrapper (
 		.clock (clock),
 		.reset (reset),
 		`RVFI_CONN
+		`RVFI_BUS_CONN
 	);
 
 `ifdef RISCV_FORMAL_ASSUME
