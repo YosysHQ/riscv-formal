@@ -69,6 +69,23 @@ csrs_xlen += "mhpmevent28 mhpmevent29 mhpmevent30 mhpmevent31".split()
 
 all_csrs = csrs_xlen + csrs_64
 
+csr_addrs = {}
+for csr in csrs_xlen:
+    csr_addrs[csr] = (0xFFF, 0xFFF, 0xFFF)
+
+csr_addrs["mvendorid"]  = (0xF11, 0xFFF, 0xFFF)
+csr_addrs["mstatus"]    = (0x300, 0xFFF, 0xFFF)
+csr_addrs["misa"]       = (0x301, 0xFFF, 0xFFF)
+
+for csr in csrs_64:
+    csr_addrs[csr] = (0xFFF, 0xFFF, 0xFFF)
+    csr_addrs[csr + "h"] = (0xFFF, 0xFFF, 0xFFF)
+
+csr_addrs["mcycle"]     = (0xB00, 0xFFF, 0xC00)
+csr_addrs["minstret"]   = (0xB02, 0xFFF, 0xC02)
+csr_addrs["mcycleh"]    = (0xB80, 0xFFF, 0xC80)
+csr_addrs["minstreth"]  = (0xB82, 0xFFF, 0xC82)
+
 for csr in csrs_xlen:
     print("")
     print("`ifdef RISCV_FORMAL_CSR_%s" % csr.upper())
@@ -109,6 +126,12 @@ for csr in csrs_xlen:
     print(".rvfi_csr_%s_rdata (rvfi_csr_%s_rdata), \\" % (csr, csr))
     print(".rvfi_csr_%s_wdata (rvfi_csr_%s_wdata)" % (csr, csr))
 
+    csr_addr = csr_addrs[csr]
+    print("`define rvformal_csr_%s_indices \\" % csr)
+    print("localparam [11:0] csr_mindex_%s = 12'h %x; \\" % (csr, csr_addr[0]))
+    print("localparam [11:0] csr_sindex_%s = 12'h %x; \\" % (csr, csr_addr[1]))
+    print("localparam [11:0] csr_uindex_%s = 12'h %x;" % (csr, csr_addr[2]))
+
     print("`else")
     print("`define rvformal_csr_%s_wires" % csr)
     print("`define rvformal_csr_%s_outputs" % csr)
@@ -116,6 +139,7 @@ for csr in csrs_xlen:
     print("`define rvformal_csr_%s_channel(_idx)" % csr)
     print("`define rvformal_csr_%s_conn" % csr)
     print("`define rvformal_csr_%s_conn32" % csr)
+    print("`define rvformal_csr_%s_indices" % csr)
     print("`endif")
 
 for csr in csrs_64:
@@ -161,6 +185,16 @@ for csr in csrs_64:
     print(".rvfi_csr_%sh_wmask (rvfi_csr_%s_wmask[63:32]), \\" % (csr, csr))
     print(".rvfi_csr_%sh_rdata (rvfi_csr_%s_rdata[63:32]), \\" % (csr, csr))
     print(".rvfi_csr_%sh_wdata (rvfi_csr_%s_wdata[63:32])" % (csr, csr))
+    
+    csr_addr = csr_addrs[csr]
+    csr_addrh = csr_addrs[csr + "h"]
+    print("`define rvformal_csr_%s_indices \\" % csr)
+    print("localparam [11:0] csr_mindex_%s = 12'h %x; \\" % (csr, csr_addr[0]))
+    print("localparam [11:0] csr_sindex_%s = 12'h %x; \\" % (csr, csr_addr[1]))
+    print("localparam [11:0] csr_uindex_%s = 12'h %x; \\" % (csr, csr_addr[2]))
+    print("localparam [11:0] csr_mindex_%sh = 12'h %x; \\" % (csr, csr_addrh[0]))
+    print("localparam [11:0] csr_sindex_%sh = 12'h %x; \\" % (csr, csr_addrh[1]))
+    print("localparam [11:0] csr_uindex_%sh = 12'h %x;" % (csr, csr_addrh[2]))
 
     print("`else")
     print("`define rvformal_csr_%s_wires" % csr)
@@ -169,6 +203,7 @@ for csr in csrs_64:
     print("`define rvformal_csr_%s_channel(_idx)" % csr)
     print("`define rvformal_csr_%s_conn" % csr)
     print("`define rvformal_csr_%s_conn32" % csr)
+    print("`define rvformal_csr_%s_indices" % csr)
     print("`endif")
 
 print("")
@@ -371,3 +406,8 @@ print("`rvformal_rollback_conn \\")
 print("`rvformal_extamo_conn \\")
 for csr in all_csrs:
     print("`rvformal_csr_%s_conn32%s" % (csr, "" if csr == all_csrs[-1] else " \\"))
+
+print("")
+print("`define RVFI_INDICES \\")
+for csr in all_csrs:
+    print("`rvformal_csr_%s_indices%s" % (csr, "" if csr == all_csrs[-1] else " \\"))

@@ -51,6 +51,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_fflags_wdata  = rvfi_csr_fflags_wdata  [(_
 .rvfi_csr_fflags_wmask (rvfi_csr_fflags_wmask), \
 .rvfi_csr_fflags_rdata (rvfi_csr_fflags_rdata), \
 .rvfi_csr_fflags_wdata (rvfi_csr_fflags_wdata)
+`define rvformal_csr_fflags_indices \
+localparam [11:0] csr_mindex_fflags = 12'h fff; \
+localparam [11:0] csr_sindex_fflags = 12'h fff; \
+localparam [11:0] csr_uindex_fflags = 12'h fff;
 `else
 `define rvformal_csr_fflags_wires
 `define rvformal_csr_fflags_outputs
@@ -58,6 +62,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_fflags_wdata  = rvfi_csr_fflags_wdata  [(_
 `define rvformal_csr_fflags_channel(_idx)
 `define rvformal_csr_fflags_conn
 `define rvformal_csr_fflags_conn32
+`define rvformal_csr_fflags_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_FRM
@@ -91,6 +96,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_frm_wdata  = rvfi_csr_frm_wdata  [(_idx)*`
 .rvfi_csr_frm_wmask (rvfi_csr_frm_wmask), \
 .rvfi_csr_frm_rdata (rvfi_csr_frm_rdata), \
 .rvfi_csr_frm_wdata (rvfi_csr_frm_wdata)
+`define rvformal_csr_frm_indices \
+localparam [11:0] csr_mindex_frm = 12'h fff; \
+localparam [11:0] csr_sindex_frm = 12'h fff; \
+localparam [11:0] csr_uindex_frm = 12'h fff;
 `else
 `define rvformal_csr_frm_wires
 `define rvformal_csr_frm_outputs
@@ -98,6 +107,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_frm_wdata  = rvfi_csr_frm_wdata  [(_idx)*`
 `define rvformal_csr_frm_channel(_idx)
 `define rvformal_csr_frm_conn
 `define rvformal_csr_frm_conn32
+`define rvformal_csr_frm_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_FCSR
@@ -131,6 +141,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_fcsr_wdata  = rvfi_csr_fcsr_wdata  [(_idx)
 .rvfi_csr_fcsr_wmask (rvfi_csr_fcsr_wmask), \
 .rvfi_csr_fcsr_rdata (rvfi_csr_fcsr_rdata), \
 .rvfi_csr_fcsr_wdata (rvfi_csr_fcsr_wdata)
+`define rvformal_csr_fcsr_indices \
+localparam [11:0] csr_mindex_fcsr = 12'h fff; \
+localparam [11:0] csr_sindex_fcsr = 12'h fff; \
+localparam [11:0] csr_uindex_fcsr = 12'h fff;
 `else
 `define rvformal_csr_fcsr_wires
 `define rvformal_csr_fcsr_outputs
@@ -138,6 +152,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_fcsr_wdata  = rvfi_csr_fcsr_wdata  [(_idx)
 `define rvformal_csr_fcsr_channel(_idx)
 `define rvformal_csr_fcsr_conn
 `define rvformal_csr_fcsr_conn32
+`define rvformal_csr_fcsr_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MVENDORID
@@ -171,6 +186,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mvendorid_wdata  = rvfi_csr_mvendorid_wdat
 .rvfi_csr_mvendorid_wmask (rvfi_csr_mvendorid_wmask), \
 .rvfi_csr_mvendorid_rdata (rvfi_csr_mvendorid_rdata), \
 .rvfi_csr_mvendorid_wdata (rvfi_csr_mvendorid_wdata)
+`define rvformal_csr_mvendorid_indices \
+localparam [11:0] csr_mindex_mvendorid = 12'h f11; \
+localparam [11:0] csr_sindex_mvendorid = 12'h fff; \
+localparam [11:0] csr_uindex_mvendorid = 12'h fff;
 `else
 `define rvformal_csr_mvendorid_wires
 `define rvformal_csr_mvendorid_outputs
@@ -178,6 +197,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mvendorid_wdata  = rvfi_csr_mvendorid_wdat
 `define rvformal_csr_mvendorid_channel(_idx)
 `define rvformal_csr_mvendorid_conn
 `define rvformal_csr_mvendorid_conn32
+`define rvformal_csr_mvendorid_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MARCHID
@@ -211,6 +231,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_marchid_wdata  = rvfi_csr_marchid_wdata  [
 .rvfi_csr_marchid_wmask (rvfi_csr_marchid_wmask), \
 .rvfi_csr_marchid_rdata (rvfi_csr_marchid_rdata), \
 .rvfi_csr_marchid_wdata (rvfi_csr_marchid_wdata)
+`define rvformal_csr_marchid_indices \
+localparam [11:0] csr_mindex_marchid = 12'h fff; \
+localparam [11:0] csr_sindex_marchid = 12'h fff; \
+localparam [11:0] csr_uindex_marchid = 12'h fff;
 `else
 `define rvformal_csr_marchid_wires
 `define rvformal_csr_marchid_outputs
@@ -218,6 +242,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_marchid_wdata  = rvfi_csr_marchid_wdata  [
 `define rvformal_csr_marchid_channel(_idx)
 `define rvformal_csr_marchid_conn
 `define rvformal_csr_marchid_conn32
+`define rvformal_csr_marchid_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MIMPID
@@ -251,6 +276,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mimpid_wdata  = rvfi_csr_mimpid_wdata  [(_
 .rvfi_csr_mimpid_wmask (rvfi_csr_mimpid_wmask), \
 .rvfi_csr_mimpid_rdata (rvfi_csr_mimpid_rdata), \
 .rvfi_csr_mimpid_wdata (rvfi_csr_mimpid_wdata)
+`define rvformal_csr_mimpid_indices \
+localparam [11:0] csr_mindex_mimpid = 12'h fff; \
+localparam [11:0] csr_sindex_mimpid = 12'h fff; \
+localparam [11:0] csr_uindex_mimpid = 12'h fff;
 `else
 `define rvformal_csr_mimpid_wires
 `define rvformal_csr_mimpid_outputs
@@ -258,6 +287,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mimpid_wdata  = rvfi_csr_mimpid_wdata  [(_
 `define rvformal_csr_mimpid_channel(_idx)
 `define rvformal_csr_mimpid_conn
 `define rvformal_csr_mimpid_conn32
+`define rvformal_csr_mimpid_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHARTID
@@ -291,6 +321,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhartid_wdata  = rvfi_csr_mhartid_wdata  [
 .rvfi_csr_mhartid_wmask (rvfi_csr_mhartid_wmask), \
 .rvfi_csr_mhartid_rdata (rvfi_csr_mhartid_rdata), \
 .rvfi_csr_mhartid_wdata (rvfi_csr_mhartid_wdata)
+`define rvformal_csr_mhartid_indices \
+localparam [11:0] csr_mindex_mhartid = 12'h fff; \
+localparam [11:0] csr_sindex_mhartid = 12'h fff; \
+localparam [11:0] csr_uindex_mhartid = 12'h fff;
 `else
 `define rvformal_csr_mhartid_wires
 `define rvformal_csr_mhartid_outputs
@@ -298,6 +332,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhartid_wdata  = rvfi_csr_mhartid_wdata  [
 `define rvformal_csr_mhartid_channel(_idx)
 `define rvformal_csr_mhartid_conn
 `define rvformal_csr_mhartid_conn32
+`define rvformal_csr_mhartid_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MSTATUS
@@ -331,6 +366,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mstatus_wdata  = rvfi_csr_mstatus_wdata  [
 .rvfi_csr_mstatus_wmask (rvfi_csr_mstatus_wmask), \
 .rvfi_csr_mstatus_rdata (rvfi_csr_mstatus_rdata), \
 .rvfi_csr_mstatus_wdata (rvfi_csr_mstatus_wdata)
+`define rvformal_csr_mstatus_indices \
+localparam [11:0] csr_mindex_mstatus = 12'h 300; \
+localparam [11:0] csr_sindex_mstatus = 12'h fff; \
+localparam [11:0] csr_uindex_mstatus = 12'h fff;
 `else
 `define rvformal_csr_mstatus_wires
 `define rvformal_csr_mstatus_outputs
@@ -338,6 +377,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mstatus_wdata  = rvfi_csr_mstatus_wdata  [
 `define rvformal_csr_mstatus_channel(_idx)
 `define rvformal_csr_mstatus_conn
 `define rvformal_csr_mstatus_conn32
+`define rvformal_csr_mstatus_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MISA
@@ -371,6 +411,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_misa_wdata  = rvfi_csr_misa_wdata  [(_idx)
 .rvfi_csr_misa_wmask (rvfi_csr_misa_wmask), \
 .rvfi_csr_misa_rdata (rvfi_csr_misa_rdata), \
 .rvfi_csr_misa_wdata (rvfi_csr_misa_wdata)
+`define rvformal_csr_misa_indices \
+localparam [11:0] csr_mindex_misa = 12'h 301; \
+localparam [11:0] csr_sindex_misa = 12'h fff; \
+localparam [11:0] csr_uindex_misa = 12'h fff;
 `else
 `define rvformal_csr_misa_wires
 `define rvformal_csr_misa_outputs
@@ -378,6 +422,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_misa_wdata  = rvfi_csr_misa_wdata  [(_idx)
 `define rvformal_csr_misa_channel(_idx)
 `define rvformal_csr_misa_conn
 `define rvformal_csr_misa_conn32
+`define rvformal_csr_misa_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MEDELEG
@@ -411,6 +456,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_medeleg_wdata  = rvfi_csr_medeleg_wdata  [
 .rvfi_csr_medeleg_wmask (rvfi_csr_medeleg_wmask), \
 .rvfi_csr_medeleg_rdata (rvfi_csr_medeleg_rdata), \
 .rvfi_csr_medeleg_wdata (rvfi_csr_medeleg_wdata)
+`define rvformal_csr_medeleg_indices \
+localparam [11:0] csr_mindex_medeleg = 12'h fff; \
+localparam [11:0] csr_sindex_medeleg = 12'h fff; \
+localparam [11:0] csr_uindex_medeleg = 12'h fff;
 `else
 `define rvformal_csr_medeleg_wires
 `define rvformal_csr_medeleg_outputs
@@ -418,6 +467,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_medeleg_wdata  = rvfi_csr_medeleg_wdata  [
 `define rvformal_csr_medeleg_channel(_idx)
 `define rvformal_csr_medeleg_conn
 `define rvformal_csr_medeleg_conn32
+`define rvformal_csr_medeleg_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MIDELEG
@@ -451,6 +501,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mideleg_wdata  = rvfi_csr_mideleg_wdata  [
 .rvfi_csr_mideleg_wmask (rvfi_csr_mideleg_wmask), \
 .rvfi_csr_mideleg_rdata (rvfi_csr_mideleg_rdata), \
 .rvfi_csr_mideleg_wdata (rvfi_csr_mideleg_wdata)
+`define rvformal_csr_mideleg_indices \
+localparam [11:0] csr_mindex_mideleg = 12'h fff; \
+localparam [11:0] csr_sindex_mideleg = 12'h fff; \
+localparam [11:0] csr_uindex_mideleg = 12'h fff;
 `else
 `define rvformal_csr_mideleg_wires
 `define rvformal_csr_mideleg_outputs
@@ -458,6 +512,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mideleg_wdata  = rvfi_csr_mideleg_wdata  [
 `define rvformal_csr_mideleg_channel(_idx)
 `define rvformal_csr_mideleg_conn
 `define rvformal_csr_mideleg_conn32
+`define rvformal_csr_mideleg_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MIE
@@ -491,6 +546,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mie_wdata  = rvfi_csr_mie_wdata  [(_idx)*`
 .rvfi_csr_mie_wmask (rvfi_csr_mie_wmask), \
 .rvfi_csr_mie_rdata (rvfi_csr_mie_rdata), \
 .rvfi_csr_mie_wdata (rvfi_csr_mie_wdata)
+`define rvformal_csr_mie_indices \
+localparam [11:0] csr_mindex_mie = 12'h fff; \
+localparam [11:0] csr_sindex_mie = 12'h fff; \
+localparam [11:0] csr_uindex_mie = 12'h fff;
 `else
 `define rvformal_csr_mie_wires
 `define rvformal_csr_mie_outputs
@@ -498,6 +557,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mie_wdata  = rvfi_csr_mie_wdata  [(_idx)*`
 `define rvformal_csr_mie_channel(_idx)
 `define rvformal_csr_mie_conn
 `define rvformal_csr_mie_conn32
+`define rvformal_csr_mie_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MTVEC
@@ -531,6 +591,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mtvec_wdata  = rvfi_csr_mtvec_wdata  [(_id
 .rvfi_csr_mtvec_wmask (rvfi_csr_mtvec_wmask), \
 .rvfi_csr_mtvec_rdata (rvfi_csr_mtvec_rdata), \
 .rvfi_csr_mtvec_wdata (rvfi_csr_mtvec_wdata)
+`define rvformal_csr_mtvec_indices \
+localparam [11:0] csr_mindex_mtvec = 12'h fff; \
+localparam [11:0] csr_sindex_mtvec = 12'h fff; \
+localparam [11:0] csr_uindex_mtvec = 12'h fff;
 `else
 `define rvformal_csr_mtvec_wires
 `define rvformal_csr_mtvec_outputs
@@ -538,6 +602,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mtvec_wdata  = rvfi_csr_mtvec_wdata  [(_id
 `define rvformal_csr_mtvec_channel(_idx)
 `define rvformal_csr_mtvec_conn
 `define rvformal_csr_mtvec_conn32
+`define rvformal_csr_mtvec_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MCOUNTEREN
@@ -571,6 +636,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mcounteren_wdata  = rvfi_csr_mcounteren_wd
 .rvfi_csr_mcounteren_wmask (rvfi_csr_mcounteren_wmask), \
 .rvfi_csr_mcounteren_rdata (rvfi_csr_mcounteren_rdata), \
 .rvfi_csr_mcounteren_wdata (rvfi_csr_mcounteren_wdata)
+`define rvformal_csr_mcounteren_indices \
+localparam [11:0] csr_mindex_mcounteren = 12'h fff; \
+localparam [11:0] csr_sindex_mcounteren = 12'h fff; \
+localparam [11:0] csr_uindex_mcounteren = 12'h fff;
 `else
 `define rvformal_csr_mcounteren_wires
 `define rvformal_csr_mcounteren_outputs
@@ -578,6 +647,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mcounteren_wdata  = rvfi_csr_mcounteren_wd
 `define rvformal_csr_mcounteren_channel(_idx)
 `define rvformal_csr_mcounteren_conn
 `define rvformal_csr_mcounteren_conn32
+`define rvformal_csr_mcounteren_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MSCRATCH
@@ -611,6 +681,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mscratch_wdata  = rvfi_csr_mscratch_wdata 
 .rvfi_csr_mscratch_wmask (rvfi_csr_mscratch_wmask), \
 .rvfi_csr_mscratch_rdata (rvfi_csr_mscratch_rdata), \
 .rvfi_csr_mscratch_wdata (rvfi_csr_mscratch_wdata)
+`define rvformal_csr_mscratch_indices \
+localparam [11:0] csr_mindex_mscratch = 12'h fff; \
+localparam [11:0] csr_sindex_mscratch = 12'h fff; \
+localparam [11:0] csr_uindex_mscratch = 12'h fff;
 `else
 `define rvformal_csr_mscratch_wires
 `define rvformal_csr_mscratch_outputs
@@ -618,6 +692,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mscratch_wdata  = rvfi_csr_mscratch_wdata 
 `define rvformal_csr_mscratch_channel(_idx)
 `define rvformal_csr_mscratch_conn
 `define rvformal_csr_mscratch_conn32
+`define rvformal_csr_mscratch_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MEPC
@@ -651,6 +726,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mepc_wdata  = rvfi_csr_mepc_wdata  [(_idx)
 .rvfi_csr_mepc_wmask (rvfi_csr_mepc_wmask), \
 .rvfi_csr_mepc_rdata (rvfi_csr_mepc_rdata), \
 .rvfi_csr_mepc_wdata (rvfi_csr_mepc_wdata)
+`define rvformal_csr_mepc_indices \
+localparam [11:0] csr_mindex_mepc = 12'h fff; \
+localparam [11:0] csr_sindex_mepc = 12'h fff; \
+localparam [11:0] csr_uindex_mepc = 12'h fff;
 `else
 `define rvformal_csr_mepc_wires
 `define rvformal_csr_mepc_outputs
@@ -658,6 +737,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mepc_wdata  = rvfi_csr_mepc_wdata  [(_idx)
 `define rvformal_csr_mepc_channel(_idx)
 `define rvformal_csr_mepc_conn
 `define rvformal_csr_mepc_conn32
+`define rvformal_csr_mepc_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MCAUSE
@@ -691,6 +771,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mcause_wdata  = rvfi_csr_mcause_wdata  [(_
 .rvfi_csr_mcause_wmask (rvfi_csr_mcause_wmask), \
 .rvfi_csr_mcause_rdata (rvfi_csr_mcause_rdata), \
 .rvfi_csr_mcause_wdata (rvfi_csr_mcause_wdata)
+`define rvformal_csr_mcause_indices \
+localparam [11:0] csr_mindex_mcause = 12'h fff; \
+localparam [11:0] csr_sindex_mcause = 12'h fff; \
+localparam [11:0] csr_uindex_mcause = 12'h fff;
 `else
 `define rvformal_csr_mcause_wires
 `define rvformal_csr_mcause_outputs
@@ -698,6 +782,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mcause_wdata  = rvfi_csr_mcause_wdata  [(_
 `define rvformal_csr_mcause_channel(_idx)
 `define rvformal_csr_mcause_conn
 `define rvformal_csr_mcause_conn32
+`define rvformal_csr_mcause_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MTVAL
@@ -731,6 +816,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mtval_wdata  = rvfi_csr_mtval_wdata  [(_id
 .rvfi_csr_mtval_wmask (rvfi_csr_mtval_wmask), \
 .rvfi_csr_mtval_rdata (rvfi_csr_mtval_rdata), \
 .rvfi_csr_mtval_wdata (rvfi_csr_mtval_wdata)
+`define rvformal_csr_mtval_indices \
+localparam [11:0] csr_mindex_mtval = 12'h fff; \
+localparam [11:0] csr_sindex_mtval = 12'h fff; \
+localparam [11:0] csr_uindex_mtval = 12'h fff;
 `else
 `define rvformal_csr_mtval_wires
 `define rvformal_csr_mtval_outputs
@@ -738,6 +827,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mtval_wdata  = rvfi_csr_mtval_wdata  [(_id
 `define rvformal_csr_mtval_channel(_idx)
 `define rvformal_csr_mtval_conn
 `define rvformal_csr_mtval_conn32
+`define rvformal_csr_mtval_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MIP
@@ -771,6 +861,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mip_wdata  = rvfi_csr_mip_wdata  [(_idx)*`
 .rvfi_csr_mip_wmask (rvfi_csr_mip_wmask), \
 .rvfi_csr_mip_rdata (rvfi_csr_mip_rdata), \
 .rvfi_csr_mip_wdata (rvfi_csr_mip_wdata)
+`define rvformal_csr_mip_indices \
+localparam [11:0] csr_mindex_mip = 12'h fff; \
+localparam [11:0] csr_sindex_mip = 12'h fff; \
+localparam [11:0] csr_uindex_mip = 12'h fff;
 `else
 `define rvformal_csr_mip_wires
 `define rvformal_csr_mip_outputs
@@ -778,6 +872,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mip_wdata  = rvfi_csr_mip_wdata  [(_idx)*`
 `define rvformal_csr_mip_channel(_idx)
 `define rvformal_csr_mip_conn
 `define rvformal_csr_mip_conn32
+`define rvformal_csr_mip_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPCFG0
@@ -811,6 +906,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpcfg0_wdata  = rvfi_csr_pmpcfg0_wdata  [
 .rvfi_csr_pmpcfg0_wmask (rvfi_csr_pmpcfg0_wmask), \
 .rvfi_csr_pmpcfg0_rdata (rvfi_csr_pmpcfg0_rdata), \
 .rvfi_csr_pmpcfg0_wdata (rvfi_csr_pmpcfg0_wdata)
+`define rvformal_csr_pmpcfg0_indices \
+localparam [11:0] csr_mindex_pmpcfg0 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpcfg0 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpcfg0 = 12'h fff;
 `else
 `define rvformal_csr_pmpcfg0_wires
 `define rvformal_csr_pmpcfg0_outputs
@@ -818,6 +917,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpcfg0_wdata  = rvfi_csr_pmpcfg0_wdata  [
 `define rvformal_csr_pmpcfg0_channel(_idx)
 `define rvformal_csr_pmpcfg0_conn
 `define rvformal_csr_pmpcfg0_conn32
+`define rvformal_csr_pmpcfg0_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPCFG1
@@ -851,6 +951,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpcfg1_wdata  = rvfi_csr_pmpcfg1_wdata  [
 .rvfi_csr_pmpcfg1_wmask (rvfi_csr_pmpcfg1_wmask), \
 .rvfi_csr_pmpcfg1_rdata (rvfi_csr_pmpcfg1_rdata), \
 .rvfi_csr_pmpcfg1_wdata (rvfi_csr_pmpcfg1_wdata)
+`define rvformal_csr_pmpcfg1_indices \
+localparam [11:0] csr_mindex_pmpcfg1 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpcfg1 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpcfg1 = 12'h fff;
 `else
 `define rvformal_csr_pmpcfg1_wires
 `define rvformal_csr_pmpcfg1_outputs
@@ -858,6 +962,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpcfg1_wdata  = rvfi_csr_pmpcfg1_wdata  [
 `define rvformal_csr_pmpcfg1_channel(_idx)
 `define rvformal_csr_pmpcfg1_conn
 `define rvformal_csr_pmpcfg1_conn32
+`define rvformal_csr_pmpcfg1_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPCFG2
@@ -891,6 +996,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpcfg2_wdata  = rvfi_csr_pmpcfg2_wdata  [
 .rvfi_csr_pmpcfg2_wmask (rvfi_csr_pmpcfg2_wmask), \
 .rvfi_csr_pmpcfg2_rdata (rvfi_csr_pmpcfg2_rdata), \
 .rvfi_csr_pmpcfg2_wdata (rvfi_csr_pmpcfg2_wdata)
+`define rvformal_csr_pmpcfg2_indices \
+localparam [11:0] csr_mindex_pmpcfg2 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpcfg2 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpcfg2 = 12'h fff;
 `else
 `define rvformal_csr_pmpcfg2_wires
 `define rvformal_csr_pmpcfg2_outputs
@@ -898,6 +1007,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpcfg2_wdata  = rvfi_csr_pmpcfg2_wdata  [
 `define rvformal_csr_pmpcfg2_channel(_idx)
 `define rvformal_csr_pmpcfg2_conn
 `define rvformal_csr_pmpcfg2_conn32
+`define rvformal_csr_pmpcfg2_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPCFG3
@@ -931,6 +1041,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpcfg3_wdata  = rvfi_csr_pmpcfg3_wdata  [
 .rvfi_csr_pmpcfg3_wmask (rvfi_csr_pmpcfg3_wmask), \
 .rvfi_csr_pmpcfg3_rdata (rvfi_csr_pmpcfg3_rdata), \
 .rvfi_csr_pmpcfg3_wdata (rvfi_csr_pmpcfg3_wdata)
+`define rvformal_csr_pmpcfg3_indices \
+localparam [11:0] csr_mindex_pmpcfg3 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpcfg3 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpcfg3 = 12'h fff;
 `else
 `define rvformal_csr_pmpcfg3_wires
 `define rvformal_csr_pmpcfg3_outputs
@@ -938,6 +1052,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpcfg3_wdata  = rvfi_csr_pmpcfg3_wdata  [
 `define rvformal_csr_pmpcfg3_channel(_idx)
 `define rvformal_csr_pmpcfg3_conn
 `define rvformal_csr_pmpcfg3_conn32
+`define rvformal_csr_pmpcfg3_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR0
@@ -971,6 +1086,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr0_wdata  = rvfi_csr_pmpaddr0_wdata 
 .rvfi_csr_pmpaddr0_wmask (rvfi_csr_pmpaddr0_wmask), \
 .rvfi_csr_pmpaddr0_rdata (rvfi_csr_pmpaddr0_rdata), \
 .rvfi_csr_pmpaddr0_wdata (rvfi_csr_pmpaddr0_wdata)
+`define rvformal_csr_pmpaddr0_indices \
+localparam [11:0] csr_mindex_pmpaddr0 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr0 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr0 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr0_wires
 `define rvformal_csr_pmpaddr0_outputs
@@ -978,6 +1097,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr0_wdata  = rvfi_csr_pmpaddr0_wdata 
 `define rvformal_csr_pmpaddr0_channel(_idx)
 `define rvformal_csr_pmpaddr0_conn
 `define rvformal_csr_pmpaddr0_conn32
+`define rvformal_csr_pmpaddr0_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR1
@@ -1011,6 +1131,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr1_wdata  = rvfi_csr_pmpaddr1_wdata 
 .rvfi_csr_pmpaddr1_wmask (rvfi_csr_pmpaddr1_wmask), \
 .rvfi_csr_pmpaddr1_rdata (rvfi_csr_pmpaddr1_rdata), \
 .rvfi_csr_pmpaddr1_wdata (rvfi_csr_pmpaddr1_wdata)
+`define rvformal_csr_pmpaddr1_indices \
+localparam [11:0] csr_mindex_pmpaddr1 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr1 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr1 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr1_wires
 `define rvformal_csr_pmpaddr1_outputs
@@ -1018,6 +1142,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr1_wdata  = rvfi_csr_pmpaddr1_wdata 
 `define rvformal_csr_pmpaddr1_channel(_idx)
 `define rvformal_csr_pmpaddr1_conn
 `define rvformal_csr_pmpaddr1_conn32
+`define rvformal_csr_pmpaddr1_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR2
@@ -1051,6 +1176,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr2_wdata  = rvfi_csr_pmpaddr2_wdata 
 .rvfi_csr_pmpaddr2_wmask (rvfi_csr_pmpaddr2_wmask), \
 .rvfi_csr_pmpaddr2_rdata (rvfi_csr_pmpaddr2_rdata), \
 .rvfi_csr_pmpaddr2_wdata (rvfi_csr_pmpaddr2_wdata)
+`define rvformal_csr_pmpaddr2_indices \
+localparam [11:0] csr_mindex_pmpaddr2 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr2 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr2 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr2_wires
 `define rvformal_csr_pmpaddr2_outputs
@@ -1058,6 +1187,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr2_wdata  = rvfi_csr_pmpaddr2_wdata 
 `define rvformal_csr_pmpaddr2_channel(_idx)
 `define rvformal_csr_pmpaddr2_conn
 `define rvformal_csr_pmpaddr2_conn32
+`define rvformal_csr_pmpaddr2_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR3
@@ -1091,6 +1221,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr3_wdata  = rvfi_csr_pmpaddr3_wdata 
 .rvfi_csr_pmpaddr3_wmask (rvfi_csr_pmpaddr3_wmask), \
 .rvfi_csr_pmpaddr3_rdata (rvfi_csr_pmpaddr3_rdata), \
 .rvfi_csr_pmpaddr3_wdata (rvfi_csr_pmpaddr3_wdata)
+`define rvformal_csr_pmpaddr3_indices \
+localparam [11:0] csr_mindex_pmpaddr3 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr3 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr3 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr3_wires
 `define rvformal_csr_pmpaddr3_outputs
@@ -1098,6 +1232,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr3_wdata  = rvfi_csr_pmpaddr3_wdata 
 `define rvformal_csr_pmpaddr3_channel(_idx)
 `define rvformal_csr_pmpaddr3_conn
 `define rvformal_csr_pmpaddr3_conn32
+`define rvformal_csr_pmpaddr3_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR4
@@ -1131,6 +1266,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr4_wdata  = rvfi_csr_pmpaddr4_wdata 
 .rvfi_csr_pmpaddr4_wmask (rvfi_csr_pmpaddr4_wmask), \
 .rvfi_csr_pmpaddr4_rdata (rvfi_csr_pmpaddr4_rdata), \
 .rvfi_csr_pmpaddr4_wdata (rvfi_csr_pmpaddr4_wdata)
+`define rvformal_csr_pmpaddr4_indices \
+localparam [11:0] csr_mindex_pmpaddr4 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr4 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr4 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr4_wires
 `define rvformal_csr_pmpaddr4_outputs
@@ -1138,6 +1277,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr4_wdata  = rvfi_csr_pmpaddr4_wdata 
 `define rvformal_csr_pmpaddr4_channel(_idx)
 `define rvformal_csr_pmpaddr4_conn
 `define rvformal_csr_pmpaddr4_conn32
+`define rvformal_csr_pmpaddr4_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR5
@@ -1171,6 +1311,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr5_wdata  = rvfi_csr_pmpaddr5_wdata 
 .rvfi_csr_pmpaddr5_wmask (rvfi_csr_pmpaddr5_wmask), \
 .rvfi_csr_pmpaddr5_rdata (rvfi_csr_pmpaddr5_rdata), \
 .rvfi_csr_pmpaddr5_wdata (rvfi_csr_pmpaddr5_wdata)
+`define rvformal_csr_pmpaddr5_indices \
+localparam [11:0] csr_mindex_pmpaddr5 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr5 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr5 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr5_wires
 `define rvformal_csr_pmpaddr5_outputs
@@ -1178,6 +1322,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr5_wdata  = rvfi_csr_pmpaddr5_wdata 
 `define rvformal_csr_pmpaddr5_channel(_idx)
 `define rvformal_csr_pmpaddr5_conn
 `define rvformal_csr_pmpaddr5_conn32
+`define rvformal_csr_pmpaddr5_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR6
@@ -1211,6 +1356,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr6_wdata  = rvfi_csr_pmpaddr6_wdata 
 .rvfi_csr_pmpaddr6_wmask (rvfi_csr_pmpaddr6_wmask), \
 .rvfi_csr_pmpaddr6_rdata (rvfi_csr_pmpaddr6_rdata), \
 .rvfi_csr_pmpaddr6_wdata (rvfi_csr_pmpaddr6_wdata)
+`define rvformal_csr_pmpaddr6_indices \
+localparam [11:0] csr_mindex_pmpaddr6 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr6 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr6 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr6_wires
 `define rvformal_csr_pmpaddr6_outputs
@@ -1218,6 +1367,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr6_wdata  = rvfi_csr_pmpaddr6_wdata 
 `define rvformal_csr_pmpaddr6_channel(_idx)
 `define rvformal_csr_pmpaddr6_conn
 `define rvformal_csr_pmpaddr6_conn32
+`define rvformal_csr_pmpaddr6_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR7
@@ -1251,6 +1401,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr7_wdata  = rvfi_csr_pmpaddr7_wdata 
 .rvfi_csr_pmpaddr7_wmask (rvfi_csr_pmpaddr7_wmask), \
 .rvfi_csr_pmpaddr7_rdata (rvfi_csr_pmpaddr7_rdata), \
 .rvfi_csr_pmpaddr7_wdata (rvfi_csr_pmpaddr7_wdata)
+`define rvformal_csr_pmpaddr7_indices \
+localparam [11:0] csr_mindex_pmpaddr7 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr7 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr7 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr7_wires
 `define rvformal_csr_pmpaddr7_outputs
@@ -1258,6 +1412,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr7_wdata  = rvfi_csr_pmpaddr7_wdata 
 `define rvformal_csr_pmpaddr7_channel(_idx)
 `define rvformal_csr_pmpaddr7_conn
 `define rvformal_csr_pmpaddr7_conn32
+`define rvformal_csr_pmpaddr7_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR8
@@ -1291,6 +1446,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr8_wdata  = rvfi_csr_pmpaddr8_wdata 
 .rvfi_csr_pmpaddr8_wmask (rvfi_csr_pmpaddr8_wmask), \
 .rvfi_csr_pmpaddr8_rdata (rvfi_csr_pmpaddr8_rdata), \
 .rvfi_csr_pmpaddr8_wdata (rvfi_csr_pmpaddr8_wdata)
+`define rvformal_csr_pmpaddr8_indices \
+localparam [11:0] csr_mindex_pmpaddr8 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr8 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr8 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr8_wires
 `define rvformal_csr_pmpaddr8_outputs
@@ -1298,6 +1457,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr8_wdata  = rvfi_csr_pmpaddr8_wdata 
 `define rvformal_csr_pmpaddr8_channel(_idx)
 `define rvformal_csr_pmpaddr8_conn
 `define rvformal_csr_pmpaddr8_conn32
+`define rvformal_csr_pmpaddr8_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR9
@@ -1331,6 +1491,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr9_wdata  = rvfi_csr_pmpaddr9_wdata 
 .rvfi_csr_pmpaddr9_wmask (rvfi_csr_pmpaddr9_wmask), \
 .rvfi_csr_pmpaddr9_rdata (rvfi_csr_pmpaddr9_rdata), \
 .rvfi_csr_pmpaddr9_wdata (rvfi_csr_pmpaddr9_wdata)
+`define rvformal_csr_pmpaddr9_indices \
+localparam [11:0] csr_mindex_pmpaddr9 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr9 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr9 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr9_wires
 `define rvformal_csr_pmpaddr9_outputs
@@ -1338,6 +1502,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr9_wdata  = rvfi_csr_pmpaddr9_wdata 
 `define rvformal_csr_pmpaddr9_channel(_idx)
 `define rvformal_csr_pmpaddr9_conn
 `define rvformal_csr_pmpaddr9_conn32
+`define rvformal_csr_pmpaddr9_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR10
@@ -1371,6 +1536,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr10_wdata  = rvfi_csr_pmpaddr10_wdat
 .rvfi_csr_pmpaddr10_wmask (rvfi_csr_pmpaddr10_wmask), \
 .rvfi_csr_pmpaddr10_rdata (rvfi_csr_pmpaddr10_rdata), \
 .rvfi_csr_pmpaddr10_wdata (rvfi_csr_pmpaddr10_wdata)
+`define rvformal_csr_pmpaddr10_indices \
+localparam [11:0] csr_mindex_pmpaddr10 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr10 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr10 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr10_wires
 `define rvformal_csr_pmpaddr10_outputs
@@ -1378,6 +1547,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr10_wdata  = rvfi_csr_pmpaddr10_wdat
 `define rvformal_csr_pmpaddr10_channel(_idx)
 `define rvformal_csr_pmpaddr10_conn
 `define rvformal_csr_pmpaddr10_conn32
+`define rvformal_csr_pmpaddr10_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR11
@@ -1411,6 +1581,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr11_wdata  = rvfi_csr_pmpaddr11_wdat
 .rvfi_csr_pmpaddr11_wmask (rvfi_csr_pmpaddr11_wmask), \
 .rvfi_csr_pmpaddr11_rdata (rvfi_csr_pmpaddr11_rdata), \
 .rvfi_csr_pmpaddr11_wdata (rvfi_csr_pmpaddr11_wdata)
+`define rvformal_csr_pmpaddr11_indices \
+localparam [11:0] csr_mindex_pmpaddr11 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr11 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr11 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr11_wires
 `define rvformal_csr_pmpaddr11_outputs
@@ -1418,6 +1592,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr11_wdata  = rvfi_csr_pmpaddr11_wdat
 `define rvformal_csr_pmpaddr11_channel(_idx)
 `define rvformal_csr_pmpaddr11_conn
 `define rvformal_csr_pmpaddr11_conn32
+`define rvformal_csr_pmpaddr11_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR12
@@ -1451,6 +1626,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr12_wdata  = rvfi_csr_pmpaddr12_wdat
 .rvfi_csr_pmpaddr12_wmask (rvfi_csr_pmpaddr12_wmask), \
 .rvfi_csr_pmpaddr12_rdata (rvfi_csr_pmpaddr12_rdata), \
 .rvfi_csr_pmpaddr12_wdata (rvfi_csr_pmpaddr12_wdata)
+`define rvformal_csr_pmpaddr12_indices \
+localparam [11:0] csr_mindex_pmpaddr12 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr12 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr12 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr12_wires
 `define rvformal_csr_pmpaddr12_outputs
@@ -1458,6 +1637,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr12_wdata  = rvfi_csr_pmpaddr12_wdat
 `define rvformal_csr_pmpaddr12_channel(_idx)
 `define rvformal_csr_pmpaddr12_conn
 `define rvformal_csr_pmpaddr12_conn32
+`define rvformal_csr_pmpaddr12_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR13
@@ -1491,6 +1671,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr13_wdata  = rvfi_csr_pmpaddr13_wdat
 .rvfi_csr_pmpaddr13_wmask (rvfi_csr_pmpaddr13_wmask), \
 .rvfi_csr_pmpaddr13_rdata (rvfi_csr_pmpaddr13_rdata), \
 .rvfi_csr_pmpaddr13_wdata (rvfi_csr_pmpaddr13_wdata)
+`define rvformal_csr_pmpaddr13_indices \
+localparam [11:0] csr_mindex_pmpaddr13 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr13 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr13 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr13_wires
 `define rvformal_csr_pmpaddr13_outputs
@@ -1498,6 +1682,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr13_wdata  = rvfi_csr_pmpaddr13_wdat
 `define rvformal_csr_pmpaddr13_channel(_idx)
 `define rvformal_csr_pmpaddr13_conn
 `define rvformal_csr_pmpaddr13_conn32
+`define rvformal_csr_pmpaddr13_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR14
@@ -1531,6 +1716,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr14_wdata  = rvfi_csr_pmpaddr14_wdat
 .rvfi_csr_pmpaddr14_wmask (rvfi_csr_pmpaddr14_wmask), \
 .rvfi_csr_pmpaddr14_rdata (rvfi_csr_pmpaddr14_rdata), \
 .rvfi_csr_pmpaddr14_wdata (rvfi_csr_pmpaddr14_wdata)
+`define rvformal_csr_pmpaddr14_indices \
+localparam [11:0] csr_mindex_pmpaddr14 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr14 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr14 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr14_wires
 `define rvformal_csr_pmpaddr14_outputs
@@ -1538,6 +1727,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr14_wdata  = rvfi_csr_pmpaddr14_wdat
 `define rvformal_csr_pmpaddr14_channel(_idx)
 `define rvformal_csr_pmpaddr14_conn
 `define rvformal_csr_pmpaddr14_conn32
+`define rvformal_csr_pmpaddr14_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_PMPADDR15
@@ -1571,6 +1761,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr15_wdata  = rvfi_csr_pmpaddr15_wdat
 .rvfi_csr_pmpaddr15_wmask (rvfi_csr_pmpaddr15_wmask), \
 .rvfi_csr_pmpaddr15_rdata (rvfi_csr_pmpaddr15_rdata), \
 .rvfi_csr_pmpaddr15_wdata (rvfi_csr_pmpaddr15_wdata)
+`define rvformal_csr_pmpaddr15_indices \
+localparam [11:0] csr_mindex_pmpaddr15 = 12'h fff; \
+localparam [11:0] csr_sindex_pmpaddr15 = 12'h fff; \
+localparam [11:0] csr_uindex_pmpaddr15 = 12'h fff;
 `else
 `define rvformal_csr_pmpaddr15_wires
 `define rvformal_csr_pmpaddr15_outputs
@@ -1578,6 +1772,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_pmpaddr15_wdata  = rvfi_csr_pmpaddr15_wdat
 `define rvformal_csr_pmpaddr15_channel(_idx)
 `define rvformal_csr_pmpaddr15_conn
 `define rvformal_csr_pmpaddr15_conn32
+`define rvformal_csr_pmpaddr15_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MCOUNTINHIBIT
@@ -1611,6 +1806,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mcountinhibit_wdata  = rvfi_csr_mcountinhi
 .rvfi_csr_mcountinhibit_wmask (rvfi_csr_mcountinhibit_wmask), \
 .rvfi_csr_mcountinhibit_rdata (rvfi_csr_mcountinhibit_rdata), \
 .rvfi_csr_mcountinhibit_wdata (rvfi_csr_mcountinhibit_wdata)
+`define rvformal_csr_mcountinhibit_indices \
+localparam [11:0] csr_mindex_mcountinhibit = 12'h fff; \
+localparam [11:0] csr_sindex_mcountinhibit = 12'h fff; \
+localparam [11:0] csr_uindex_mcountinhibit = 12'h fff;
 `else
 `define rvformal_csr_mcountinhibit_wires
 `define rvformal_csr_mcountinhibit_outputs
@@ -1618,6 +1817,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mcountinhibit_wdata  = rvfi_csr_mcountinhi
 `define rvformal_csr_mcountinhibit_channel(_idx)
 `define rvformal_csr_mcountinhibit_conn
 `define rvformal_csr_mcountinhibit_conn32
+`define rvformal_csr_mcountinhibit_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT3
@@ -1651,6 +1851,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent3_wdata  = rvfi_csr_mhpmevent3_wd
 .rvfi_csr_mhpmevent3_wmask (rvfi_csr_mhpmevent3_wmask), \
 .rvfi_csr_mhpmevent3_rdata (rvfi_csr_mhpmevent3_rdata), \
 .rvfi_csr_mhpmevent3_wdata (rvfi_csr_mhpmevent3_wdata)
+`define rvformal_csr_mhpmevent3_indices \
+localparam [11:0] csr_mindex_mhpmevent3 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent3 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent3 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent3_wires
 `define rvformal_csr_mhpmevent3_outputs
@@ -1658,6 +1862,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent3_wdata  = rvfi_csr_mhpmevent3_wd
 `define rvformal_csr_mhpmevent3_channel(_idx)
 `define rvformal_csr_mhpmevent3_conn
 `define rvformal_csr_mhpmevent3_conn32
+`define rvformal_csr_mhpmevent3_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT4
@@ -1691,6 +1896,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent4_wdata  = rvfi_csr_mhpmevent4_wd
 .rvfi_csr_mhpmevent4_wmask (rvfi_csr_mhpmevent4_wmask), \
 .rvfi_csr_mhpmevent4_rdata (rvfi_csr_mhpmevent4_rdata), \
 .rvfi_csr_mhpmevent4_wdata (rvfi_csr_mhpmevent4_wdata)
+`define rvformal_csr_mhpmevent4_indices \
+localparam [11:0] csr_mindex_mhpmevent4 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent4 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent4 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent4_wires
 `define rvformal_csr_mhpmevent4_outputs
@@ -1698,6 +1907,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent4_wdata  = rvfi_csr_mhpmevent4_wd
 `define rvformal_csr_mhpmevent4_channel(_idx)
 `define rvformal_csr_mhpmevent4_conn
 `define rvformal_csr_mhpmevent4_conn32
+`define rvformal_csr_mhpmevent4_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT5
@@ -1731,6 +1941,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent5_wdata  = rvfi_csr_mhpmevent5_wd
 .rvfi_csr_mhpmevent5_wmask (rvfi_csr_mhpmevent5_wmask), \
 .rvfi_csr_mhpmevent5_rdata (rvfi_csr_mhpmevent5_rdata), \
 .rvfi_csr_mhpmevent5_wdata (rvfi_csr_mhpmevent5_wdata)
+`define rvformal_csr_mhpmevent5_indices \
+localparam [11:0] csr_mindex_mhpmevent5 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent5 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent5 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent5_wires
 `define rvformal_csr_mhpmevent5_outputs
@@ -1738,6 +1952,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent5_wdata  = rvfi_csr_mhpmevent5_wd
 `define rvformal_csr_mhpmevent5_channel(_idx)
 `define rvformal_csr_mhpmevent5_conn
 `define rvformal_csr_mhpmevent5_conn32
+`define rvformal_csr_mhpmevent5_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT6
@@ -1771,6 +1986,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent6_wdata  = rvfi_csr_mhpmevent6_wd
 .rvfi_csr_mhpmevent6_wmask (rvfi_csr_mhpmevent6_wmask), \
 .rvfi_csr_mhpmevent6_rdata (rvfi_csr_mhpmevent6_rdata), \
 .rvfi_csr_mhpmevent6_wdata (rvfi_csr_mhpmevent6_wdata)
+`define rvformal_csr_mhpmevent6_indices \
+localparam [11:0] csr_mindex_mhpmevent6 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent6 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent6 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent6_wires
 `define rvformal_csr_mhpmevent6_outputs
@@ -1778,6 +1997,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent6_wdata  = rvfi_csr_mhpmevent6_wd
 `define rvformal_csr_mhpmevent6_channel(_idx)
 `define rvformal_csr_mhpmevent6_conn
 `define rvformal_csr_mhpmevent6_conn32
+`define rvformal_csr_mhpmevent6_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT7
@@ -1811,6 +2031,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent7_wdata  = rvfi_csr_mhpmevent7_wd
 .rvfi_csr_mhpmevent7_wmask (rvfi_csr_mhpmevent7_wmask), \
 .rvfi_csr_mhpmevent7_rdata (rvfi_csr_mhpmevent7_rdata), \
 .rvfi_csr_mhpmevent7_wdata (rvfi_csr_mhpmevent7_wdata)
+`define rvformal_csr_mhpmevent7_indices \
+localparam [11:0] csr_mindex_mhpmevent7 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent7 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent7 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent7_wires
 `define rvformal_csr_mhpmevent7_outputs
@@ -1818,6 +2042,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent7_wdata  = rvfi_csr_mhpmevent7_wd
 `define rvformal_csr_mhpmevent7_channel(_idx)
 `define rvformal_csr_mhpmevent7_conn
 `define rvformal_csr_mhpmevent7_conn32
+`define rvformal_csr_mhpmevent7_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT8
@@ -1851,6 +2076,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent8_wdata  = rvfi_csr_mhpmevent8_wd
 .rvfi_csr_mhpmevent8_wmask (rvfi_csr_mhpmevent8_wmask), \
 .rvfi_csr_mhpmevent8_rdata (rvfi_csr_mhpmevent8_rdata), \
 .rvfi_csr_mhpmevent8_wdata (rvfi_csr_mhpmevent8_wdata)
+`define rvformal_csr_mhpmevent8_indices \
+localparam [11:0] csr_mindex_mhpmevent8 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent8 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent8 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent8_wires
 `define rvformal_csr_mhpmevent8_outputs
@@ -1858,6 +2087,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent8_wdata  = rvfi_csr_mhpmevent8_wd
 `define rvformal_csr_mhpmevent8_channel(_idx)
 `define rvformal_csr_mhpmevent8_conn
 `define rvformal_csr_mhpmevent8_conn32
+`define rvformal_csr_mhpmevent8_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT9
@@ -1891,6 +2121,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent9_wdata  = rvfi_csr_mhpmevent9_wd
 .rvfi_csr_mhpmevent9_wmask (rvfi_csr_mhpmevent9_wmask), \
 .rvfi_csr_mhpmevent9_rdata (rvfi_csr_mhpmevent9_rdata), \
 .rvfi_csr_mhpmevent9_wdata (rvfi_csr_mhpmevent9_wdata)
+`define rvformal_csr_mhpmevent9_indices \
+localparam [11:0] csr_mindex_mhpmevent9 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent9 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent9 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent9_wires
 `define rvformal_csr_mhpmevent9_outputs
@@ -1898,6 +2132,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent9_wdata  = rvfi_csr_mhpmevent9_wd
 `define rvformal_csr_mhpmevent9_channel(_idx)
 `define rvformal_csr_mhpmevent9_conn
 `define rvformal_csr_mhpmevent9_conn32
+`define rvformal_csr_mhpmevent9_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT10
@@ -1931,6 +2166,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent10_wdata  = rvfi_csr_mhpmevent10_
 .rvfi_csr_mhpmevent10_wmask (rvfi_csr_mhpmevent10_wmask), \
 .rvfi_csr_mhpmevent10_rdata (rvfi_csr_mhpmevent10_rdata), \
 .rvfi_csr_mhpmevent10_wdata (rvfi_csr_mhpmevent10_wdata)
+`define rvformal_csr_mhpmevent10_indices \
+localparam [11:0] csr_mindex_mhpmevent10 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent10 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent10 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent10_wires
 `define rvformal_csr_mhpmevent10_outputs
@@ -1938,6 +2177,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent10_wdata  = rvfi_csr_mhpmevent10_
 `define rvformal_csr_mhpmevent10_channel(_idx)
 `define rvformal_csr_mhpmevent10_conn
 `define rvformal_csr_mhpmevent10_conn32
+`define rvformal_csr_mhpmevent10_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT11
@@ -1971,6 +2211,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent11_wdata  = rvfi_csr_mhpmevent11_
 .rvfi_csr_mhpmevent11_wmask (rvfi_csr_mhpmevent11_wmask), \
 .rvfi_csr_mhpmevent11_rdata (rvfi_csr_mhpmevent11_rdata), \
 .rvfi_csr_mhpmevent11_wdata (rvfi_csr_mhpmevent11_wdata)
+`define rvformal_csr_mhpmevent11_indices \
+localparam [11:0] csr_mindex_mhpmevent11 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent11 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent11 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent11_wires
 `define rvformal_csr_mhpmevent11_outputs
@@ -1978,6 +2222,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent11_wdata  = rvfi_csr_mhpmevent11_
 `define rvformal_csr_mhpmevent11_channel(_idx)
 `define rvformal_csr_mhpmevent11_conn
 `define rvformal_csr_mhpmevent11_conn32
+`define rvformal_csr_mhpmevent11_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT12
@@ -2011,6 +2256,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent12_wdata  = rvfi_csr_mhpmevent12_
 .rvfi_csr_mhpmevent12_wmask (rvfi_csr_mhpmevent12_wmask), \
 .rvfi_csr_mhpmevent12_rdata (rvfi_csr_mhpmevent12_rdata), \
 .rvfi_csr_mhpmevent12_wdata (rvfi_csr_mhpmevent12_wdata)
+`define rvformal_csr_mhpmevent12_indices \
+localparam [11:0] csr_mindex_mhpmevent12 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent12 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent12 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent12_wires
 `define rvformal_csr_mhpmevent12_outputs
@@ -2018,6 +2267,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent12_wdata  = rvfi_csr_mhpmevent12_
 `define rvformal_csr_mhpmevent12_channel(_idx)
 `define rvformal_csr_mhpmevent12_conn
 `define rvformal_csr_mhpmevent12_conn32
+`define rvformal_csr_mhpmevent12_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT13
@@ -2051,6 +2301,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent13_wdata  = rvfi_csr_mhpmevent13_
 .rvfi_csr_mhpmevent13_wmask (rvfi_csr_mhpmevent13_wmask), \
 .rvfi_csr_mhpmevent13_rdata (rvfi_csr_mhpmevent13_rdata), \
 .rvfi_csr_mhpmevent13_wdata (rvfi_csr_mhpmevent13_wdata)
+`define rvformal_csr_mhpmevent13_indices \
+localparam [11:0] csr_mindex_mhpmevent13 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent13 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent13 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent13_wires
 `define rvformal_csr_mhpmevent13_outputs
@@ -2058,6 +2312,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent13_wdata  = rvfi_csr_mhpmevent13_
 `define rvformal_csr_mhpmevent13_channel(_idx)
 `define rvformal_csr_mhpmevent13_conn
 `define rvformal_csr_mhpmevent13_conn32
+`define rvformal_csr_mhpmevent13_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT14
@@ -2091,6 +2346,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent14_wdata  = rvfi_csr_mhpmevent14_
 .rvfi_csr_mhpmevent14_wmask (rvfi_csr_mhpmevent14_wmask), \
 .rvfi_csr_mhpmevent14_rdata (rvfi_csr_mhpmevent14_rdata), \
 .rvfi_csr_mhpmevent14_wdata (rvfi_csr_mhpmevent14_wdata)
+`define rvformal_csr_mhpmevent14_indices \
+localparam [11:0] csr_mindex_mhpmevent14 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent14 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent14 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent14_wires
 `define rvformal_csr_mhpmevent14_outputs
@@ -2098,6 +2357,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent14_wdata  = rvfi_csr_mhpmevent14_
 `define rvformal_csr_mhpmevent14_channel(_idx)
 `define rvformal_csr_mhpmevent14_conn
 `define rvformal_csr_mhpmevent14_conn32
+`define rvformal_csr_mhpmevent14_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT15
@@ -2131,6 +2391,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent15_wdata  = rvfi_csr_mhpmevent15_
 .rvfi_csr_mhpmevent15_wmask (rvfi_csr_mhpmevent15_wmask), \
 .rvfi_csr_mhpmevent15_rdata (rvfi_csr_mhpmevent15_rdata), \
 .rvfi_csr_mhpmevent15_wdata (rvfi_csr_mhpmevent15_wdata)
+`define rvformal_csr_mhpmevent15_indices \
+localparam [11:0] csr_mindex_mhpmevent15 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent15 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent15 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent15_wires
 `define rvformal_csr_mhpmevent15_outputs
@@ -2138,6 +2402,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent15_wdata  = rvfi_csr_mhpmevent15_
 `define rvformal_csr_mhpmevent15_channel(_idx)
 `define rvformal_csr_mhpmevent15_conn
 `define rvformal_csr_mhpmevent15_conn32
+`define rvformal_csr_mhpmevent15_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT16
@@ -2171,6 +2436,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent16_wdata  = rvfi_csr_mhpmevent16_
 .rvfi_csr_mhpmevent16_wmask (rvfi_csr_mhpmevent16_wmask), \
 .rvfi_csr_mhpmevent16_rdata (rvfi_csr_mhpmevent16_rdata), \
 .rvfi_csr_mhpmevent16_wdata (rvfi_csr_mhpmevent16_wdata)
+`define rvformal_csr_mhpmevent16_indices \
+localparam [11:0] csr_mindex_mhpmevent16 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent16 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent16 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent16_wires
 `define rvformal_csr_mhpmevent16_outputs
@@ -2178,6 +2447,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent16_wdata  = rvfi_csr_mhpmevent16_
 `define rvformal_csr_mhpmevent16_channel(_idx)
 `define rvformal_csr_mhpmevent16_conn
 `define rvformal_csr_mhpmevent16_conn32
+`define rvformal_csr_mhpmevent16_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT17
@@ -2211,6 +2481,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent17_wdata  = rvfi_csr_mhpmevent17_
 .rvfi_csr_mhpmevent17_wmask (rvfi_csr_mhpmevent17_wmask), \
 .rvfi_csr_mhpmevent17_rdata (rvfi_csr_mhpmevent17_rdata), \
 .rvfi_csr_mhpmevent17_wdata (rvfi_csr_mhpmevent17_wdata)
+`define rvformal_csr_mhpmevent17_indices \
+localparam [11:0] csr_mindex_mhpmevent17 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent17 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent17 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent17_wires
 `define rvformal_csr_mhpmevent17_outputs
@@ -2218,6 +2492,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent17_wdata  = rvfi_csr_mhpmevent17_
 `define rvformal_csr_mhpmevent17_channel(_idx)
 `define rvformal_csr_mhpmevent17_conn
 `define rvformal_csr_mhpmevent17_conn32
+`define rvformal_csr_mhpmevent17_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT18
@@ -2251,6 +2526,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent18_wdata  = rvfi_csr_mhpmevent18_
 .rvfi_csr_mhpmevent18_wmask (rvfi_csr_mhpmevent18_wmask), \
 .rvfi_csr_mhpmevent18_rdata (rvfi_csr_mhpmevent18_rdata), \
 .rvfi_csr_mhpmevent18_wdata (rvfi_csr_mhpmevent18_wdata)
+`define rvformal_csr_mhpmevent18_indices \
+localparam [11:0] csr_mindex_mhpmevent18 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent18 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent18 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent18_wires
 `define rvformal_csr_mhpmevent18_outputs
@@ -2258,6 +2537,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent18_wdata  = rvfi_csr_mhpmevent18_
 `define rvformal_csr_mhpmevent18_channel(_idx)
 `define rvformal_csr_mhpmevent18_conn
 `define rvformal_csr_mhpmevent18_conn32
+`define rvformal_csr_mhpmevent18_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT19
@@ -2291,6 +2571,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent19_wdata  = rvfi_csr_mhpmevent19_
 .rvfi_csr_mhpmevent19_wmask (rvfi_csr_mhpmevent19_wmask), \
 .rvfi_csr_mhpmevent19_rdata (rvfi_csr_mhpmevent19_rdata), \
 .rvfi_csr_mhpmevent19_wdata (rvfi_csr_mhpmevent19_wdata)
+`define rvformal_csr_mhpmevent19_indices \
+localparam [11:0] csr_mindex_mhpmevent19 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent19 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent19 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent19_wires
 `define rvformal_csr_mhpmevent19_outputs
@@ -2298,6 +2582,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent19_wdata  = rvfi_csr_mhpmevent19_
 `define rvformal_csr_mhpmevent19_channel(_idx)
 `define rvformal_csr_mhpmevent19_conn
 `define rvformal_csr_mhpmevent19_conn32
+`define rvformal_csr_mhpmevent19_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT20
@@ -2331,6 +2616,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent20_wdata  = rvfi_csr_mhpmevent20_
 .rvfi_csr_mhpmevent20_wmask (rvfi_csr_mhpmevent20_wmask), \
 .rvfi_csr_mhpmevent20_rdata (rvfi_csr_mhpmevent20_rdata), \
 .rvfi_csr_mhpmevent20_wdata (rvfi_csr_mhpmevent20_wdata)
+`define rvformal_csr_mhpmevent20_indices \
+localparam [11:0] csr_mindex_mhpmevent20 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent20 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent20 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent20_wires
 `define rvformal_csr_mhpmevent20_outputs
@@ -2338,6 +2627,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent20_wdata  = rvfi_csr_mhpmevent20_
 `define rvformal_csr_mhpmevent20_channel(_idx)
 `define rvformal_csr_mhpmevent20_conn
 `define rvformal_csr_mhpmevent20_conn32
+`define rvformal_csr_mhpmevent20_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT21
@@ -2371,6 +2661,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent21_wdata  = rvfi_csr_mhpmevent21_
 .rvfi_csr_mhpmevent21_wmask (rvfi_csr_mhpmevent21_wmask), \
 .rvfi_csr_mhpmevent21_rdata (rvfi_csr_mhpmevent21_rdata), \
 .rvfi_csr_mhpmevent21_wdata (rvfi_csr_mhpmevent21_wdata)
+`define rvformal_csr_mhpmevent21_indices \
+localparam [11:0] csr_mindex_mhpmevent21 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent21 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent21 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent21_wires
 `define rvformal_csr_mhpmevent21_outputs
@@ -2378,6 +2672,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent21_wdata  = rvfi_csr_mhpmevent21_
 `define rvformal_csr_mhpmevent21_channel(_idx)
 `define rvformal_csr_mhpmevent21_conn
 `define rvformal_csr_mhpmevent21_conn32
+`define rvformal_csr_mhpmevent21_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT22
@@ -2411,6 +2706,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent22_wdata  = rvfi_csr_mhpmevent22_
 .rvfi_csr_mhpmevent22_wmask (rvfi_csr_mhpmevent22_wmask), \
 .rvfi_csr_mhpmevent22_rdata (rvfi_csr_mhpmevent22_rdata), \
 .rvfi_csr_mhpmevent22_wdata (rvfi_csr_mhpmevent22_wdata)
+`define rvformal_csr_mhpmevent22_indices \
+localparam [11:0] csr_mindex_mhpmevent22 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent22 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent22 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent22_wires
 `define rvformal_csr_mhpmevent22_outputs
@@ -2418,6 +2717,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent22_wdata  = rvfi_csr_mhpmevent22_
 `define rvformal_csr_mhpmevent22_channel(_idx)
 `define rvformal_csr_mhpmevent22_conn
 `define rvformal_csr_mhpmevent22_conn32
+`define rvformal_csr_mhpmevent22_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT23
@@ -2451,6 +2751,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent23_wdata  = rvfi_csr_mhpmevent23_
 .rvfi_csr_mhpmevent23_wmask (rvfi_csr_mhpmevent23_wmask), \
 .rvfi_csr_mhpmevent23_rdata (rvfi_csr_mhpmevent23_rdata), \
 .rvfi_csr_mhpmevent23_wdata (rvfi_csr_mhpmevent23_wdata)
+`define rvformal_csr_mhpmevent23_indices \
+localparam [11:0] csr_mindex_mhpmevent23 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent23 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent23 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent23_wires
 `define rvformal_csr_mhpmevent23_outputs
@@ -2458,6 +2762,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent23_wdata  = rvfi_csr_mhpmevent23_
 `define rvformal_csr_mhpmevent23_channel(_idx)
 `define rvformal_csr_mhpmevent23_conn
 `define rvformal_csr_mhpmevent23_conn32
+`define rvformal_csr_mhpmevent23_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT24
@@ -2491,6 +2796,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent24_wdata  = rvfi_csr_mhpmevent24_
 .rvfi_csr_mhpmevent24_wmask (rvfi_csr_mhpmevent24_wmask), \
 .rvfi_csr_mhpmevent24_rdata (rvfi_csr_mhpmevent24_rdata), \
 .rvfi_csr_mhpmevent24_wdata (rvfi_csr_mhpmevent24_wdata)
+`define rvformal_csr_mhpmevent24_indices \
+localparam [11:0] csr_mindex_mhpmevent24 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent24 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent24 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent24_wires
 `define rvformal_csr_mhpmevent24_outputs
@@ -2498,6 +2807,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent24_wdata  = rvfi_csr_mhpmevent24_
 `define rvformal_csr_mhpmevent24_channel(_idx)
 `define rvformal_csr_mhpmevent24_conn
 `define rvformal_csr_mhpmevent24_conn32
+`define rvformal_csr_mhpmevent24_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT25
@@ -2531,6 +2841,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent25_wdata  = rvfi_csr_mhpmevent25_
 .rvfi_csr_mhpmevent25_wmask (rvfi_csr_mhpmevent25_wmask), \
 .rvfi_csr_mhpmevent25_rdata (rvfi_csr_mhpmevent25_rdata), \
 .rvfi_csr_mhpmevent25_wdata (rvfi_csr_mhpmevent25_wdata)
+`define rvformal_csr_mhpmevent25_indices \
+localparam [11:0] csr_mindex_mhpmevent25 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent25 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent25 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent25_wires
 `define rvformal_csr_mhpmevent25_outputs
@@ -2538,6 +2852,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent25_wdata  = rvfi_csr_mhpmevent25_
 `define rvformal_csr_mhpmevent25_channel(_idx)
 `define rvformal_csr_mhpmevent25_conn
 `define rvformal_csr_mhpmevent25_conn32
+`define rvformal_csr_mhpmevent25_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT26
@@ -2571,6 +2886,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent26_wdata  = rvfi_csr_mhpmevent26_
 .rvfi_csr_mhpmevent26_wmask (rvfi_csr_mhpmevent26_wmask), \
 .rvfi_csr_mhpmevent26_rdata (rvfi_csr_mhpmevent26_rdata), \
 .rvfi_csr_mhpmevent26_wdata (rvfi_csr_mhpmevent26_wdata)
+`define rvformal_csr_mhpmevent26_indices \
+localparam [11:0] csr_mindex_mhpmevent26 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent26 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent26 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent26_wires
 `define rvformal_csr_mhpmevent26_outputs
@@ -2578,6 +2897,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent26_wdata  = rvfi_csr_mhpmevent26_
 `define rvformal_csr_mhpmevent26_channel(_idx)
 `define rvformal_csr_mhpmevent26_conn
 `define rvformal_csr_mhpmevent26_conn32
+`define rvformal_csr_mhpmevent26_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT27
@@ -2611,6 +2931,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent27_wdata  = rvfi_csr_mhpmevent27_
 .rvfi_csr_mhpmevent27_wmask (rvfi_csr_mhpmevent27_wmask), \
 .rvfi_csr_mhpmevent27_rdata (rvfi_csr_mhpmevent27_rdata), \
 .rvfi_csr_mhpmevent27_wdata (rvfi_csr_mhpmevent27_wdata)
+`define rvformal_csr_mhpmevent27_indices \
+localparam [11:0] csr_mindex_mhpmevent27 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent27 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent27 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent27_wires
 `define rvformal_csr_mhpmevent27_outputs
@@ -2618,6 +2942,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent27_wdata  = rvfi_csr_mhpmevent27_
 `define rvformal_csr_mhpmevent27_channel(_idx)
 `define rvformal_csr_mhpmevent27_conn
 `define rvformal_csr_mhpmevent27_conn32
+`define rvformal_csr_mhpmevent27_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT28
@@ -2651,6 +2976,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent28_wdata  = rvfi_csr_mhpmevent28_
 .rvfi_csr_mhpmevent28_wmask (rvfi_csr_mhpmevent28_wmask), \
 .rvfi_csr_mhpmevent28_rdata (rvfi_csr_mhpmevent28_rdata), \
 .rvfi_csr_mhpmevent28_wdata (rvfi_csr_mhpmevent28_wdata)
+`define rvformal_csr_mhpmevent28_indices \
+localparam [11:0] csr_mindex_mhpmevent28 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent28 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent28 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent28_wires
 `define rvformal_csr_mhpmevent28_outputs
@@ -2658,6 +2987,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent28_wdata  = rvfi_csr_mhpmevent28_
 `define rvformal_csr_mhpmevent28_channel(_idx)
 `define rvformal_csr_mhpmevent28_conn
 `define rvformal_csr_mhpmevent28_conn32
+`define rvformal_csr_mhpmevent28_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT29
@@ -2691,6 +3021,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent29_wdata  = rvfi_csr_mhpmevent29_
 .rvfi_csr_mhpmevent29_wmask (rvfi_csr_mhpmevent29_wmask), \
 .rvfi_csr_mhpmevent29_rdata (rvfi_csr_mhpmevent29_rdata), \
 .rvfi_csr_mhpmevent29_wdata (rvfi_csr_mhpmevent29_wdata)
+`define rvformal_csr_mhpmevent29_indices \
+localparam [11:0] csr_mindex_mhpmevent29 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent29 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent29 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent29_wires
 `define rvformal_csr_mhpmevent29_outputs
@@ -2698,6 +3032,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent29_wdata  = rvfi_csr_mhpmevent29_
 `define rvformal_csr_mhpmevent29_channel(_idx)
 `define rvformal_csr_mhpmevent29_conn
 `define rvformal_csr_mhpmevent29_conn32
+`define rvformal_csr_mhpmevent29_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT30
@@ -2731,6 +3066,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent30_wdata  = rvfi_csr_mhpmevent30_
 .rvfi_csr_mhpmevent30_wmask (rvfi_csr_mhpmevent30_wmask), \
 .rvfi_csr_mhpmevent30_rdata (rvfi_csr_mhpmevent30_rdata), \
 .rvfi_csr_mhpmevent30_wdata (rvfi_csr_mhpmevent30_wdata)
+`define rvformal_csr_mhpmevent30_indices \
+localparam [11:0] csr_mindex_mhpmevent30 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent30 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent30 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent30_wires
 `define rvformal_csr_mhpmevent30_outputs
@@ -2738,6 +3077,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent30_wdata  = rvfi_csr_mhpmevent30_
 `define rvformal_csr_mhpmevent30_channel(_idx)
 `define rvformal_csr_mhpmevent30_conn
 `define rvformal_csr_mhpmevent30_conn32
+`define rvformal_csr_mhpmevent30_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMEVENT31
@@ -2771,6 +3111,10 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent31_wdata  = rvfi_csr_mhpmevent31_
 .rvfi_csr_mhpmevent31_wmask (rvfi_csr_mhpmevent31_wmask), \
 .rvfi_csr_mhpmevent31_rdata (rvfi_csr_mhpmevent31_rdata), \
 .rvfi_csr_mhpmevent31_wdata (rvfi_csr_mhpmevent31_wdata)
+`define rvformal_csr_mhpmevent31_indices \
+localparam [11:0] csr_mindex_mhpmevent31 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmevent31 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmevent31 = 12'h fff;
 `else
 `define rvformal_csr_mhpmevent31_wires
 `define rvformal_csr_mhpmevent31_outputs
@@ -2778,6 +3122,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mhpmevent31_wdata  = rvfi_csr_mhpmevent31_
 `define rvformal_csr_mhpmevent31_channel(_idx)
 `define rvformal_csr_mhpmevent31_conn
 `define rvformal_csr_mhpmevent31_conn32
+`define rvformal_csr_mhpmevent31_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_TIME
@@ -2815,6 +3160,13 @@ wire [64 - 1 : 0] csr_time_wdata  = rvfi_csr_time_wdata  [(_idx)*64 +: 64];
 .rvfi_csr_timeh_wmask (rvfi_csr_time_wmask[63:32]), \
 .rvfi_csr_timeh_rdata (rvfi_csr_time_rdata[63:32]), \
 .rvfi_csr_timeh_wdata (rvfi_csr_time_wdata[63:32])
+`define rvformal_csr_time_indices \
+localparam [11:0] csr_mindex_time = 12'h fff; \
+localparam [11:0] csr_sindex_time = 12'h fff; \
+localparam [11:0] csr_uindex_time = 12'h fff; \
+localparam [11:0] csr_mindex_timeh = 12'h fff; \
+localparam [11:0] csr_sindex_timeh = 12'h fff; \
+localparam [11:0] csr_uindex_timeh = 12'h fff;
 `else
 `define rvformal_csr_time_wires
 `define rvformal_csr_time_outputs
@@ -2822,6 +3174,7 @@ wire [64 - 1 : 0] csr_time_wdata  = rvfi_csr_time_wdata  [(_idx)*64 +: 64];
 `define rvformal_csr_time_channel(_idx)
 `define rvformal_csr_time_conn
 `define rvformal_csr_time_conn32
+`define rvformal_csr_time_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MCYCLE
@@ -2859,6 +3212,13 @@ wire [64 - 1 : 0] csr_mcycle_wdata  = rvfi_csr_mcycle_wdata  [(_idx)*64 +: 64];
 .rvfi_csr_mcycleh_wmask (rvfi_csr_mcycle_wmask[63:32]), \
 .rvfi_csr_mcycleh_rdata (rvfi_csr_mcycle_rdata[63:32]), \
 .rvfi_csr_mcycleh_wdata (rvfi_csr_mcycle_wdata[63:32])
+`define rvformal_csr_mcycle_indices \
+localparam [11:0] csr_mindex_mcycle = 12'h b00; \
+localparam [11:0] csr_sindex_mcycle = 12'h fff; \
+localparam [11:0] csr_uindex_mcycle = 12'h c00; \
+localparam [11:0] csr_mindex_mcycleh = 12'h b80; \
+localparam [11:0] csr_sindex_mcycleh = 12'h fff; \
+localparam [11:0] csr_uindex_mcycleh = 12'h c80;
 `else
 `define rvformal_csr_mcycle_wires
 `define rvformal_csr_mcycle_outputs
@@ -2866,6 +3226,7 @@ wire [64 - 1 : 0] csr_mcycle_wdata  = rvfi_csr_mcycle_wdata  [(_idx)*64 +: 64];
 `define rvformal_csr_mcycle_channel(_idx)
 `define rvformal_csr_mcycle_conn
 `define rvformal_csr_mcycle_conn32
+`define rvformal_csr_mcycle_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MINSTRET
@@ -2903,6 +3264,13 @@ wire [64 - 1 : 0] csr_minstret_wdata  = rvfi_csr_minstret_wdata  [(_idx)*64 +: 6
 .rvfi_csr_minstreth_wmask (rvfi_csr_minstret_wmask[63:32]), \
 .rvfi_csr_minstreth_rdata (rvfi_csr_minstret_rdata[63:32]), \
 .rvfi_csr_minstreth_wdata (rvfi_csr_minstret_wdata[63:32])
+`define rvformal_csr_minstret_indices \
+localparam [11:0] csr_mindex_minstret = 12'h b02; \
+localparam [11:0] csr_sindex_minstret = 12'h fff; \
+localparam [11:0] csr_uindex_minstret = 12'h c02; \
+localparam [11:0] csr_mindex_minstreth = 12'h b82; \
+localparam [11:0] csr_sindex_minstreth = 12'h fff; \
+localparam [11:0] csr_uindex_minstreth = 12'h c82;
 `else
 `define rvformal_csr_minstret_wires
 `define rvformal_csr_minstret_outputs
@@ -2910,6 +3278,7 @@ wire [64 - 1 : 0] csr_minstret_wdata  = rvfi_csr_minstret_wdata  [(_idx)*64 +: 6
 `define rvformal_csr_minstret_channel(_idx)
 `define rvformal_csr_minstret_conn
 `define rvformal_csr_minstret_conn32
+`define rvformal_csr_minstret_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER3
@@ -2947,6 +3316,13 @@ wire [64 - 1 : 0] csr_mhpmcounter3_wdata  = rvfi_csr_mhpmcounter3_wdata  [(_idx)
 .rvfi_csr_mhpmcounter3h_wmask (rvfi_csr_mhpmcounter3_wmask[63:32]), \
 .rvfi_csr_mhpmcounter3h_rdata (rvfi_csr_mhpmcounter3_rdata[63:32]), \
 .rvfi_csr_mhpmcounter3h_wdata (rvfi_csr_mhpmcounter3_wdata[63:32])
+`define rvformal_csr_mhpmcounter3_indices \
+localparam [11:0] csr_mindex_mhpmcounter3 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter3 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter3 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter3h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter3h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter3h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter3_wires
 `define rvformal_csr_mhpmcounter3_outputs
@@ -2954,6 +3330,7 @@ wire [64 - 1 : 0] csr_mhpmcounter3_wdata  = rvfi_csr_mhpmcounter3_wdata  [(_idx)
 `define rvformal_csr_mhpmcounter3_channel(_idx)
 `define rvformal_csr_mhpmcounter3_conn
 `define rvformal_csr_mhpmcounter3_conn32
+`define rvformal_csr_mhpmcounter3_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER4
@@ -2991,6 +3368,13 @@ wire [64 - 1 : 0] csr_mhpmcounter4_wdata  = rvfi_csr_mhpmcounter4_wdata  [(_idx)
 .rvfi_csr_mhpmcounter4h_wmask (rvfi_csr_mhpmcounter4_wmask[63:32]), \
 .rvfi_csr_mhpmcounter4h_rdata (rvfi_csr_mhpmcounter4_rdata[63:32]), \
 .rvfi_csr_mhpmcounter4h_wdata (rvfi_csr_mhpmcounter4_wdata[63:32])
+`define rvformal_csr_mhpmcounter4_indices \
+localparam [11:0] csr_mindex_mhpmcounter4 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter4 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter4 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter4h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter4h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter4h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter4_wires
 `define rvformal_csr_mhpmcounter4_outputs
@@ -2998,6 +3382,7 @@ wire [64 - 1 : 0] csr_mhpmcounter4_wdata  = rvfi_csr_mhpmcounter4_wdata  [(_idx)
 `define rvformal_csr_mhpmcounter4_channel(_idx)
 `define rvformal_csr_mhpmcounter4_conn
 `define rvformal_csr_mhpmcounter4_conn32
+`define rvformal_csr_mhpmcounter4_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER5
@@ -3035,6 +3420,13 @@ wire [64 - 1 : 0] csr_mhpmcounter5_wdata  = rvfi_csr_mhpmcounter5_wdata  [(_idx)
 .rvfi_csr_mhpmcounter5h_wmask (rvfi_csr_mhpmcounter5_wmask[63:32]), \
 .rvfi_csr_mhpmcounter5h_rdata (rvfi_csr_mhpmcounter5_rdata[63:32]), \
 .rvfi_csr_mhpmcounter5h_wdata (rvfi_csr_mhpmcounter5_wdata[63:32])
+`define rvformal_csr_mhpmcounter5_indices \
+localparam [11:0] csr_mindex_mhpmcounter5 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter5 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter5 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter5h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter5h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter5h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter5_wires
 `define rvformal_csr_mhpmcounter5_outputs
@@ -3042,6 +3434,7 @@ wire [64 - 1 : 0] csr_mhpmcounter5_wdata  = rvfi_csr_mhpmcounter5_wdata  [(_idx)
 `define rvformal_csr_mhpmcounter5_channel(_idx)
 `define rvformal_csr_mhpmcounter5_conn
 `define rvformal_csr_mhpmcounter5_conn32
+`define rvformal_csr_mhpmcounter5_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER6
@@ -3079,6 +3472,13 @@ wire [64 - 1 : 0] csr_mhpmcounter6_wdata  = rvfi_csr_mhpmcounter6_wdata  [(_idx)
 .rvfi_csr_mhpmcounter6h_wmask (rvfi_csr_mhpmcounter6_wmask[63:32]), \
 .rvfi_csr_mhpmcounter6h_rdata (rvfi_csr_mhpmcounter6_rdata[63:32]), \
 .rvfi_csr_mhpmcounter6h_wdata (rvfi_csr_mhpmcounter6_wdata[63:32])
+`define rvformal_csr_mhpmcounter6_indices \
+localparam [11:0] csr_mindex_mhpmcounter6 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter6 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter6 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter6h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter6h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter6h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter6_wires
 `define rvformal_csr_mhpmcounter6_outputs
@@ -3086,6 +3486,7 @@ wire [64 - 1 : 0] csr_mhpmcounter6_wdata  = rvfi_csr_mhpmcounter6_wdata  [(_idx)
 `define rvformal_csr_mhpmcounter6_channel(_idx)
 `define rvformal_csr_mhpmcounter6_conn
 `define rvformal_csr_mhpmcounter6_conn32
+`define rvformal_csr_mhpmcounter6_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER7
@@ -3123,6 +3524,13 @@ wire [64 - 1 : 0] csr_mhpmcounter7_wdata  = rvfi_csr_mhpmcounter7_wdata  [(_idx)
 .rvfi_csr_mhpmcounter7h_wmask (rvfi_csr_mhpmcounter7_wmask[63:32]), \
 .rvfi_csr_mhpmcounter7h_rdata (rvfi_csr_mhpmcounter7_rdata[63:32]), \
 .rvfi_csr_mhpmcounter7h_wdata (rvfi_csr_mhpmcounter7_wdata[63:32])
+`define rvformal_csr_mhpmcounter7_indices \
+localparam [11:0] csr_mindex_mhpmcounter7 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter7 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter7 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter7h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter7h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter7h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter7_wires
 `define rvformal_csr_mhpmcounter7_outputs
@@ -3130,6 +3538,7 @@ wire [64 - 1 : 0] csr_mhpmcounter7_wdata  = rvfi_csr_mhpmcounter7_wdata  [(_idx)
 `define rvformal_csr_mhpmcounter7_channel(_idx)
 `define rvformal_csr_mhpmcounter7_conn
 `define rvformal_csr_mhpmcounter7_conn32
+`define rvformal_csr_mhpmcounter7_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER8
@@ -3167,6 +3576,13 @@ wire [64 - 1 : 0] csr_mhpmcounter8_wdata  = rvfi_csr_mhpmcounter8_wdata  [(_idx)
 .rvfi_csr_mhpmcounter8h_wmask (rvfi_csr_mhpmcounter8_wmask[63:32]), \
 .rvfi_csr_mhpmcounter8h_rdata (rvfi_csr_mhpmcounter8_rdata[63:32]), \
 .rvfi_csr_mhpmcounter8h_wdata (rvfi_csr_mhpmcounter8_wdata[63:32])
+`define rvformal_csr_mhpmcounter8_indices \
+localparam [11:0] csr_mindex_mhpmcounter8 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter8 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter8 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter8h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter8h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter8h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter8_wires
 `define rvformal_csr_mhpmcounter8_outputs
@@ -3174,6 +3590,7 @@ wire [64 - 1 : 0] csr_mhpmcounter8_wdata  = rvfi_csr_mhpmcounter8_wdata  [(_idx)
 `define rvformal_csr_mhpmcounter8_channel(_idx)
 `define rvformal_csr_mhpmcounter8_conn
 `define rvformal_csr_mhpmcounter8_conn32
+`define rvformal_csr_mhpmcounter8_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER9
@@ -3211,6 +3628,13 @@ wire [64 - 1 : 0] csr_mhpmcounter9_wdata  = rvfi_csr_mhpmcounter9_wdata  [(_idx)
 .rvfi_csr_mhpmcounter9h_wmask (rvfi_csr_mhpmcounter9_wmask[63:32]), \
 .rvfi_csr_mhpmcounter9h_rdata (rvfi_csr_mhpmcounter9_rdata[63:32]), \
 .rvfi_csr_mhpmcounter9h_wdata (rvfi_csr_mhpmcounter9_wdata[63:32])
+`define rvformal_csr_mhpmcounter9_indices \
+localparam [11:0] csr_mindex_mhpmcounter9 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter9 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter9 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter9h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter9h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter9h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter9_wires
 `define rvformal_csr_mhpmcounter9_outputs
@@ -3218,6 +3642,7 @@ wire [64 - 1 : 0] csr_mhpmcounter9_wdata  = rvfi_csr_mhpmcounter9_wdata  [(_idx)
 `define rvformal_csr_mhpmcounter9_channel(_idx)
 `define rvformal_csr_mhpmcounter9_conn
 `define rvformal_csr_mhpmcounter9_conn32
+`define rvformal_csr_mhpmcounter9_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER10
@@ -3255,6 +3680,13 @@ wire [64 - 1 : 0] csr_mhpmcounter10_wdata  = rvfi_csr_mhpmcounter10_wdata  [(_id
 .rvfi_csr_mhpmcounter10h_wmask (rvfi_csr_mhpmcounter10_wmask[63:32]), \
 .rvfi_csr_mhpmcounter10h_rdata (rvfi_csr_mhpmcounter10_rdata[63:32]), \
 .rvfi_csr_mhpmcounter10h_wdata (rvfi_csr_mhpmcounter10_wdata[63:32])
+`define rvformal_csr_mhpmcounter10_indices \
+localparam [11:0] csr_mindex_mhpmcounter10 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter10 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter10 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter10h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter10h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter10h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter10_wires
 `define rvformal_csr_mhpmcounter10_outputs
@@ -3262,6 +3694,7 @@ wire [64 - 1 : 0] csr_mhpmcounter10_wdata  = rvfi_csr_mhpmcounter10_wdata  [(_id
 `define rvformal_csr_mhpmcounter10_channel(_idx)
 `define rvformal_csr_mhpmcounter10_conn
 `define rvformal_csr_mhpmcounter10_conn32
+`define rvformal_csr_mhpmcounter10_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER11
@@ -3299,6 +3732,13 @@ wire [64 - 1 : 0] csr_mhpmcounter11_wdata  = rvfi_csr_mhpmcounter11_wdata  [(_id
 .rvfi_csr_mhpmcounter11h_wmask (rvfi_csr_mhpmcounter11_wmask[63:32]), \
 .rvfi_csr_mhpmcounter11h_rdata (rvfi_csr_mhpmcounter11_rdata[63:32]), \
 .rvfi_csr_mhpmcounter11h_wdata (rvfi_csr_mhpmcounter11_wdata[63:32])
+`define rvformal_csr_mhpmcounter11_indices \
+localparam [11:0] csr_mindex_mhpmcounter11 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter11 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter11 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter11h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter11h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter11h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter11_wires
 `define rvformal_csr_mhpmcounter11_outputs
@@ -3306,6 +3746,7 @@ wire [64 - 1 : 0] csr_mhpmcounter11_wdata  = rvfi_csr_mhpmcounter11_wdata  [(_id
 `define rvformal_csr_mhpmcounter11_channel(_idx)
 `define rvformal_csr_mhpmcounter11_conn
 `define rvformal_csr_mhpmcounter11_conn32
+`define rvformal_csr_mhpmcounter11_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER12
@@ -3343,6 +3784,13 @@ wire [64 - 1 : 0] csr_mhpmcounter12_wdata  = rvfi_csr_mhpmcounter12_wdata  [(_id
 .rvfi_csr_mhpmcounter12h_wmask (rvfi_csr_mhpmcounter12_wmask[63:32]), \
 .rvfi_csr_mhpmcounter12h_rdata (rvfi_csr_mhpmcounter12_rdata[63:32]), \
 .rvfi_csr_mhpmcounter12h_wdata (rvfi_csr_mhpmcounter12_wdata[63:32])
+`define rvformal_csr_mhpmcounter12_indices \
+localparam [11:0] csr_mindex_mhpmcounter12 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter12 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter12 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter12h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter12h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter12h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter12_wires
 `define rvformal_csr_mhpmcounter12_outputs
@@ -3350,6 +3798,7 @@ wire [64 - 1 : 0] csr_mhpmcounter12_wdata  = rvfi_csr_mhpmcounter12_wdata  [(_id
 `define rvformal_csr_mhpmcounter12_channel(_idx)
 `define rvformal_csr_mhpmcounter12_conn
 `define rvformal_csr_mhpmcounter12_conn32
+`define rvformal_csr_mhpmcounter12_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER13
@@ -3387,6 +3836,13 @@ wire [64 - 1 : 0] csr_mhpmcounter13_wdata  = rvfi_csr_mhpmcounter13_wdata  [(_id
 .rvfi_csr_mhpmcounter13h_wmask (rvfi_csr_mhpmcounter13_wmask[63:32]), \
 .rvfi_csr_mhpmcounter13h_rdata (rvfi_csr_mhpmcounter13_rdata[63:32]), \
 .rvfi_csr_mhpmcounter13h_wdata (rvfi_csr_mhpmcounter13_wdata[63:32])
+`define rvformal_csr_mhpmcounter13_indices \
+localparam [11:0] csr_mindex_mhpmcounter13 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter13 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter13 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter13h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter13h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter13h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter13_wires
 `define rvformal_csr_mhpmcounter13_outputs
@@ -3394,6 +3850,7 @@ wire [64 - 1 : 0] csr_mhpmcounter13_wdata  = rvfi_csr_mhpmcounter13_wdata  [(_id
 `define rvformal_csr_mhpmcounter13_channel(_idx)
 `define rvformal_csr_mhpmcounter13_conn
 `define rvformal_csr_mhpmcounter13_conn32
+`define rvformal_csr_mhpmcounter13_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER14
@@ -3431,6 +3888,13 @@ wire [64 - 1 : 0] csr_mhpmcounter14_wdata  = rvfi_csr_mhpmcounter14_wdata  [(_id
 .rvfi_csr_mhpmcounter14h_wmask (rvfi_csr_mhpmcounter14_wmask[63:32]), \
 .rvfi_csr_mhpmcounter14h_rdata (rvfi_csr_mhpmcounter14_rdata[63:32]), \
 .rvfi_csr_mhpmcounter14h_wdata (rvfi_csr_mhpmcounter14_wdata[63:32])
+`define rvformal_csr_mhpmcounter14_indices \
+localparam [11:0] csr_mindex_mhpmcounter14 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter14 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter14 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter14h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter14h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter14h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter14_wires
 `define rvformal_csr_mhpmcounter14_outputs
@@ -3438,6 +3902,7 @@ wire [64 - 1 : 0] csr_mhpmcounter14_wdata  = rvfi_csr_mhpmcounter14_wdata  [(_id
 `define rvformal_csr_mhpmcounter14_channel(_idx)
 `define rvformal_csr_mhpmcounter14_conn
 `define rvformal_csr_mhpmcounter14_conn32
+`define rvformal_csr_mhpmcounter14_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER15
@@ -3475,6 +3940,13 @@ wire [64 - 1 : 0] csr_mhpmcounter15_wdata  = rvfi_csr_mhpmcounter15_wdata  [(_id
 .rvfi_csr_mhpmcounter15h_wmask (rvfi_csr_mhpmcounter15_wmask[63:32]), \
 .rvfi_csr_mhpmcounter15h_rdata (rvfi_csr_mhpmcounter15_rdata[63:32]), \
 .rvfi_csr_mhpmcounter15h_wdata (rvfi_csr_mhpmcounter15_wdata[63:32])
+`define rvformal_csr_mhpmcounter15_indices \
+localparam [11:0] csr_mindex_mhpmcounter15 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter15 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter15 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter15h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter15h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter15h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter15_wires
 `define rvformal_csr_mhpmcounter15_outputs
@@ -3482,6 +3954,7 @@ wire [64 - 1 : 0] csr_mhpmcounter15_wdata  = rvfi_csr_mhpmcounter15_wdata  [(_id
 `define rvformal_csr_mhpmcounter15_channel(_idx)
 `define rvformal_csr_mhpmcounter15_conn
 `define rvformal_csr_mhpmcounter15_conn32
+`define rvformal_csr_mhpmcounter15_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER16
@@ -3519,6 +3992,13 @@ wire [64 - 1 : 0] csr_mhpmcounter16_wdata  = rvfi_csr_mhpmcounter16_wdata  [(_id
 .rvfi_csr_mhpmcounter16h_wmask (rvfi_csr_mhpmcounter16_wmask[63:32]), \
 .rvfi_csr_mhpmcounter16h_rdata (rvfi_csr_mhpmcounter16_rdata[63:32]), \
 .rvfi_csr_mhpmcounter16h_wdata (rvfi_csr_mhpmcounter16_wdata[63:32])
+`define rvformal_csr_mhpmcounter16_indices \
+localparam [11:0] csr_mindex_mhpmcounter16 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter16 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter16 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter16h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter16h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter16h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter16_wires
 `define rvformal_csr_mhpmcounter16_outputs
@@ -3526,6 +4006,7 @@ wire [64 - 1 : 0] csr_mhpmcounter16_wdata  = rvfi_csr_mhpmcounter16_wdata  [(_id
 `define rvformal_csr_mhpmcounter16_channel(_idx)
 `define rvformal_csr_mhpmcounter16_conn
 `define rvformal_csr_mhpmcounter16_conn32
+`define rvformal_csr_mhpmcounter16_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER17
@@ -3563,6 +4044,13 @@ wire [64 - 1 : 0] csr_mhpmcounter17_wdata  = rvfi_csr_mhpmcounter17_wdata  [(_id
 .rvfi_csr_mhpmcounter17h_wmask (rvfi_csr_mhpmcounter17_wmask[63:32]), \
 .rvfi_csr_mhpmcounter17h_rdata (rvfi_csr_mhpmcounter17_rdata[63:32]), \
 .rvfi_csr_mhpmcounter17h_wdata (rvfi_csr_mhpmcounter17_wdata[63:32])
+`define rvformal_csr_mhpmcounter17_indices \
+localparam [11:0] csr_mindex_mhpmcounter17 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter17 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter17 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter17h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter17h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter17h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter17_wires
 `define rvformal_csr_mhpmcounter17_outputs
@@ -3570,6 +4058,7 @@ wire [64 - 1 : 0] csr_mhpmcounter17_wdata  = rvfi_csr_mhpmcounter17_wdata  [(_id
 `define rvformal_csr_mhpmcounter17_channel(_idx)
 `define rvformal_csr_mhpmcounter17_conn
 `define rvformal_csr_mhpmcounter17_conn32
+`define rvformal_csr_mhpmcounter17_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER18
@@ -3607,6 +4096,13 @@ wire [64 - 1 : 0] csr_mhpmcounter18_wdata  = rvfi_csr_mhpmcounter18_wdata  [(_id
 .rvfi_csr_mhpmcounter18h_wmask (rvfi_csr_mhpmcounter18_wmask[63:32]), \
 .rvfi_csr_mhpmcounter18h_rdata (rvfi_csr_mhpmcounter18_rdata[63:32]), \
 .rvfi_csr_mhpmcounter18h_wdata (rvfi_csr_mhpmcounter18_wdata[63:32])
+`define rvformal_csr_mhpmcounter18_indices \
+localparam [11:0] csr_mindex_mhpmcounter18 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter18 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter18 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter18h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter18h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter18h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter18_wires
 `define rvformal_csr_mhpmcounter18_outputs
@@ -3614,6 +4110,7 @@ wire [64 - 1 : 0] csr_mhpmcounter18_wdata  = rvfi_csr_mhpmcounter18_wdata  [(_id
 `define rvformal_csr_mhpmcounter18_channel(_idx)
 `define rvformal_csr_mhpmcounter18_conn
 `define rvformal_csr_mhpmcounter18_conn32
+`define rvformal_csr_mhpmcounter18_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER19
@@ -3651,6 +4148,13 @@ wire [64 - 1 : 0] csr_mhpmcounter19_wdata  = rvfi_csr_mhpmcounter19_wdata  [(_id
 .rvfi_csr_mhpmcounter19h_wmask (rvfi_csr_mhpmcounter19_wmask[63:32]), \
 .rvfi_csr_mhpmcounter19h_rdata (rvfi_csr_mhpmcounter19_rdata[63:32]), \
 .rvfi_csr_mhpmcounter19h_wdata (rvfi_csr_mhpmcounter19_wdata[63:32])
+`define rvformal_csr_mhpmcounter19_indices \
+localparam [11:0] csr_mindex_mhpmcounter19 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter19 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter19 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter19h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter19h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter19h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter19_wires
 `define rvformal_csr_mhpmcounter19_outputs
@@ -3658,6 +4162,7 @@ wire [64 - 1 : 0] csr_mhpmcounter19_wdata  = rvfi_csr_mhpmcounter19_wdata  [(_id
 `define rvformal_csr_mhpmcounter19_channel(_idx)
 `define rvformal_csr_mhpmcounter19_conn
 `define rvformal_csr_mhpmcounter19_conn32
+`define rvformal_csr_mhpmcounter19_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER20
@@ -3695,6 +4200,13 @@ wire [64 - 1 : 0] csr_mhpmcounter20_wdata  = rvfi_csr_mhpmcounter20_wdata  [(_id
 .rvfi_csr_mhpmcounter20h_wmask (rvfi_csr_mhpmcounter20_wmask[63:32]), \
 .rvfi_csr_mhpmcounter20h_rdata (rvfi_csr_mhpmcounter20_rdata[63:32]), \
 .rvfi_csr_mhpmcounter20h_wdata (rvfi_csr_mhpmcounter20_wdata[63:32])
+`define rvformal_csr_mhpmcounter20_indices \
+localparam [11:0] csr_mindex_mhpmcounter20 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter20 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter20 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter20h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter20h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter20h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter20_wires
 `define rvformal_csr_mhpmcounter20_outputs
@@ -3702,6 +4214,7 @@ wire [64 - 1 : 0] csr_mhpmcounter20_wdata  = rvfi_csr_mhpmcounter20_wdata  [(_id
 `define rvformal_csr_mhpmcounter20_channel(_idx)
 `define rvformal_csr_mhpmcounter20_conn
 `define rvformal_csr_mhpmcounter20_conn32
+`define rvformal_csr_mhpmcounter20_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER21
@@ -3739,6 +4252,13 @@ wire [64 - 1 : 0] csr_mhpmcounter21_wdata  = rvfi_csr_mhpmcounter21_wdata  [(_id
 .rvfi_csr_mhpmcounter21h_wmask (rvfi_csr_mhpmcounter21_wmask[63:32]), \
 .rvfi_csr_mhpmcounter21h_rdata (rvfi_csr_mhpmcounter21_rdata[63:32]), \
 .rvfi_csr_mhpmcounter21h_wdata (rvfi_csr_mhpmcounter21_wdata[63:32])
+`define rvformal_csr_mhpmcounter21_indices \
+localparam [11:0] csr_mindex_mhpmcounter21 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter21 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter21 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter21h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter21h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter21h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter21_wires
 `define rvformal_csr_mhpmcounter21_outputs
@@ -3746,6 +4266,7 @@ wire [64 - 1 : 0] csr_mhpmcounter21_wdata  = rvfi_csr_mhpmcounter21_wdata  [(_id
 `define rvformal_csr_mhpmcounter21_channel(_idx)
 `define rvformal_csr_mhpmcounter21_conn
 `define rvformal_csr_mhpmcounter21_conn32
+`define rvformal_csr_mhpmcounter21_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER22
@@ -3783,6 +4304,13 @@ wire [64 - 1 : 0] csr_mhpmcounter22_wdata  = rvfi_csr_mhpmcounter22_wdata  [(_id
 .rvfi_csr_mhpmcounter22h_wmask (rvfi_csr_mhpmcounter22_wmask[63:32]), \
 .rvfi_csr_mhpmcounter22h_rdata (rvfi_csr_mhpmcounter22_rdata[63:32]), \
 .rvfi_csr_mhpmcounter22h_wdata (rvfi_csr_mhpmcounter22_wdata[63:32])
+`define rvformal_csr_mhpmcounter22_indices \
+localparam [11:0] csr_mindex_mhpmcounter22 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter22 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter22 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter22h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter22h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter22h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter22_wires
 `define rvformal_csr_mhpmcounter22_outputs
@@ -3790,6 +4318,7 @@ wire [64 - 1 : 0] csr_mhpmcounter22_wdata  = rvfi_csr_mhpmcounter22_wdata  [(_id
 `define rvformal_csr_mhpmcounter22_channel(_idx)
 `define rvformal_csr_mhpmcounter22_conn
 `define rvformal_csr_mhpmcounter22_conn32
+`define rvformal_csr_mhpmcounter22_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER23
@@ -3827,6 +4356,13 @@ wire [64 - 1 : 0] csr_mhpmcounter23_wdata  = rvfi_csr_mhpmcounter23_wdata  [(_id
 .rvfi_csr_mhpmcounter23h_wmask (rvfi_csr_mhpmcounter23_wmask[63:32]), \
 .rvfi_csr_mhpmcounter23h_rdata (rvfi_csr_mhpmcounter23_rdata[63:32]), \
 .rvfi_csr_mhpmcounter23h_wdata (rvfi_csr_mhpmcounter23_wdata[63:32])
+`define rvformal_csr_mhpmcounter23_indices \
+localparam [11:0] csr_mindex_mhpmcounter23 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter23 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter23 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter23h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter23h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter23h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter23_wires
 `define rvformal_csr_mhpmcounter23_outputs
@@ -3834,6 +4370,7 @@ wire [64 - 1 : 0] csr_mhpmcounter23_wdata  = rvfi_csr_mhpmcounter23_wdata  [(_id
 `define rvformal_csr_mhpmcounter23_channel(_idx)
 `define rvformal_csr_mhpmcounter23_conn
 `define rvformal_csr_mhpmcounter23_conn32
+`define rvformal_csr_mhpmcounter23_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER24
@@ -3871,6 +4408,13 @@ wire [64 - 1 : 0] csr_mhpmcounter24_wdata  = rvfi_csr_mhpmcounter24_wdata  [(_id
 .rvfi_csr_mhpmcounter24h_wmask (rvfi_csr_mhpmcounter24_wmask[63:32]), \
 .rvfi_csr_mhpmcounter24h_rdata (rvfi_csr_mhpmcounter24_rdata[63:32]), \
 .rvfi_csr_mhpmcounter24h_wdata (rvfi_csr_mhpmcounter24_wdata[63:32])
+`define rvformal_csr_mhpmcounter24_indices \
+localparam [11:0] csr_mindex_mhpmcounter24 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter24 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter24 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter24h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter24h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter24h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter24_wires
 `define rvformal_csr_mhpmcounter24_outputs
@@ -3878,6 +4422,7 @@ wire [64 - 1 : 0] csr_mhpmcounter24_wdata  = rvfi_csr_mhpmcounter24_wdata  [(_id
 `define rvformal_csr_mhpmcounter24_channel(_idx)
 `define rvformal_csr_mhpmcounter24_conn
 `define rvformal_csr_mhpmcounter24_conn32
+`define rvformal_csr_mhpmcounter24_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER25
@@ -3915,6 +4460,13 @@ wire [64 - 1 : 0] csr_mhpmcounter25_wdata  = rvfi_csr_mhpmcounter25_wdata  [(_id
 .rvfi_csr_mhpmcounter25h_wmask (rvfi_csr_mhpmcounter25_wmask[63:32]), \
 .rvfi_csr_mhpmcounter25h_rdata (rvfi_csr_mhpmcounter25_rdata[63:32]), \
 .rvfi_csr_mhpmcounter25h_wdata (rvfi_csr_mhpmcounter25_wdata[63:32])
+`define rvformal_csr_mhpmcounter25_indices \
+localparam [11:0] csr_mindex_mhpmcounter25 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter25 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter25 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter25h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter25h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter25h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter25_wires
 `define rvformal_csr_mhpmcounter25_outputs
@@ -3922,6 +4474,7 @@ wire [64 - 1 : 0] csr_mhpmcounter25_wdata  = rvfi_csr_mhpmcounter25_wdata  [(_id
 `define rvformal_csr_mhpmcounter25_channel(_idx)
 `define rvformal_csr_mhpmcounter25_conn
 `define rvformal_csr_mhpmcounter25_conn32
+`define rvformal_csr_mhpmcounter25_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER26
@@ -3959,6 +4512,13 @@ wire [64 - 1 : 0] csr_mhpmcounter26_wdata  = rvfi_csr_mhpmcounter26_wdata  [(_id
 .rvfi_csr_mhpmcounter26h_wmask (rvfi_csr_mhpmcounter26_wmask[63:32]), \
 .rvfi_csr_mhpmcounter26h_rdata (rvfi_csr_mhpmcounter26_rdata[63:32]), \
 .rvfi_csr_mhpmcounter26h_wdata (rvfi_csr_mhpmcounter26_wdata[63:32])
+`define rvformal_csr_mhpmcounter26_indices \
+localparam [11:0] csr_mindex_mhpmcounter26 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter26 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter26 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter26h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter26h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter26h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter26_wires
 `define rvformal_csr_mhpmcounter26_outputs
@@ -3966,6 +4526,7 @@ wire [64 - 1 : 0] csr_mhpmcounter26_wdata  = rvfi_csr_mhpmcounter26_wdata  [(_id
 `define rvformal_csr_mhpmcounter26_channel(_idx)
 `define rvformal_csr_mhpmcounter26_conn
 `define rvformal_csr_mhpmcounter26_conn32
+`define rvformal_csr_mhpmcounter26_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER27
@@ -4003,6 +4564,13 @@ wire [64 - 1 : 0] csr_mhpmcounter27_wdata  = rvfi_csr_mhpmcounter27_wdata  [(_id
 .rvfi_csr_mhpmcounter27h_wmask (rvfi_csr_mhpmcounter27_wmask[63:32]), \
 .rvfi_csr_mhpmcounter27h_rdata (rvfi_csr_mhpmcounter27_rdata[63:32]), \
 .rvfi_csr_mhpmcounter27h_wdata (rvfi_csr_mhpmcounter27_wdata[63:32])
+`define rvformal_csr_mhpmcounter27_indices \
+localparam [11:0] csr_mindex_mhpmcounter27 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter27 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter27 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter27h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter27h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter27h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter27_wires
 `define rvformal_csr_mhpmcounter27_outputs
@@ -4010,6 +4578,7 @@ wire [64 - 1 : 0] csr_mhpmcounter27_wdata  = rvfi_csr_mhpmcounter27_wdata  [(_id
 `define rvformal_csr_mhpmcounter27_channel(_idx)
 `define rvformal_csr_mhpmcounter27_conn
 `define rvformal_csr_mhpmcounter27_conn32
+`define rvformal_csr_mhpmcounter27_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER28
@@ -4047,6 +4616,13 @@ wire [64 - 1 : 0] csr_mhpmcounter28_wdata  = rvfi_csr_mhpmcounter28_wdata  [(_id
 .rvfi_csr_mhpmcounter28h_wmask (rvfi_csr_mhpmcounter28_wmask[63:32]), \
 .rvfi_csr_mhpmcounter28h_rdata (rvfi_csr_mhpmcounter28_rdata[63:32]), \
 .rvfi_csr_mhpmcounter28h_wdata (rvfi_csr_mhpmcounter28_wdata[63:32])
+`define rvformal_csr_mhpmcounter28_indices \
+localparam [11:0] csr_mindex_mhpmcounter28 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter28 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter28 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter28h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter28h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter28h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter28_wires
 `define rvformal_csr_mhpmcounter28_outputs
@@ -4054,6 +4630,7 @@ wire [64 - 1 : 0] csr_mhpmcounter28_wdata  = rvfi_csr_mhpmcounter28_wdata  [(_id
 `define rvformal_csr_mhpmcounter28_channel(_idx)
 `define rvformal_csr_mhpmcounter28_conn
 `define rvformal_csr_mhpmcounter28_conn32
+`define rvformal_csr_mhpmcounter28_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER29
@@ -4091,6 +4668,13 @@ wire [64 - 1 : 0] csr_mhpmcounter29_wdata  = rvfi_csr_mhpmcounter29_wdata  [(_id
 .rvfi_csr_mhpmcounter29h_wmask (rvfi_csr_mhpmcounter29_wmask[63:32]), \
 .rvfi_csr_mhpmcounter29h_rdata (rvfi_csr_mhpmcounter29_rdata[63:32]), \
 .rvfi_csr_mhpmcounter29h_wdata (rvfi_csr_mhpmcounter29_wdata[63:32])
+`define rvformal_csr_mhpmcounter29_indices \
+localparam [11:0] csr_mindex_mhpmcounter29 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter29 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter29 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter29h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter29h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter29h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter29_wires
 `define rvformal_csr_mhpmcounter29_outputs
@@ -4098,6 +4682,7 @@ wire [64 - 1 : 0] csr_mhpmcounter29_wdata  = rvfi_csr_mhpmcounter29_wdata  [(_id
 `define rvformal_csr_mhpmcounter29_channel(_idx)
 `define rvformal_csr_mhpmcounter29_conn
 `define rvformal_csr_mhpmcounter29_conn32
+`define rvformal_csr_mhpmcounter29_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER30
@@ -4135,6 +4720,13 @@ wire [64 - 1 : 0] csr_mhpmcounter30_wdata  = rvfi_csr_mhpmcounter30_wdata  [(_id
 .rvfi_csr_mhpmcounter30h_wmask (rvfi_csr_mhpmcounter30_wmask[63:32]), \
 .rvfi_csr_mhpmcounter30h_rdata (rvfi_csr_mhpmcounter30_rdata[63:32]), \
 .rvfi_csr_mhpmcounter30h_wdata (rvfi_csr_mhpmcounter30_wdata[63:32])
+`define rvformal_csr_mhpmcounter30_indices \
+localparam [11:0] csr_mindex_mhpmcounter30 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter30 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter30 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter30h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter30h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter30h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter30_wires
 `define rvformal_csr_mhpmcounter30_outputs
@@ -4142,6 +4734,7 @@ wire [64 - 1 : 0] csr_mhpmcounter30_wdata  = rvfi_csr_mhpmcounter30_wdata  [(_id
 `define rvformal_csr_mhpmcounter30_channel(_idx)
 `define rvformal_csr_mhpmcounter30_conn
 `define rvformal_csr_mhpmcounter30_conn32
+`define rvformal_csr_mhpmcounter30_indices
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MHPMCOUNTER31
@@ -4179,6 +4772,13 @@ wire [64 - 1 : 0] csr_mhpmcounter31_wdata  = rvfi_csr_mhpmcounter31_wdata  [(_id
 .rvfi_csr_mhpmcounter31h_wmask (rvfi_csr_mhpmcounter31_wmask[63:32]), \
 .rvfi_csr_mhpmcounter31h_rdata (rvfi_csr_mhpmcounter31_rdata[63:32]), \
 .rvfi_csr_mhpmcounter31h_wdata (rvfi_csr_mhpmcounter31_wdata[63:32])
+`define rvformal_csr_mhpmcounter31_indices \
+localparam [11:0] csr_mindex_mhpmcounter31 = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter31 = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter31 = 12'h fff; \
+localparam [11:0] csr_mindex_mhpmcounter31h = 12'h fff; \
+localparam [11:0] csr_sindex_mhpmcounter31h = 12'h fff; \
+localparam [11:0] csr_uindex_mhpmcounter31h = 12'h fff;
 `else
 `define rvformal_csr_mhpmcounter31_wires
 `define rvformal_csr_mhpmcounter31_outputs
@@ -4186,6 +4786,7 @@ wire [64 - 1 : 0] csr_mhpmcounter31_wdata  = rvfi_csr_mhpmcounter31_wdata  [(_id
 `define rvformal_csr_mhpmcounter31_channel(_idx)
 `define rvformal_csr_mhpmcounter31_conn
 `define rvformal_csr_mhpmcounter31_conn32
+`define rvformal_csr_mhpmcounter31_indices
 `endif
 
 `ifdef RISCV_FORMAL_ROLLBACK
@@ -4973,3 +5574,106 @@ end endgenerate
 `rvformal_csr_mhpmcounter29_conn32 \
 `rvformal_csr_mhpmcounter30_conn32 \
 `rvformal_csr_mhpmcounter31_conn32
+
+`define RVFI_INDICES \
+`rvformal_csr_fflags_indices \
+`rvformal_csr_frm_indices \
+`rvformal_csr_fcsr_indices \
+`rvformal_csr_mvendorid_indices \
+`rvformal_csr_marchid_indices \
+`rvformal_csr_mimpid_indices \
+`rvformal_csr_mhartid_indices \
+`rvformal_csr_mstatus_indices \
+`rvformal_csr_misa_indices \
+`rvformal_csr_medeleg_indices \
+`rvformal_csr_mideleg_indices \
+`rvformal_csr_mie_indices \
+`rvformal_csr_mtvec_indices \
+`rvformal_csr_mcounteren_indices \
+`rvformal_csr_mscratch_indices \
+`rvformal_csr_mepc_indices \
+`rvformal_csr_mcause_indices \
+`rvformal_csr_mtval_indices \
+`rvformal_csr_mip_indices \
+`rvformal_csr_pmpcfg0_indices \
+`rvformal_csr_pmpcfg1_indices \
+`rvformal_csr_pmpcfg2_indices \
+`rvformal_csr_pmpcfg3_indices \
+`rvformal_csr_pmpaddr0_indices \
+`rvformal_csr_pmpaddr1_indices \
+`rvformal_csr_pmpaddr2_indices \
+`rvformal_csr_pmpaddr3_indices \
+`rvformal_csr_pmpaddr4_indices \
+`rvformal_csr_pmpaddr5_indices \
+`rvformal_csr_pmpaddr6_indices \
+`rvformal_csr_pmpaddr7_indices \
+`rvformal_csr_pmpaddr8_indices \
+`rvformal_csr_pmpaddr9_indices \
+`rvformal_csr_pmpaddr10_indices \
+`rvformal_csr_pmpaddr11_indices \
+`rvformal_csr_pmpaddr12_indices \
+`rvformal_csr_pmpaddr13_indices \
+`rvformal_csr_pmpaddr14_indices \
+`rvformal_csr_pmpaddr15_indices \
+`rvformal_csr_mcountinhibit_indices \
+`rvformal_csr_mhpmevent3_indices \
+`rvformal_csr_mhpmevent4_indices \
+`rvformal_csr_mhpmevent5_indices \
+`rvformal_csr_mhpmevent6_indices \
+`rvformal_csr_mhpmevent7_indices \
+`rvformal_csr_mhpmevent8_indices \
+`rvformal_csr_mhpmevent9_indices \
+`rvformal_csr_mhpmevent10_indices \
+`rvformal_csr_mhpmevent11_indices \
+`rvformal_csr_mhpmevent12_indices \
+`rvformal_csr_mhpmevent13_indices \
+`rvformal_csr_mhpmevent14_indices \
+`rvformal_csr_mhpmevent15_indices \
+`rvformal_csr_mhpmevent16_indices \
+`rvformal_csr_mhpmevent17_indices \
+`rvformal_csr_mhpmevent18_indices \
+`rvformal_csr_mhpmevent19_indices \
+`rvformal_csr_mhpmevent20_indices \
+`rvformal_csr_mhpmevent21_indices \
+`rvformal_csr_mhpmevent22_indices \
+`rvformal_csr_mhpmevent23_indices \
+`rvformal_csr_mhpmevent24_indices \
+`rvformal_csr_mhpmevent25_indices \
+`rvformal_csr_mhpmevent26_indices \
+`rvformal_csr_mhpmevent27_indices \
+`rvformal_csr_mhpmevent28_indices \
+`rvformal_csr_mhpmevent29_indices \
+`rvformal_csr_mhpmevent30_indices \
+`rvformal_csr_mhpmevent31_indices \
+`rvformal_csr_time_indices \
+`rvformal_csr_mcycle_indices \
+`rvformal_csr_minstret_indices \
+`rvformal_csr_mhpmcounter3_indices \
+`rvformal_csr_mhpmcounter4_indices \
+`rvformal_csr_mhpmcounter5_indices \
+`rvformal_csr_mhpmcounter6_indices \
+`rvformal_csr_mhpmcounter7_indices \
+`rvformal_csr_mhpmcounter8_indices \
+`rvformal_csr_mhpmcounter9_indices \
+`rvformal_csr_mhpmcounter10_indices \
+`rvformal_csr_mhpmcounter11_indices \
+`rvformal_csr_mhpmcounter12_indices \
+`rvformal_csr_mhpmcounter13_indices \
+`rvformal_csr_mhpmcounter14_indices \
+`rvformal_csr_mhpmcounter15_indices \
+`rvformal_csr_mhpmcounter16_indices \
+`rvformal_csr_mhpmcounter17_indices \
+`rvformal_csr_mhpmcounter18_indices \
+`rvformal_csr_mhpmcounter19_indices \
+`rvformal_csr_mhpmcounter20_indices \
+`rvformal_csr_mhpmcounter21_indices \
+`rvformal_csr_mhpmcounter22_indices \
+`rvformal_csr_mhpmcounter23_indices \
+`rvformal_csr_mhpmcounter24_indices \
+`rvformal_csr_mhpmcounter25_indices \
+`rvformal_csr_mhpmcounter26_indices \
+`rvformal_csr_mhpmcounter27_indices \
+`rvformal_csr_mhpmcounter28_indices \
+`rvformal_csr_mhpmcounter29_indices \
+`rvformal_csr_mhpmcounter30_indices \
+`rvformal_csr_mhpmcounter31_indices
