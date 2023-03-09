@@ -48,6 +48,36 @@ It might be neccessary to add some bounded fairness constraints to the design fo
 This check makes sure that no two instructions with the same `rvfi_order` are retired by the core.
 
 
+Standard Bus Checks
+-------------------
+
+The following checks are managed by `genchecks.py` and can be implemented using the standard RVFI wrapper interface when implementing the RVFI_BUS extension.
+
+### Instruction Bus Memcheck
+
+The `bus_imem` check adds a memory abstraction that only emulates a single word of memory (at an unconstrained address). This memory word is read-only and has an unconstrained value. The check makes sure that instructions fetched from this memory word are handled correctly and that the data from that memory word makes its way into `rvfi_insn` unharmed.
+
+### Instruction Bus Fault Memcheck
+
+The `bus_imem_fault` check adds a memory abstraction that has a single always faulting word of memory (at an unconstrained address). The check makes sure that executing from this address causes an "instruction access fault" trap.
+
+The RVFI signalling for the instruction with a faulting fetch requires an all-zero `rvfi_insn` value with `rvfi_trap` set.
+When `RISCV_FORMAL_MEM_FAULT` is defined, `rvfi_mem_fault` must also be set.
+This check also verifies that the faulting instruction updates the `mcause` csr, when that csr is implemented and specified in the configuration file.
+
+### Data Bus Memcheck
+
+This `bus_dmem` check adds a memory abstraction that only emulates a single word of memory (at an unconstrained address). The memory word is read/write. The check tests if writes to and reads from the memory location (as reported via RVFI) are consistent. Additionally it checks that an initial value as reported via RVFI matches the fetched value on the bus. This check does not require writes to appear on the bus and is thus compatible with caches between the core and the observed bus.
+
+### Data Bus Fault Memcheck
+
+The `bus_dmem_fault` check adds a memory abstraction that has a single always faulting word of memory (at an unconstrained address). The check makes sure that reading from or writing to this address causes a "load access fault" or "store/AMO access fault" trap respectively.
+
+The RVFI signalling for an instruction causing either fault has `rvfi_trap` and does not include a register update or memory write, even if the instruction would have performed one if the memory access didn't fault.
+When `RISCV_FORMAL_MEM_FAULT` is defined, `rvfi_mem_fault` must also be set.
+This check also verifies that the faulting instruction updates the `mcause` csr, when that csr is implemented and specified in the configuration file.
+
+
 Other Checks
 ------------
 
@@ -59,11 +89,15 @@ This check adds a memory abstraction that only emulates a single word of memory 
 
 See `imemcheck.sv` in [cores/picorv32/](../cores/picorv32/) for an example implementation.
 
+This check is superseded by the equivalent standard bus check above.
+
 ### Data Memcheck
 
 This check adds a memory abstraction that only emulates a single word of memory (at an unconstrained address). The memory word is read/write. The check tests if writes to and reads from the memory location (as reported via RVFI) are consistent.
 
 See `dmemcheck.sv` in [cores/picorv32/](../cores/picorv32/) for one possible implementation of this test.
+
+This check is superseded by the equivalent standard bus check above.
 
 ### Checking for equivalence of core with and without RVFI
 
