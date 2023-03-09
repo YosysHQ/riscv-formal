@@ -41,6 +41,9 @@ module rvfi_insn_check (
 		(* keep *) wire [`RISCV_FORMAL_XLEN/8 - 1 : 0] mem_wmask = rvfi_mem_wmask[channel_idx*`RISCV_FORMAL_XLEN/8 +: `RISCV_FORMAL_XLEN/8];
 		(* keep *) wire [`RISCV_FORMAL_XLEN   - 1 : 0] mem_rdata = rvfi_mem_rdata[channel_idx*`RISCV_FORMAL_XLEN   +: `RISCV_FORMAL_XLEN];
 		(* keep *) wire [`RISCV_FORMAL_XLEN   - 1 : 0] mem_wdata = rvfi_mem_wdata[channel_idx*`RISCV_FORMAL_XLEN   +: `RISCV_FORMAL_XLEN];
+`ifdef RISCV_FORMAL_MEM_FAULT
+		(* keep *) wire                                mem_fault = rvfi_mem_fault[channel_idx];
+`endif
 
 `ifdef RISCV_FORMAL_CSR_MISA
 		(* keep *) wire [`RISCV_FORMAL_XLEN   - 1 : 0] csr_misa_rdata = rvfi_csr_misa_rdata[channel_idx*`RISCV_FORMAL_XLEN   +: `RISCV_FORMAL_XLEN];
@@ -115,7 +118,12 @@ module rvfi_insn_check (
 		assign mem_pma_w = 1;
 `endif
 
-		wire mem_access_fault = (spec_mem_rmask && !mem_pma_r) || (spec_mem_wmask && !mem_pma_w) ||
+`ifdef RISCV_FORMAL_MEM_FAULT
+		wire mem_access_fault = mem_fault ||
+`else
+		wire mem_access_fault =
+`endif
+				(spec_mem_rmask && !mem_pma_r) || (spec_mem_wmask && !mem_pma_w) ||
 				((spec_mem_rmask || spec_mem_wmask) && !`rvformal_addr_valid(spec_mem_addr));
 
 		integer i;

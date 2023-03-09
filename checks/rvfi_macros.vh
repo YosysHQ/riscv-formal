@@ -4216,6 +4216,26 @@
 `define rvformal_extamo_conn
 `define rvformal_extamo_channel(_idx)
 `endif
+`ifdef RISCV_FORMAL_MEM_FAULT
+`define rvformal_mem_fault_wires \
+  (* keep *) wire [`RISCV_FORMAL_NRET     - 1 : 0] rvfi_mem_fault;
+`define rvformal_mem_fault_outputs, \
+  output [`RISCV_FORMAL_NRET     - 1 : 0] rvfi_mem_fault
+`define rvformal_mem_fault_inputs, \
+  input [`RISCV_FORMAL_NRET     - 1 : 0] rvfi_mem_fault
+`define rvformal_mem_fault_conn, \
+  .rvfi_mem_fault (rvfi_mem_fault)
+`define rvformal_mem_fault_channel(_idx) \
+  wire [    0 : 0] mem_fault = rvfi_mem_fault [ _idx      +: 1];
+`define rvformal_mem_fault_signals \
+  `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, 1, mem_fault)
+`else
+`define rvformal_mem_fault_wires
+`define rvformal_mem_fault_outputs
+`define rvformal_mem_fault_inputs
+`define rvformal_mem_fault_conn
+`define rvformal_mem_fault_channel(_idx)
+`endif
 `define RVFI_WIRES \
   (* keep *) wire [`RISCV_FORMAL_NRET                        - 1 : 0] rvfi_valid    ; \
   (* keep *) wire [`RISCV_FORMAL_NRET *                 64   - 1 : 0] rvfi_order    ; \
@@ -4240,6 +4260,7 @@
   (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN   - 1 : 0] rvfi_mem_wdata; \
   `rvformal_extamo_wires \
   `rvformal_rollback_wires \
+  `rvformal_mem_fault_wires \
   `rvformal_csr_fflags_wires \
   `rvformal_csr_frm_wires \
   `rvformal_csr_fcsr_wires \
@@ -4365,6 +4386,7 @@
   output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN   - 1 : 0] rvfi_mem_wdata \
   `rvformal_extamo_outputs \
   `rvformal_rollback_outputs \
+  `rvformal_mem_fault_outputs \
   `rvformal_csr_fflags_outputs \
   `rvformal_csr_frm_outputs \
   `rvformal_csr_fcsr_outputs \
@@ -4490,6 +4512,7 @@
   input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN   - 1 : 0] rvfi_mem_wdata \
   `rvformal_extamo_inputs \
   `rvformal_rollback_inputs \
+  `rvformal_mem_fault_inputs \
   `rvformal_csr_fflags_inputs \
   `rvformal_csr_frm_inputs \
   `rvformal_csr_fcsr_inputs \
@@ -4615,6 +4638,7 @@
   .rvfi_mem_wdata (rvfi_mem_wdata) \
   `rvformal_extamo_conn \
   `rvformal_rollback_conn \
+  `rvformal_mem_fault_conn \
   `rvformal_csr_fflags_conn \
   `rvformal_csr_frm_conn \
   `rvformal_csr_fcsr_conn \
@@ -4738,6 +4762,78 @@
   .rvfi_mem_wmask (rvfi_mem_wmask), \
   .rvfi_mem_rdata (rvfi_mem_rdata), \
   .rvfi_mem_wdata (rvfi_mem_wdata) \
+  `rvformal_extamo_conn \
+  `rvformal_rollback_conn \
+  `rvformal_mem_fault_conn \
+  `rvformal_csr_fflags_conn \
+  `rvformal_csr_frm_conn \
+  `rvformal_csr_fcsr_conn \
+  `rvformal_csr_mvendorid_conn \
+  `rvformal_csr_marchid_conn \
+  `rvformal_csr_mimpid_conn \
+  `rvformal_csr_mhartid_conn \
+  `rvformal_csr_mstatus_conn \
+  `rvformal_csr_misa_conn \
+  `rvformal_csr_medeleg_conn \
+  `rvformal_csr_mideleg_conn \
+  `rvformal_csr_mie_conn \
+  `rvformal_csr_mtvec_conn \
+  `rvformal_csr_mcounteren_conn \
+  `rvformal_csr_mscratch_conn \
+  `rvformal_csr_mepc_conn \
+  `rvformal_csr_mcause_conn \
+  `rvformal_csr_mtval_conn \
+  `rvformal_csr_mip_conn \
+  `rvformal_csr_pmpcfg0_conn \
+  `rvformal_csr_pmpcfg1_conn \
+  `rvformal_csr_pmpcfg2_conn \
+  `rvformal_csr_pmpcfg3_conn \
+  `rvformal_csr_pmpaddr0_conn \
+  `rvformal_csr_pmpaddr1_conn \
+  `rvformal_csr_pmpaddr2_conn \
+  `rvformal_csr_pmpaddr3_conn \
+  `rvformal_csr_pmpaddr4_conn \
+  `rvformal_csr_pmpaddr5_conn \
+  `rvformal_csr_pmpaddr6_conn \
+  `rvformal_csr_pmpaddr7_conn \
+  `rvformal_csr_pmpaddr8_conn \
+  `rvformal_csr_pmpaddr9_conn \
+  `rvformal_csr_pmpaddr10_conn \
+  `rvformal_csr_pmpaddr11_conn \
+  `rvformal_csr_pmpaddr12_conn \
+  `rvformal_csr_pmpaddr13_conn \
+  `rvformal_csr_pmpaddr14_conn \
+  `rvformal_csr_pmpaddr15_conn \
+  `rvformal_csr_mcountinhibit_conn \
+  `rvformal_csr_mhpmevent3_conn \
+  `rvformal_csr_mhpmevent4_conn \
+  `rvformal_csr_mhpmevent5_conn \
+  `rvformal_csr_mhpmevent6_conn \
+  `rvformal_csr_mhpmevent7_conn \
+  `rvformal_csr_mhpmevent8_conn \
+  `rvformal_csr_mhpmevent9_conn \
+  `rvformal_csr_mhpmevent10_conn \
+  `rvformal_csr_mhpmevent11_conn \
+  `rvformal_csr_mhpmevent12_conn \
+  `rvformal_csr_mhpmevent13_conn \
+  `rvformal_csr_mhpmevent14_conn \
+  `rvformal_csr_mhpmevent15_conn \
+  `rvformal_csr_mhpmevent16_conn \
+  `rvformal_csr_mhpmevent17_conn \
+  `rvformal_csr_mhpmevent18_conn \
+  `rvformal_csr_mhpmevent19_conn \
+  `rvformal_csr_mhpmevent20_conn \
+  `rvformal_csr_mhpmevent21_conn \
+  `rvformal_csr_mhpmevent22_conn \
+  `rvformal_csr_mhpmevent23_conn \
+  `rvformal_csr_mhpmevent24_conn \
+  `rvformal_csr_mhpmevent25_conn \
+  `rvformal_csr_mhpmevent26_conn \
+  `rvformal_csr_mhpmevent27_conn \
+  `rvformal_csr_mhpmevent28_conn \
+  `rvformal_csr_mhpmevent29_conn \
+  `rvformal_csr_mhpmevent30_conn \
+  `rvformal_csr_mhpmevent31_conn \
   `rvformal_csr_time_conn32 \
   `rvformal_csr_mcycle_conn32 \
   `rvformal_csr_minstret_conn32 \
@@ -4793,6 +4889,7 @@
   wire [`RISCV_FORMAL_XLEN   - 1 : 0] mem_rdata = rvfi_mem_rdata [(_idx)*(`RISCV_FORMAL_XLEN  ) +: `RISCV_FORMAL_XLEN  ]; \
   wire [`RISCV_FORMAL_XLEN   - 1 : 0] mem_wdata = rvfi_mem_wdata [(_idx)*(`RISCV_FORMAL_XLEN  ) +: `RISCV_FORMAL_XLEN  ]; \
   `rvformal_extamo_channel(_idx) \
+  `rvformal_mem_fault_channel(_idx) \
   `rvformal_csr_fflags_channel(_idx) \
   `rvformal_csr_frm_channel(_idx) \
   `rvformal_csr_fcsr_channel(_idx) \
@@ -4917,6 +5014,7 @@
   `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN  , mem_rdata) \
   `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN  , mem_wdata) \
   `rvformal_extamo_signals \
+  `rvformal_mem_fault_signals \
   `rvformal_csr_fflags_signals \
   `rvformal_csr_frm_signals \
   `rvformal_csr_fcsr_signals \
@@ -5028,6 +5126,7 @@ end endgenerate
   (* keep *) wire [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_valid; \
   (* keep *) wire [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_insn ; \
   (* keep *) wire [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_data ; \
+  (* keep *) wire [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_fault; \
   (* keep *) wire [`RISCV_FORMAL_NBUS *   `RISCV_FORMAL_XLEN   - 1 : 0] rvfi_bus_addr ; \
   (* keep *) wire [`RISCV_FORMAL_NBUS * `RISCV_FORMAL_BUSLEN/8 - 1 : 0] rvfi_bus_rmask; \
   (* keep *) wire [`RISCV_FORMAL_NBUS * `RISCV_FORMAL_BUSLEN/8 - 1 : 0] rvfi_bus_wmask; \
@@ -5037,6 +5136,7 @@ end endgenerate
   output [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_valid, \
   output [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_insn , \
   output [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_data , \
+  output [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_fault, \
   output [`RISCV_FORMAL_NBUS *   `RISCV_FORMAL_XLEN   - 1 : 0] rvfi_bus_addr , \
   output [`RISCV_FORMAL_NBUS * `RISCV_FORMAL_BUSLEN/8 - 1 : 0] rvfi_bus_rmask, \
   output [`RISCV_FORMAL_NBUS * `RISCV_FORMAL_BUSLEN/8 - 1 : 0] rvfi_bus_wmask, \
@@ -5046,6 +5146,7 @@ end endgenerate
   input [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_valid, \
   input [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_insn , \
   input [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_data , \
+  input [`RISCV_FORMAL_NBUS                          - 1 : 0] rvfi_bus_fault, \
   input [`RISCV_FORMAL_NBUS *   `RISCV_FORMAL_XLEN   - 1 : 0] rvfi_bus_addr , \
   input [`RISCV_FORMAL_NBUS * `RISCV_FORMAL_BUSLEN/8 - 1 : 0] rvfi_bus_rmask, \
   input [`RISCV_FORMAL_NBUS * `RISCV_FORMAL_BUSLEN/8 - 1 : 0] rvfi_bus_wmask, \
@@ -5055,6 +5156,7 @@ end endgenerate
   .rvfi_bus_valid (rvfi_bus_valid), \
   .rvfi_bus_insn  (rvfi_bus_insn ), \
   .rvfi_bus_data  (rvfi_bus_data ), \
+  .rvfi_bus_fault (rvfi_bus_fault), \
   .rvfi_bus_addr  (rvfi_bus_addr ), \
   .rvfi_bus_rmask (rvfi_bus_rmask), \
   .rvfi_bus_wmask (rvfi_bus_wmask), \
@@ -5064,6 +5166,7 @@ end endgenerate
   wire [                         0 : 0] bus_valid = rvfi_bus_valid [ _idx                           +:                    1  ]; \
   wire [                         0 : 0] bus_insn  = rvfi_bus_insn  [ _idx                           +:                    1  ]; \
   wire [                         0 : 0] bus_data  = rvfi_bus_data  [ _idx                           +:                    1  ]; \
+  wire [                         0 : 0] bus_fault = rvfi_bus_fault [ _idx                           +:                    1  ]; \
   wire [  `RISCV_FORMAL_XLEN   - 1 : 0] bus_addr  = rvfi_bus_addr  [(_idx)*(  `RISCV_FORMAL_XLEN  ) +:   `RISCV_FORMAL_XLEN  ]; \
   wire [`RISCV_FORMAL_BUSLEN/8 - 1 : 0] bus_rmask = rvfi_bus_rmask [(_idx)*(`RISCV_FORMAL_BUSLEN/8) +: `RISCV_FORMAL_BUSLEN/8]; \
   wire [`RISCV_FORMAL_BUSLEN/8 - 1 : 0] bus_wmask = rvfi_bus_wmask [(_idx)*(`RISCV_FORMAL_BUSLEN/8) +: `RISCV_FORMAL_BUSLEN/8]; \
@@ -5073,6 +5176,7 @@ end endgenerate
   `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NBUS,                    1  , bus_valid) \
   `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NBUS,                    1  , bus_insn ) \
   `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NBUS,                    1  , bus_data ) \
+  `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NBUS,                    1  , bus_fault) \
   `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NBUS,   `RISCV_FORMAL_XLEN  , bus_addr ) \
   `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NBUS, `RISCV_FORMAL_BUSLEN/8, bus_rmask) \
   `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NBUS, `RISCV_FORMAL_BUSLEN/8, bus_wmask) \

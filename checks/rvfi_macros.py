@@ -121,7 +121,7 @@ class Group:
                 f".rvfi_{name:<{self._cn}} (rvfi_{name:<{self._cn}})"
                 for width, name in self.signals
             ], [
-                "`" + group.macro_name('conn32') for group in self.append if group._has_conn32
+                "`" + group.macro_name('conn32' if group._has_conn32 else 'conn') for group in self.append
             ]))
         if self.channels:
             print(self.commas([f"`define {self.macro_name('channel')}"], [
@@ -259,6 +259,15 @@ group_extamo = Group(
     ]
 ).print_macros()
 
+group_fault = Group(
+    condition="RISCV_FORMAL_MEM_FAULT",
+    name="rvformal_mem_fault",
+    channels="`RISCV_FORMAL_NRET",
+    signals=[
+        ("1", "mem_fault"),
+    ]
+).print_macros()
+
 rvfi = Group(
     name="RVFI",
     channels="`RISCV_FORMAL_NRET",
@@ -285,7 +294,7 @@ rvfi = Group(
         ("`RISCV_FORMAL_XLEN  ", "mem_rdata"),
         ("`RISCV_FORMAL_XLEN  ", "mem_wdata"),
     ],
-    append = [group_extamo, group_rollback, *csr_groups]
+    append = [group_extamo, group_rollback, group_fault, *csr_groups]
 ).print_macros()
 
 rvfi = Group(
@@ -297,6 +306,7 @@ rvfi = Group(
         ("                   1  ", "bus_valid"),
         ("                   1  ", "bus_insn "),
         ("                   1  ", "bus_data "),
+        ("                   1  ", "bus_fault"),
         ("  `RISCV_FORMAL_XLEN  ", "bus_addr "),
         ("`RISCV_FORMAL_BUSLEN/8", "bus_rmask"),
         ("`RISCV_FORMAL_BUSLEN/8", "bus_wmask"),

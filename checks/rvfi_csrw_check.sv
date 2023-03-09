@@ -25,6 +25,7 @@ module rvfi_csrw_check (
 		localparam [11:0] csr_uindex_``_name = _uaddr;
 
 	`DECLARE_CSR(misa,      12'h 301, csr_none, csr_none)
+	`DECLARE_CSR(mcause,    12'h 342, csr_none, csr_none)
 	`DECLARE_CSR(mcycle,    12'h B00, csr_none, 12'h C00)
 	`DECLARE_CSR(minstret,  12'h B02, csr_none, 12'h C02)
 	`DECLARE_CSR(mcycleh,   12'h B80, csr_none, 12'h C80)

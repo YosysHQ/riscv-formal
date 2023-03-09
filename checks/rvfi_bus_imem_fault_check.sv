@@ -14,13 +14,12 @@
 // WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-module rvfi_bus_imem_check (
+module rvfi_bus_imem_fault_check (
 	input clock, reset, check,
 	`RVFI_INPUTS
 	`RVFI_BUS_INPUTS
 );
 	`rvformal_rand_const_reg [`RISCV_FORMAL_XLEN-1:0] imem_addr;
-	`rvformal_rand_const_reg [15:0] imem_data;
 
 	reg [`RISCV_FORMAL_XLEN-1:0] pc;
 	reg [`RISCV_FORMAL_ILEN-1:0] insn;
@@ -28,6 +27,11 @@ module rvfi_bus_imem_check (
 	reg [  `RISCV_FORMAL_XLEN   - 1:0] bus_addr;
 	reg [`RISCV_FORMAL_BUSLEN/8 - 1:0] bus_rmask;
 	reg [`RISCV_FORMAL_BUSLEN   - 1:0] bus_rdata;
+
+`ifdef RISCV_FORMAL_CSR_MCAUSE
+	reg [`RISCV_FORMAL_XLEN-1:0] csr_mcause_wmask;
+	reg [`RISCV_FORMAL_XLEN-1:0] csr_mcause_wdata;
+`endif
 
 	integer channel_idx, i, j;
 
@@ -42,8 +46,7 @@ module rvfi_bus_imem_check (
 					for (i = 0; i < `RISCV_FORMAL_BUSLEN/8; i=i+1)
 					for (j = 0; j < 2; j=j+1) begin
 						if (bus_rmask[i] && bus_addr + i == imem_addr + j) begin
-							assume (!rvfi_bus_fault[channel_idx]);
-							assume (imem_data[j*8 +: 8] == bus_rdata[i*8 +: 8]);
+							assume (rvfi_bus_fault[channel_idx]);
 						end
 					end
 				end
@@ -59,15 +62,35 @@ module rvfi_bus_imem_check (
 					if (rvfi_valid[channel_idx]) begin
 						pc = rvfi_pc_rdata[channel_idx*`RISCV_FORMAL_XLEN +: `RISCV_FORMAL_XLEN];
 						insn = rvfi_insn[channel_idx*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
+`ifdef RISCV_FORMAL_CSR_MCAUSE
+						csr_mcause_wmask = rvfi_csr_mcause_wmask[channel_idx*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
+						csr_mcause_wdata = rvfi_csr_mcause_wdata[channel_idx*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
+`endif
 
 						if (`rvformal_addr_valid(pc) && pc == imem_addr) begin
 							cover (1);
-							assert (insn[15:0] == imem_data);
+							assert (rvfi_trap[channel_idx]);
+							assert (insn == 0);
+`ifdef RISCV_FORMAL_MEM_FAULT
+							assert (rvfi_mem_fault[channel_idx]);
+`endif
+`ifdef RISCV_FORMAL_CSR_MCAUSE
+							assert (&csr_mcause_wmask);
+							assert (csr_mcause_wdata == 1);
+`endif
 						end;
 
 						if (insn[1:0] == 2'b11 && `rvformal_addr_valid(pc+2) && pc+2 == imem_addr) begin
 							cover (1);
-							assert (insn[31:16] == imem_data);
+							assert (rvfi_trap[channel_idx]);
+							assert (insn == 0);
+`ifdef RISCV_FORMAL_MEM_FAULT
+							assert (rvfi_mem_fault[channel_idx]);
+`endif
+`ifdef RISCV_FORMAL_CSR_MCAUSE
+							assert (&csr_mcause_wmask);
+							assert (csr_mcause_wdata == 1);
+`endif
 						end;
 
 					end

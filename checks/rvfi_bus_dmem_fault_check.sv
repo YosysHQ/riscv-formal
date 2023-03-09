@@ -20,15 +20,12 @@
 // WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-module rvfi_bus_dmem_check (
+module rvfi_bus_dmem_fault_check (
 	input clock, reset, check,
 	`RVFI_INPUTS
 	`RVFI_BUS_INPUTS
 );
 	`rvformal_rand_const_reg [`RISCV_FORMAL_XLEN-1:0] dmem_addr;
-	`rvformal_rand_const_reg [`RISCV_FORMAL_XLEN-1:0] dmem_data;
-
-	reg [  `RISCV_FORMAL_XLEN-1:0] dmem_shadow;
 
 	reg [  `RISCV_FORMAL_XLEN   - 1:0] bus_addr;
 	reg [`RISCV_FORMAL_BUSLEN/8 - 1:0] bus_rmask;
@@ -36,15 +33,16 @@ module rvfi_bus_dmem_check (
 	reg [`RISCV_FORMAL_BUSLEN/8 - 1:0] bus_wmask;
 	reg [`RISCV_FORMAL_BUSLEN   - 1:0] bus_wdata;
 
-	reg [`RISCV_FORMAL_XLEN-1:0] bus_shadow;
+`ifdef RISCV_FORMAL_CSR_MCAUSE
+	reg [`RISCV_FORMAL_XLEN-1:0] csr_mcause_wmask;
+	reg [`RISCV_FORMAL_XLEN-1:0] csr_mcause_wdata;
+`endif
+
 
 	integer channel_idx, i, j;
 
 	always @(posedge clock) begin
-		if (reset) begin
-			dmem_shadow <= dmem_data;
-			bus_shadow <= dmem_data;
-		end else begin
+		if (!reset) begin
 			for (channel_idx = 0; channel_idx < `RISCV_FORMAL_NBUS; channel_idx=channel_idx+1) begin
 				if (rvfi_bus_valid[channel_idx] && rvfi_bus_data[channel_idx]) begin
 					bus_addr = rvfi_bus_addr[channel_idx*`RISCV_FORMAL_XLEN +: `RISCV_FORMAL_XLEN];
@@ -57,12 +55,10 @@ module rvfi_bus_dmem_check (
 						for (j = 0; j < `RISCV_FORMAL_XLEN/8; j=j+1) begin
 							if (bus_addr + i == dmem_addr + j) begin
 								if (bus_rmask[i]) begin
-									assume (!rvfi_bus_fault[channel_idx]);
-									assume (bus_rdata[i*8 +: 8] == bus_shadow[j*8 +: 8]);
+									assume (rvfi_bus_fault[channel_idx]);
 								end
 								if (bus_wmask[i]) begin
-									bus_shadow[j*8 +: 8] = bus_wdata[i*8 +: 8];
-									assume (!rvfi_bus_fault[channel_idx]);
+									assume (rvfi_bus_fault[channel_idx]);
 								end
 							end
 						end
@@ -76,13 +72,33 @@ module rvfi_bus_dmem_check (
 `ifdef RISCV_FORMAL_CHANNEL_IDX
 							i == `RISCV_FORMAL_CHANNEL_IDX &&
 `endif
-							check && rvfi_mem_rmask[channel_idx*`RISCV_FORMAL_XLEN/8 + i]
+							check
 						) begin
-							cover (1);
-							assert (dmem_shadow[i*8 +: 8] == rvfi_mem_rdata[i*8 +: 8]);
-						end
-						if (rvfi_mem_wmask[channel_idx*`RISCV_FORMAL_XLEN/8 + i]) begin
-							dmem_shadow[i*8 +: 8] = rvfi_mem_wdata[i*8 +: 8];
+`ifdef RISCV_FORMAL_CSR_MCAUSE
+							csr_mcause_wmask = rvfi_csr_mcause_wmask[channel_idx*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
+							csr_mcause_wdata = rvfi_csr_mcause_wdata[channel_idx*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
+`endif
+							if (rvfi_mem_wmask[channel_idx*`RISCV_FORMAL_XLEN/8 + i]) begin
+								cover (1);
+								assert (rvfi_trap[channel_idx]);
+`ifdef RISCV_FORMAL_MEM_FAULT
+								assert (rvfi_mem_fault[channel_idx]);
+`endif
+`ifdef RISCV_FORMAL_CSR_MCAUSE
+								assert (&csr_mcause_wmask);
+								assert (csr_mcause_wdata == 7);
+`endif
+							end else if (rvfi_mem_rmask[channel_idx*`RISCV_FORMAL_XLEN/8 + i]) begin
+								cover (1);
+								assert (rvfi_trap[channel_idx]);
+`ifdef RISCV_FORMAL_MEM_FAULT
+								assert (rvfi_mem_fault[channel_idx]);
+`endif
+`ifdef RISCV_FORMAL_CSR_MCAUSE
+								assert (&csr_mcause_wmask);
+								assert (csr_mcause_wdata == 5);
+`endif
+							end;
 						end
 					end
 				end
