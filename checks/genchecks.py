@@ -389,7 +389,6 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
             check_name = "csrc"
 
         hargs["check"] = check_name
-        print(f"checking for {check_name} on {csr_name}")
 
         if chanidx is not None:
             depth_cfg = get_depth_cfg(["%s%s" % (pf,check_name), check, "%s%s_ch%d" % (pf, check_name, chanidx), "%s_ch%d" % (check, chanidx)])
