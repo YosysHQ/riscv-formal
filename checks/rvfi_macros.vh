@@ -682,7 +682,7 @@ wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_mscratch_wdata  = rvfi_csr_mscratch_wdata 
 .rvfi_csr_mscratch_rdata (rvfi_csr_mscratch_rdata), \
 .rvfi_csr_mscratch_wdata (rvfi_csr_mscratch_wdata)
 `define rvformal_csr_mscratch_indices \
-localparam [11:0] csr_mindex_mscratch = 12'h fff; \
+localparam [11:0] csr_mindex_mscratch = 12'h 340; \
 localparam [11:0] csr_sindex_mscratch = 12'h fff; \
 localparam [11:0] csr_uindex_mscratch = 12'h fff;
 `else

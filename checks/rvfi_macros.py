@@ -76,6 +76,7 @@ for csr in csrs_xlen:
 csr_addrs["mvendorid"]  = (0xF11, 0xFFF, 0xFFF)
 csr_addrs["mstatus"]    = (0x300, 0xFFF, 0xFFF)
 csr_addrs["misa"]       = (0x301, 0xFFF, 0xFFF)
+csr_addrs["mscratch"]   = (0x340, 0xFFF, 0xFFF)
 
 for csr in csrs_64:
     csr_addrs[csr] = (0xFFF, 0xFFF, 0xFFF)
