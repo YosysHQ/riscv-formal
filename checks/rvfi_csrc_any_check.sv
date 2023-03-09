@@ -41,36 +41,38 @@ module rvfi_csrc_any_check (
 
 	wire csr_write = !rvfi.insn[13] || rvfi.insn[19:15];
 	wire csr_read = rvfi.insn[11:7] != 0;
-	wire [31:0] csr_rsval = rvfi.insn[15:12] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
+	wire csr_write_valid = csr_write && csr_insn_valid;
+	wire csr_read_valid = csr_read && csr_insn_valid;
+	wire [1:0] csr_mode = rvfi.insn[13:12];
+	wire [31:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
     
     // Setup for reg testing
 	`rvformal_rand_const_reg [63:0] insn_order;
-	reg [`RISCV_FORMAL_XLEN-1:0] register_shadow = 0;
-	reg [`RISCV_FORMAL_XLEN-1:0] previous_shadow = 0;
-	reg register_written = 0;
+	reg [`RISCV_FORMAL_XLEN-1:0] rsval_shadow = 0;
+	reg [`RISCV_FORMAL_XLEN-1:0] wdata_shadow = 0;
+	reg csr_written = 0;
+	reg csr_mode_shadow = 0;
 
 	always @(posedge clock) begin
 		if (reset) begin
-			register_shadow = 0;
-			register_written = 0;
+			rsval_shadow = 0;
+			wdata_shadow = 0;
+			csr_written = 0;
+			csr_mode_shadow = 0;
 		end else begin
 			if (check) begin
-				assume(csr_insn_valid);
-
-				if (register_written && csr_read && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
-					assert(register_shadow == csr_insn_rdata || csr_insn_rdata == previous_shadow);
+				if (csr_written && csr_read_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+					assert(rsval_shadow == csr_insn_rdata || csr_insn_rdata == wdata_shadow);
+					assert(rsval_shadow == wdata_shadow);
 				end
 			end else begin
-				register_written = 0;
-				if (csr_insn_valid && csr_write && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
-					if (`csr_mindex(`RISCV_FORMAL_CSRC_NAME) == csr_mindex_minstret) begin
-						register_shadow = csr_rsval + 1;
-						previous_shadow = csr_insn_wdata + 1;
-					end else begin
-						register_shadow = csr_rsval;
-						previous_shadow = csr_insn_wdata;
-					end
-					register_written = 1;
+				if (csr_write_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+					// simplify things by only testing reg write, and not set/clear
+					assume(csr_mode == 0 || csr_mode == 1);
+					rsval_shadow = csr_rsval;
+					wdata_shadow = csr_insn_wdata;
+					csr_written = 1;
+					csr_mode_shadow = csr_mode;
 				end
 			end
 		end
