@@ -23,6 +23,7 @@ xlen = 32
 buslen = 32
 nbus = 1
 csrs = set()
+csr_tests = {}
 compr = False
 
 depths = list()
@@ -121,8 +122,16 @@ if "options" in config:
 
 if "csrs" in config:
     for line in config["csrs"].split("\n"):
-        for item in line.split():
-            csrs.add(item)
+        csr_test = line.split()
+        try:
+            csrs.add(csr_test[0])
+        except IndexError: # no csr
+            continue
+
+        try:
+            csr_tests[csr_test[0]] = csr_test[1:]
+        except IndexError: # no defined tests
+            pass
 
 if "64" in isa:
     xlen = 64
@@ -379,20 +388,27 @@ for grp in groups:
 
 # ------------------------------ Consistency Checkers ------------------------------
 
-def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_mode=False, bus_mode=False):
+def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_mode=False, csr_test=None, bus_mode=False):
     pf = "" if grp is None else grp+"_"
     if csr_mode:
         csr_name = check
-        check = pf + "csrc_" + csr_name
-        hargs["check"] = "csrc"
+        if csr_test is not None:
+            check = pf + "csrc_" + csr_test + "_" + csr_name
+            check_name = "csrc_" + csr_test
+
+        else:
+            check = pf + "csrc_" + csr_name
+            check_name = "csrc"
+
+        hargs["check"] = check_name
 
         if chanidx is not None:
-            depth_cfg = get_depth_cfg(["%scsrc" % (pf,), check, "%scsrc_ch%d" % (pf, chanidx), "%s_ch%d" % (check, chanidx)])
+            depth_cfg = get_depth_cfg(["%s%s" % (pf,check_name), check, "%s%s_ch%d" % (pf, check_name, chanidx), "%s_ch%d" % (check, chanidx)])
             hargs["channel"] = "%d" % chanidx
             check += "_ch%d" % chanidx
 
         else:
-            depth_cfg = get_depth_cfg(["csrc", check])
+            depth_cfg = get_depth_cfg(["%s" % (check_name,), check])
     else:
         hargs["check"] = check
         check = pf + check
@@ -594,7 +610,8 @@ for grp in groups:
 
     for csr in sorted(csrs):
         for chanidx in range(nret):
-            check_cons(grp, csr, chanidx, start=0, depth=1, csr_mode=True)
+            for csr_test in csr_tests.get(csr, [None]):
+                check_cons(grp, csr, chanidx, start=0, depth=1, csr_mode=True, csr_test=csr_test)
 
 # ------------------------------ Makefile ------------------------------
 
