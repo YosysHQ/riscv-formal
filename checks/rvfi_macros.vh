@@ -4881,6 +4881,31 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
 `rvformal_csr_mhpmcounter30_indices \
 `rvformal_csr_mhpmcounter31_indices \
 
+`ifdef `RISCV_FORMAL_CUSTOM_CSR_INPUTS
+`define rvformal_custom_csr_inputs `RISCV_FORMAL_CUSTOM_CSR_INPUTS
+`else
+`define rvformal_custom_csr_inputs
+`endif
+`ifdef `RISCV_FORMAL_CUSTOM_CSR_WIRES
+`define rvformal_custom_csr_wires `RISCV_FORMAL_CUSTOM_CSR_WIRES
+`else
+`define rvformal_custom_csr_wires
+`endif
+`ifdef `RISCV_FORMAL_CUSTOM_CSR_CONN
+`define rvformal_custom_csr_conn `RISCV_FORMAL_CUSTOM_CSR_CONN
+`else
+`define rvformal_custom_csr_conn
+`endif
+`ifdef `RISCV_FORMAL_CUSTOM_CSR_CONN32
+`define rvformal_custom_csr_conn32 `RISCV_FORMAL_CUSTOM_CSR_CONN32
+`else
+`define rvformal_custom_csr_conn32
+`endif
+`ifdef `RISCV_FORMAL_CUSTOM_CSR_OUTPUTS
+`define rvformal_custom_csr_outputs `RISCV_FORMAL_CUSTOM_CSR_OUTPUTS
+`else
+`define rvformal_custom_csr_outputs
+`endif
 `ifdef RISCV_FORMAL_ROLLBACK
 `define rvformal_rollback_wires \
   (* keep *) wire [     0 : 0] rvfi_rollback_valid; \
@@ -5065,7 +5090,8 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
   `rvformal_csr_mhpmcounter28_wires \
   `rvformal_csr_mhpmcounter29_wires \
   `rvformal_csr_mhpmcounter30_wires \
-  `rvformal_csr_mhpmcounter31_wires
+  `rvformal_csr_mhpmcounter31_wires \
+  `rvformal_custom_csr_wires
 `define RVFI_OUTPUTS \
   output [`RISCV_FORMAL_NRET                        - 1 : 0] rvfi_valid    , \
   output [`RISCV_FORMAL_NRET *                 64   - 1 : 0] rvfi_order    , \
@@ -5191,7 +5217,8 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
   `rvformal_csr_mhpmcounter28_outputs \
   `rvformal_csr_mhpmcounter29_outputs \
   `rvformal_csr_mhpmcounter30_outputs \
-  `rvformal_csr_mhpmcounter31_outputs
+  `rvformal_csr_mhpmcounter31_outputs \
+  `rvformal_custom_csr_outputs
 `define RVFI_INPUTS \
   input [`RISCV_FORMAL_NRET                        - 1 : 0] rvfi_valid    , \
   input [`RISCV_FORMAL_NRET *                 64   - 1 : 0] rvfi_order    , \
@@ -5317,7 +5344,8 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
   `rvformal_csr_mhpmcounter28_inputs \
   `rvformal_csr_mhpmcounter29_inputs \
   `rvformal_csr_mhpmcounter30_inputs \
-  `rvformal_csr_mhpmcounter31_inputs
+  `rvformal_csr_mhpmcounter31_inputs \
+  `rvformal_custom_csr_inputs
 `define RVFI_CONN \
   .rvfi_valid     (rvfi_valid    ), \
   .rvfi_order     (rvfi_order    ), \
@@ -5443,7 +5471,8 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
   `rvformal_csr_mhpmcounter28_conn \
   `rvformal_csr_mhpmcounter29_conn \
   `rvformal_csr_mhpmcounter30_conn \
-  `rvformal_csr_mhpmcounter31_conn
+  `rvformal_csr_mhpmcounter31_conn \
+  `rvformal_custom_csr_conn
 `define RVFI_CONN32 \
   .rvfi_valid     (rvfi_valid    ), \
   .rvfi_order     (rvfi_order    ), \
@@ -5569,7 +5598,8 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
   `rvformal_csr_mhpmcounter28_conn32 \
   `rvformal_csr_mhpmcounter29_conn32 \
   `rvformal_csr_mhpmcounter30_conn32 \
-  `rvformal_csr_mhpmcounter31_conn32
+  `rvformal_csr_mhpmcounter31_conn32 \
+  `rvformal_custom_csr_conn32
 `define RVFI_GETCHANNEL(_idx) \
   wire [                       0 : 0] valid     = rvfi_valid     [ _idx                         +:                  1  ]; \
   wire [                64   - 1 : 0] order     = rvfi_order     [(_idx)*(                64  ) +:                 64  ]; \

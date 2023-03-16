@@ -27,8 +27,8 @@ class Group:
     append: List['Group'] = field(default_factory=list)
 
     def __post_init__(self):
-        self._cw = max(len(width) for width, name in self.signals)
-        self._cn = max(len(name) for width, name in self.signals)
+        self._cw = max((len(width) for width, name in self.signals), default=0)
+        self._cn = max((len(name) for width, name in self.signals), default=0)
         self._has_conn32 = self.csr_conn32 or any(g._has_conn32 for g in self.append)
 
     def bitrange(self, width, no_channel=False):
@@ -288,6 +288,16 @@ for csr in csrs:
     print(f"`rvformal_csr_{csr.name}_indices \\")
 print()
 
+# Do not print this group, we'll use user macros when defined instead
+custom_csr = Group(name="rvformal_custom_csr", signals=[], csr_conn32=True)
+
+for macro in ["inputs", "wires", "conn", "conn32", "outputs"]:
+    print(f"`ifdef `RISCV_FORMAL_CUSTOM_CSR_{macro.upper()}")
+    print(f"`define rvformal_custom_csr_{macro} `RISCV_FORMAL_CUSTOM_CSR_{macro.upper()}")
+    print(f"`else")
+    print(f"`define rvformal_custom_csr_{macro}")
+    print(f"`endif")
+
 group_rollback = Group(
     condition="RISCV_FORMAL_ROLLBACK",
     name="rvformal_rollback",
@@ -341,7 +351,7 @@ rvfi = Group(
         ("`RISCV_FORMAL_XLEN  ", "mem_rdata"),
         ("`RISCV_FORMAL_XLEN  ", "mem_wdata"),
     ],
-    append = [group_extamo, group_rollback, group_fault, *csr_groups]
+    append = [group_extamo, group_rollback, group_fault, *csr_groups, custom_csr]
 ).print_macros()
 
 rvfi = Group(
