@@ -4880,31 +4880,42 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
 `rvformal_csr_mhpmcounter29_indices \
 `rvformal_csr_mhpmcounter30_indices \
 `rvformal_csr_mhpmcounter31_indices \
+`rvformal_custom_csr_indices
 
-`ifdef `RISCV_FORMAL_CUSTOM_CSR_INPUTS
+`ifdef RISCV_FORMAL_CUSTOM_CSR_INPUTS
 `define rvformal_custom_csr_inputs `RISCV_FORMAL_CUSTOM_CSR_INPUTS
 `else
 `define rvformal_custom_csr_inputs
 `endif
-`ifdef `RISCV_FORMAL_CUSTOM_CSR_WIRES
+`ifdef RISCV_FORMAL_CUSTOM_CSR_WIRES
 `define rvformal_custom_csr_wires `RISCV_FORMAL_CUSTOM_CSR_WIRES
 `else
 `define rvformal_custom_csr_wires
 `endif
-`ifdef `RISCV_FORMAL_CUSTOM_CSR_CONN
+`ifdef RISCV_FORMAL_CUSTOM_CSR_CONN
 `define rvformal_custom_csr_conn `RISCV_FORMAL_CUSTOM_CSR_CONN
 `else
 `define rvformal_custom_csr_conn
 `endif
-`ifdef `RISCV_FORMAL_CUSTOM_CSR_CONN32
-`define rvformal_custom_csr_conn32 `RISCV_FORMAL_CUSTOM_CSR_CONN32
+`ifdef RISCV_FORMAL_CUSTOM_CSR_CHANNEL
+`define rvformal_custom_csr_channel(_idx) `RISCV_FORMAL_CUSTOM_CSR_CHANNEL(_idx)
 `else
-`define rvformal_custom_csr_conn32
+`define rvformal_custom_csr_channel(_idx)
 `endif
-`ifdef `RISCV_FORMAL_CUSTOM_CSR_OUTPUTS
+`ifdef RISCV_FORMAL_CUSTOM_CSR_SIGNALS
+`define rvformal_custom_csr_signals `RISCV_FORMAL_CUSTOM_CSR_SIGNALS
+`else
+`define rvformal_custom_csr_signals
+`endif
+`ifdef RISCV_FORMAL_CUSTOM_CSR_OUTPUTS
 `define rvformal_custom_csr_outputs `RISCV_FORMAL_CUSTOM_CSR_OUTPUTS
 `else
 `define rvformal_custom_csr_outputs
+`endif
+`ifdef RISCV_FORMAL_CUSTOM_CSR_INDICES
+`define rvformal_custom_csr_indices `RISCV_FORMAL_CUSTOM_CSR_INDICES
+`else
+`define rvformal_custom_csr_indices
 `endif
 `ifdef RISCV_FORMAL_ROLLBACK
 `define rvformal_rollback_wires \
@@ -5599,7 +5610,7 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
   `rvformal_csr_mhpmcounter29_conn32 \
   `rvformal_csr_mhpmcounter30_conn32 \
   `rvformal_csr_mhpmcounter31_conn32 \
-  `rvformal_custom_csr_conn32
+  `rvformal_custom_csr_conn
 `define RVFI_GETCHANNEL(_idx) \
   wire [                       0 : 0] valid     = rvfi_valid     [ _idx                         +:                  1  ]; \
   wire [                64   - 1 : 0] order     = rvfi_order     [(_idx)*(                64  ) +:                 64  ]; \
@@ -5724,7 +5735,8 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
   `rvformal_csr_mhpmcounter28_channel(_idx) \
   `rvformal_csr_mhpmcounter29_channel(_idx) \
   `rvformal_csr_mhpmcounter30_channel(_idx) \
-  `rvformal_csr_mhpmcounter31_channel(_idx)
+  `rvformal_csr_mhpmcounter31_channel(_idx) \
+  `rvformal_custom_csr_channel(_idx)
 `define RVFI_SIGNALS \
   `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET,                  1  , valid    ) \
   `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET,                 64  , order    ) \
@@ -5849,7 +5861,8 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
   `rvformal_csr_mhpmcounter28_signals \
   `rvformal_csr_mhpmcounter29_signals \
   `rvformal_csr_mhpmcounter30_signals \
-  `rvformal_csr_mhpmcounter31_signals
+  `rvformal_csr_mhpmcounter31_signals \
+  `rvformal_custom_csr_signals
 
 `define RVFI_CHANNEL(_name, _idx) \
 generate if(1) begin:_name \

@@ -23,6 +23,7 @@ xlen = 32
 buslen = 32
 nbus = 1
 csrs = set()
+custom_csrs = set()
 csr_tests = {}
 compr = False
 
@@ -133,6 +134,24 @@ if "csrs" in config:
         except IndexError: # no defined tests
             pass
 
+if "custom_csrs" in config:
+    for line in config["custom_csrs"].split("\n"):
+        custom_csr_test = line.split()
+        try:
+            addr    = int(custom_csr_test[0], base=16)
+            levels  = custom_csr_test[1]
+            name    = custom_csr_test[2]
+            csrs.add(name)
+            custom_csrs.add((name, addr, levels))
+        except IndexError: # no csr
+            continue
+
+        try:
+            tests   = custom_csr_test[3:]
+            csr_tests[name] = tests
+        except IndexError: # no defined tests
+            pass
+
 if "64" in isa:
     xlen = 64
 
@@ -210,6 +229,38 @@ def get_depth_cfg(patterns):
                 if re.fullmatch(line[0], pat):
                     ret = [int(s) for s in line[1:]]
     return ret
+
+def print_custom_csrs(sby_file):
+    fstrings = {
+        "inputs": "  ,input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal} \\",
+        "wires": "  (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal}; \\",
+        "conn": "  ,.rvfi_csr_{csr}_{signal} (rvfi_csr_{csr}_{signal}) \\",
+        "channel": "  wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_{csr}_{signal} = rvfi_csr_{csr}_{signal} [(_idx)*(`RISCV_FORMAL_XLEN) +: `RISCV_FORMAL_XLEN]; \\",
+        "signals": "`RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN, csr_{csr}_{signal}) \\",
+        "outputs": "  ,output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal} \\",
+        "indices": "  localparam [11:0] csr_{level}index_{name} = 12'h{index:03X}; \\"
+    }
+    for (macro, fstring) in fstrings.items():
+        if macro == "channel":
+            print("`define RISCV_FORMAL_CUSTOM_CSR_%s(_idx) \\" % macro.upper(), file=sby_file)
+        else:
+            print("`define RISCV_FORMAL_CUSTOM_CSR_%s \\" % macro.upper(), file=sby_file)
+        for custom_csr in custom_csrs:
+            name = custom_csr[0]
+            addr = custom_csr[1]
+            levels = custom_csr[2]
+            if macro == "indices":
+                for level in ["m", "s", "u"]:
+                    if level in levels:
+                        macro_string = fstring.format(level=level, name=name, index=addr)
+                    else:
+                        macro_string = fstring.format(level=level, name=name, index=0xfff)
+                    print(macro_string, file=sby_file)
+            else:
+                for signal in ["rmask", "wmask", "rdata", "wdata"]:
+                    macro_string = fstring.format(csr=name, signal=signal)
+                    print(macro_string, file=sby_file)
+        print("", file=sby_file)
 
 # ------------------------------ Instruction Checkers ------------------------------
 
@@ -330,6 +381,9 @@ def check_insn(grp, insn, chanidx, csr_mode=False):
                     : `define RISCV_FORMAL_CHECKER rvfi_insn_check
                     : `define RISCV_FORMAL_INSN_MODEL rvfi_insn_@insn@
             """, **hargs)
+
+        if custom_csrs:
+            print_custom_csrs(sby_file)
 
         if blackbox:
             print("`define RISCV_FORMAL_BLACKBOX_REGS", file=sby_file)
@@ -527,6 +581,9 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
             if csr_name in ("mcycle", "minstret"):
                 print("`define RISCV_FORMAL_CSRC_UPCNT", file=sby_file)
             print("`define RISCV_FORMAL_CSRC_NAME " + csr_name, file=sby_file)
+
+        if custom_csrs:
+            print_custom_csrs(sby_file)
 
         if blackbox and hargs["check"] != "liveness":
             print("`define RISCV_FORMAL_BLACKBOX_ALU", file=sby_file)

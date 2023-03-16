@@ -286,16 +286,22 @@ for csr in csrs:
 print("`define RVFI_INDICES \\")
 for csr in csrs:
     print(f"`rvformal_csr_{csr.name}_indices \\")
+print("`rvformal_custom_csr_indices")
 print()
 
 # Do not print this group, we'll use user macros when defined instead
-custom_csr = Group(name="rvformal_custom_csr", signals=[], csr_conn32=True)
+custom_csr = Group(name="rvformal_custom_csr", signals=[], channels="`RISCV_FORMAL_NRET",)
 
-for macro in ["inputs", "wires", "conn", "conn32", "outputs"]:
-    print(f"`ifdef `RISCV_FORMAL_CUSTOM_CSR_{macro.upper()}")
-    print(f"`define rvformal_custom_csr_{macro} `RISCV_FORMAL_CUSTOM_CSR_{macro.upper()}")
-    print(f"`else")
-    print(f"`define rvformal_custom_csr_{macro}")
+for macro in ["inputs", "wires", "conn", "channel", "signals", "outputs", "indices"]:
+    print(f"`ifdef RISCV_FORMAL_CUSTOM_CSR_{macro.upper()}")
+    if (macro == "channel"):
+        print(f"`define rvformal_custom_csr_{macro}(_idx) `RISCV_FORMAL_CUSTOM_CSR_{macro.upper()}(_idx)")
+        print(f"`else")
+        print(f"`define rvformal_custom_csr_{macro}(_idx)")
+    else:
+        print(f"`define rvformal_custom_csr_{macro} `RISCV_FORMAL_CUSTOM_CSR_{macro.upper()}")
+        print(f"`else")
+        print(f"`define rvformal_custom_csr_{macro}")
     print(f"`endif")
 
 group_rollback = Group(
