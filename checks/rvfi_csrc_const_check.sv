@@ -47,6 +47,7 @@ module rvfi_csrc_const_check (
 
 	// Setup for reg testing
 	reg [`RISCV_FORMAL_XLEN-1:0] wdata_shadow = 0;
+	reg [`RISCV_FORMAL_XLEN-1:0] rdata_shadow = 0;
 	reg csr_written = 0;
 
 	always @(posedge clock) begin
@@ -60,6 +61,7 @@ module rvfi_csrc_const_check (
 				end
 			end else begin
 				if (csr_write_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+					rdata_shadow = csr_insn_rdata;
 					wdata_shadow = csr_insn_wdata;
 					csr_written = 1;
 				end

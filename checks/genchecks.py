@@ -446,8 +446,10 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
         csr_name = check
         if csr_test is not None:
             if csr_test.startswith("const"):
-                constval = str(csr_test).split('=', maxsplit=1)[1].strip('"')
-                safeval = constval.split()[-1]
+                try:
+                    constval = str(csr_test).split('=', maxsplit=1)[1].strip('"')
+                except IndexError: # no value provided
+                    constval = "rdata_shadow"
                 check = f"{pf}csrc_const_{csr_name}"
                 check_name = f"csrc_const"
             else:
