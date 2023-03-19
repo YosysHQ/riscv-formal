@@ -121,36 +121,34 @@ if "options" in config:
             print(line)
             assert 0
 
+def add_csr_tests(name, test_str):
+    # use regex to split by spaces, unless those spaces are inside quotation marks
+    # e.g. const="32'h dead_beef" is one match not two
+    tests = re.findall("(\S*?\"[^\"]*\"|\S+)", test_str)
+    csr_tests[name] = tests
+
+def add_csr(csr_str):
+    try:
+        (name, tests) = csr_str.split(maxsplit=1)
+        add_csr_tests(name, tests)
+    except ValueError: # no tests
+        name = csr_str.strip()
+    csrs.add(name)
+    return name
+
 if "csrs" in config:
     for line in config["csrs"].split("\n"):
-        csr_test = line.split()
-        try:
-            csrs.add(csr_test[0])
-        except IndexError: # no csr
-            continue
-
-        try:
-            csr_tests[csr_test[0]] = csr_test[1:]
-        except IndexError: # no defined tests
-            pass
+        if line:
+            add_csr(line)
 
 if "custom_csrs" in config:
     for line in config["custom_csrs"].split("\n"):
-        custom_csr_test = line.split()
         try:
-            addr    = int(custom_csr_test[0], base=16)
-            levels  = custom_csr_test[1]
-            name    = custom_csr_test[2]
-            csrs.add(name)
-            custom_csrs.add((name, addr, levels))
-        except IndexError: # no csr
+            (addr, levels, csr_str) = line.split(maxsplit=2)
+        except ValueError: # no csr
             continue
-
-        try:
-            tests   = custom_csr_test[3:]
-            csr_tests[name] = tests
-        except IndexError: # no defined tests
-            pass
+        name = add_csr(csr_str)
+        custom_csrs.add((name, int(addr, base=16), levels))
 
 if "64" in isa:
     xlen = 64
@@ -447,8 +445,14 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
     if csr_mode:
         csr_name = check
         if csr_test is not None:
-            check = pf + "csrc_" + csr_test + "_" + csr_name
-            check_name = "csrc_" + csr_test
+            if csr_test.startswith("const"):
+                constval = str(csr_test).split('=', maxsplit=1)[1].strip('"')
+                safeval = constval.split()[-1]
+                check = f"{pf}csrc_const_{csr_name}"
+                check_name = f"csrc_const"
+            else:
+                check = pf + "csrc_" + csr_test + "_" + csr_name
+                check_name = "csrc_" + csr_test
 
         else:
             check = pf + "csrc_" + csr_name
@@ -578,8 +582,10 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
             print("`define RISCV_FORMAL_CSR_%s" % csr.upper(), file=sby_file)
 
         if csr_mode:
-            if csr_name in ("mcycle", "minstret"):
-                print("`define RISCV_FORMAL_CSRC_UPCNT", file=sby_file)
+            try:
+                print("`define RISCV_FORMAL_CSRC_CONSTVAL " + constval, file=sby_file)
+            except UnboundLocalError: # no constval
+                pass
             print("`define RISCV_FORMAL_CSRC_NAME " + csr_name, file=sby_file)
 
         if custom_csrs:
