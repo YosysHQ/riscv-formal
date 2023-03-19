@@ -117,6 +117,10 @@ if "options" in config:
             assert len(line) == 2
             nbus = int(line[1])
 
+        elif line[0] == "csr_spec":
+            assert len(line) == 2
+            csr_spec = line[1]
+
         else:
             print(line)
             assert 0
@@ -135,6 +139,33 @@ def add_csr(csr_str):
         name = csr_str.strip()
     csrs.add(name)
     return name
+
+if csr_spec == "1.12":
+    spec_csrs = {
+        "mvendorid"     : ["const"],
+        "marchid"       : ["const"],
+        "mimpid"        : ["const"],
+        "mhartid"       : ["const"],
+        "mconfigptr"    : ["const"],
+        "mstatus"       : [],
+        "misa"          : [],
+        "mie"           : [],
+        "mtvec"         : [],
+        "mstatush"      : [],
+        "mscratch"      : ["any"],
+        "mepc"          : [],
+        "mcause"        : [],
+        "mtval"        : [],
+        "mip"           : [],
+        "mcycle"        : ["inc"],
+        "minstret"      : ["inc"],
+    }
+    #spec_csrs.update({f"mhpmcounter{i}" : [] for i in range(3, 32)})
+    #spec_csrs.update({f"mhpmevent{i}" : [] for i in range(3, 32)})
+
+    for (name, tests) in spec_csrs.items():
+        csrs.add(name)
+        csr_tests[name] = tests
 
 if "csrs" in config:
     for line in config["csrs"].split("\n"):
