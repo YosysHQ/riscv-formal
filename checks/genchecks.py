@@ -25,6 +25,7 @@ nbus = 1
 csrs = set()
 custom_csrs = set()
 csr_tests = {}
+csr_spec = None
 compr = False
 
 depths = list()
