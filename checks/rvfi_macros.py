@@ -192,27 +192,30 @@ csrs = [
     Csr("xlen", "mhartid",           0xF14,  None,  None),
     Csr("xlen", "mconfigptr",        0xF15,  None,  None),
     Csr("xlen", "mstatus",           0x300,  None,  None),
+    Csr("xlen", "mstatush",          0x310,  None,  None),
     Csr("xlen", "misa",              0x301,  None,  None),
-    Csr("xlen", "medeleg",            None,  None,  None),
-    Csr("xlen", "mideleg",            None,  None,  None),
+    Csr("xlen", "medeleg",           0x302,  None,  None),
+    Csr("xlen", "mideleg",           0x303,  None,  None),
     Csr("xlen", "mie",               0x304,  None,  None),
     Csr("xlen", "mtvec",             0x305,  None,  None),
-    Csr("xlen", "mcounteren",         None,  None,  None),
-    Csr("xlen", "mstatush",          0x310,  None,  None),
+    Csr("xlen", "mcounteren",        0x306,  None,  None),
     Csr("xlen", "mscratch",          0x340,  None,  None),
     Csr("xlen", "mepc",              0x341,  None,  None),
     Csr("xlen", "mcause",            0x342,  None,  None),
     Csr("xlen", "mtval",             0x343,  None,  None),
     Csr("xlen", "mip",               0x344,  None,  None),
-    Csr("xlen", "mcountinhibit",      None,  None,  None),
-    Csr("xlen", "mcountinhibit",      None,  None,  None),
+    Csr("xlen", "mtinst",            0x34A,  None,  None),
+    Csr("xlen", "mtval2",            0x34B,  None,  None),
+    Csr("xlen", "mcountinhibit",     0x320,  None,  None),
+    Csr("xlen", "menvcfg",           0x30A,  None,  None),
+    Csr("xlen", "menvcfgh",          0x31A,  None,  None),
     *(
-        Csr("xlen", f"pmpcfg{i}",     None,  None,  None)
-        for i in range(4)
+        Csr("xlen", f"pmpcfg{i}",    0x3A0 + i,  None,  None)
+        for i in range(16)
     ),
     *(
-        Csr("xlen", f"pmpaddr{i}",    None,  None,  None)
-        for i in range(16)
+        Csr("xlen", f"pmpaddr{i}",   0x3B0 + i,  None,  None)
+        for i in range(64)
     ),
     *(
         Csr("xlen", f"mhpmevent{i}",  0x320 + i,  None,  None)

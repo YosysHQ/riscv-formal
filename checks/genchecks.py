@@ -149,25 +149,43 @@ if csr_spec == "1.12":
         "mimpid"        : ["const"],
         "mhartid"       : ["const"],
         "mconfigptr"    : ["const"],
-        "mstatus"       : [],
-        "misa"          : [],
-        "mie"           : [],
-        "mtvec"         : [],
-        "mstatush"      : [],
+        "mstatus"       : None,
+        "misa"          : None,
+        "mie"           : None,
+        "mtvec"         : None,
         "mscratch"      : ["any"],
-        "mepc"          : [],
-        "mcause"        : [],
-        "mtval"        : [],
-        "mip"           : [],
+        "mepc"          : None,
+        "mcause"        : None,
+        "mtval"         : None,
+        "mip"           : None,
         "mcycle"        : ["inc"],
         "minstret"      : ["inc"],
     }
-    #spec_csrs.update({f"mhpmcounter{i}" : [] for i in range(3, 32)})
-    #spec_csrs.update({f"mhpmevent{i}" : [] for i in range(3, 32)})
+    spec_csrs.update({f"mhpmcounter{i}" : None for i in range(3, 32)})
+    spec_csrs.update({f"mhpmevent{i}" : None for i in range(3, 32)})
+
+    restricted_csrs = {
+        "medeleg"       : ("s",  "302", None),
+        "mideleg"       : ("s",  "303", None),
+        "mcounteren"    : ("u",  "306", None),
+        "mstatush"      : ("32", "310", None),
+        "mtinst"        : ("h",  "34A", None),
+        "mtval2"        : ("h",  "34B", None),
+        "menvcfg"       : ("u",  "30A", None),
+        "menvcfgh"      : ("u",  "31A", None),  # u-mode only *and* 32bit only
+    }
+    for (name, data) in restricted_csrs.items():
+        if data[0] in isa:
+            spec_csrs[name] = data[2]
+        else:
+            illegal_csrs.add(
+                (data[1], "m", "rw"),
+            )
 
     for (name, tests) in spec_csrs.items():
         csrs.add(name)
-        csr_tests[name] = tests
+        if tests:
+            csr_tests[name] = tests
 
 if "csrs" in config:
     for line in config["csrs"].split("\n"):
