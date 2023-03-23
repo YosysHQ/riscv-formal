@@ -83,6 +83,10 @@ always have `rvfi_csr_mcycle_rdata == rvfi_csr_mcycle_wdata`.
 
 Machine performance-monitoring counters are currently not supported by riscv-formal.
 
+### CSR 0xFFF
+
+This address is used as a catch-all to mean no address and thus is not able to be tested normally.
+
 Debug-Mode CSRs
 ---------------
 
