@@ -128,6 +128,8 @@ read/write of the csr.
 
 The `csrc_const` check tests whether the value in a CSR is always the same, ignoring any value which
 may be written.  `RISCV_FORMAL_CSRC_CONSTVAL <value>` must be defined as the value to be expected.
+For CSRs which can take any value so long as it remains constant during operation, a value of
+`rdata_shadow` can be assigned which will compare with the previously read value.
 
 #### CSR read-zero
 
@@ -160,6 +162,9 @@ e.g. `misa zero const="32'h 0"` declares two tests for the `misa` CSR. First usi
 as `32'h 0`.
 
 Each named CSR must be connected as described in the [RVFI specification](rvfi.md).
+
+`const` is currently the only test which supports value assignment.  If no value is provided, a
+value of `rdata_shadow` will be assigned such that any value is accepted provided it is constant.
 
 #### `[custom_csrs]`
 
