@@ -187,6 +187,18 @@ writes.
 
 e.g. `fff msu rw` defines a test at address oxFFF for machine, supervisor, and user modes which should cause an illegal access exception on both reads and writes.
 
+#### CSR spec test generation
+
+By setting `csr_spec` in the `options` section, it is possible to automatically generate tests for
+all CSRs to match the specification recommendations/requirements.  This option will add all defined
+CSRs to be tested under `csrw` as well as generating corresponding `csrc` tests where relevant.  For
+those CSRs which should only exist in certain conditions, e.g. if U mode is available, then those
+CSRs are included if the `isa` option includes them, otherwise the addresses are checked as being an
+expected illegal access exception.  Optional CSRs are not automatically tested and will need to be specified as described above.
+
+At present the only supported value for `csr_spec` is `1.12`, corresponding to version 1.12 of the
+Machine ISA, as defined in the 20211203 Priveleged Architecture document.
+
 Other Checks
 ------------
 
