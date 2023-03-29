@@ -16,8 +16,10 @@ Example configuration:
     `define RISCV_FORMAL_COMPRESSED
     `define RISCV_FORMAL_ALIGNED_MEM
 
-Defining `RISCV_FORMAL`, `RISCV_FORMAL_NRET`, `RISCV_FORMAL_XLEN`, and
-`RISCV_FORMAL_ILEN` is mandatory.
+The macros in this section must be defined by the user where relevant, while the next section
+includes additional macros which may be automatically generated depending on configuration. Defining
+`RISCV_FORMAL`, `RISCV_FORMAL_NRET`, `RISCV_FORMAL_XLEN`, and `RISCV_FORMAL_ILEN` is mandatory if
+`genchecks.py` is not being used.
 
 RISCV_FORMAL_UMODE
 ------------------
