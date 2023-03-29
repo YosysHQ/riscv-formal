@@ -38,8 +38,8 @@ the option enables the specified effect.
 
 | Option   | Value   | Description |
 | -------- | ------- | ----------- |
-| isa      | String  | ISA extensions, e.g. `RV64IMAFD`, or `rv32izicsr_zifencei`. |
-| nret     | Integer | The number of channels for the RVFI port. |
+| isa      | String  | ISA extensions, e.g. `RV64IMAFD`, or `rv32i`.  Note that X and Z extensions are not currently supported and should be removed from the string. |
+| nret     | Integer | The number of channels for the RVFI port.  Defaults to 1. |
 | blackbox | None    | Signifies register file and ALU should be black-boxed. |
 | solver   | String  | Name of solver, defaults to `boolector`. |
 | dumpsmt2 | None    | Passed to `smtbmc` engine to output SMT2 trace. |
