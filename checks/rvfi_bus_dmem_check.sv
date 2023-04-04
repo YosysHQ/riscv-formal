@@ -20,6 +20,11 @@
 // WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+`ifndef RISCV_FORMAL_FAULT_WIDTH
+`define RISCV_FORMAL_FAULT_WIDTH 1
+`endif
+
 module rvfi_bus_dmem_check (
 	input clock, reset, check,
 	`RVFI_INPUTS
@@ -57,11 +62,15 @@ module rvfi_bus_dmem_check (
 						for (j = 0; j < `RISCV_FORMAL_XLEN/8; j=j+1) begin
 							if (bus_addr + i == dmem_addr + j) begin
 								if (bus_rmask[i]) begin
-									assume (!rvfi_bus_fault[channel_idx]);
 									assume (bus_rdata[i*8 +: 8] == bus_shadow[j*8 +: 8]);
 								end
 								if (bus_wmask[i]) begin
 									bus_shadow[j*8 +: 8] = bus_wdata[i*8 +: 8];
+								end
+							end
+
+							if (((bus_addr + i) | (`RISCV_FORMAL_FAULT_WIDTH - 1)) == ((dmem_addr + j) | (`RISCV_FORMAL_FAULT_WIDTH - 1))) begin
+								if (bus_rmask[i] || bus_wmask[i]) begin
 									assume (!rvfi_bus_fault[channel_idx]);
 								end
 							end
