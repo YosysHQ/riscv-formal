@@ -48,6 +48,162 @@ It might be neccessary to add some bounded fairness constraints to the design fo
 This check makes sure that no two instructions with the same `rvfi_order` are retired by the core.
 
 
+Standard Bus Checks
+-------------------
+
+The following checks are managed by `genchecks.py` and can be implemented using the standard RVFI wrapper interface when implementing the RVFI_BUS extension.
+
+### Instruction Bus Memcheck
+
+The `bus_imem` check adds a memory abstraction that only emulates a single word of memory (at an unconstrained address). This memory word is read-only and has an unconstrained value. The check makes sure that instructions fetched from this memory word are handled correctly and that the data from that memory word makes its way into `rvfi_insn` unharmed.
+
+### Instruction Bus Fault Memcheck
+
+The `bus_imem_fault` check adds a memory abstraction that has a single always faulting word of memory (at an unconstrained address). The check makes sure that executing from this address causes an "instruction access fault" trap.
+
+The RVFI signalling for the instruction with a faulting fetch requires an all-zero `rvfi_insn` value with `rvfi_trap` set.
+When `RISCV_FORMAL_MEM_FAULT` is defined, `rvfi_mem_fault` must also be set.
+This check also verifies that the faulting instruction updates the `mcause` csr, when that csr is implemented and specified in the configuration file.
+
+### Data Bus Memcheck
+
+This `bus_dmem` check adds a memory abstraction that only emulates a single word of memory (at an unconstrained address). The memory word is read/write. The check tests if writes to and reads from the memory location (as reported via RVFI) are consistent. Additionally it checks that an initial value as reported via RVFI matches the fetched value on the bus. This check does not require writes to appear on the bus and is thus compatible with caches between the core and the observed bus.
+
+### Data Bus Fault Memcheck
+
+The `bus_dmem_fault` check adds a memory abstraction that has a single always faulting word of memory (at an unconstrained address). The check makes sure that reading from or writing to this address causes a "load access fault" or "store/AMO access fault" trap respectively.
+
+The RVFI signalling for an instruction causing either fault has `rvfi_trap` and does not include a register update or memory write, even if the instruction would have performed one if the memory access didn't fault.
+When `RISCV_FORMAL_MEM_FAULT` is defined, `rvfi_mem_fault` must also be set.
+This check also verifies that the faulting instruction updates the `mcause` csr, when that csr is implemented and specified in the configuration file.
+
+CSR Checks
+----------
+
+The following checks are managed by `genchecks.py` and can be implemented using the standard RVFI
+wrapper interface.  All checks operate on one channel at a time and may not work correctly if a CSR
+is able to be modified by more than one channel.
+
+### CSR instruction check
+
+The `csrw` check validates that CSR instructions modify the correct rvfi signal ports.
+`RISCV_FORMAL_CSRW_NAME <csrname>` must be defined for the CSR under test, along with
+`csr_{m,s,u}index_<csrname> <csraddr>`.  If the CSR has a corresponding 'h' register containing the
+upper bits, `RISCV_FORMAL_CSRWH` and `csr_{m,s,u}indexh_<csrname> <csraddr>` should also be defined.
+
+As per the standard CSR address mapping convention: the top two bits (csr[11:10]) indicate whether
+the register is read/write (00, 01, or 10) or read-only (11); and the next two bits (csr[9:8])
+encode the lowest privilege level that can access the CSR.  
+
+A valid read instruction must assign `rvfi_csr_<csrname>_rdata` to `rvfi_rd_wdata`, as well as the
+correct `rvfi_rd_addr`.  A valid write instruction must assign the correct value to
+`rvfi_csr_<csrname>_wdata`.  And any illegal accesses should result in a trap.
+
+### Illegal CSR access
+
+The `csr_ill` check validates illegal access exceptions are raised for access to CSRs which are not
+available through the RVFI wrapper interface, including those which may not be implemented.
+`RISCV_FORMAL_ILL_CSR_ADDR <csraddr>`  must be defined for the CSR under test.  Defining
+`RISCV_FORMAL_ILL_{M,S,U}MODE` specifies which modes should be tested for access, and
+`RISCV_FORMAL_ILL_{WRITE,READ}` specifies what accesses are expected to be illegal.
+
+### CSR consistency checks
+
+These checks perform multiple reads/writes and compare the values on `rvfi_csr_<csrname>_rdata` and `rvfi_csr_<csrname>_wdata` during the `check` cycle.
+
+In each case, `RISCV_FORMAL_CSRC_NAME <csrname>` must be defined for the CSR under test, along with
+the corresponsing `csr_{m,s,u}index_<csrname> <csraddr>`.
+
+#### CSR write-any
+
+The `csrc_any` check tests whether any value written to a CSR is then able to be read-back exactly
+as written.
+
+#### CSR increments
+
+The `csrc_inc` check tests whether the value in a CSR is always greater than or equal to a previous
+read/write of the csr.  
+
+#### CSR read-constant
+
+The `csrc_const` check tests whether the value in a CSR is always the same, ignoring any value which
+may be written.  `RISCV_FORMAL_CSRC_CONSTVAL <value>` must be defined as the value to be expected.
+For CSRs which can take any value so long as it remains constant during operation, a value of
+`rdata_shadow` can be assigned which will compare with the previously read value.
+
+#### CSR read-zero
+
+The `csrc_zero` check is similar to the CSR read-constant check, but exclusively tests for a
+constant value of all zero.
+
+### genchecks config
+
+#### `[depth]`
+
+The `csrw` and `csr_ill` checks expect one value, indicating the maximum depth of the Bounded Model
+Checker (BMC).
+
+All `csrc_*` checks expect two values, with the first being the number of cycles to hold reset for,
+and the second being the maximum depth of the BMC.
+
+Depth can be specified for all tests of one type, e.g. `csrc_zero`, or individual to a particular CSR, e.g. `csrw_mcycle`.
+
+Any test without a corresponding value in the `depth` section will not be run.
+
+#### `[csrs]`
+
+The `csrs` config section lists all standard CSRs which can be tested.  By default, all CSRs will be
+run through the CSR instruction check (`csrw`).  Consistency checks can be defined as a space
+seperated list after the csr name.  For checks which expect a value, using quotation marks will
+allow for verbatim values. 
+
+e.g. `misa zero const="32'h 0"` declares two tests for the `misa` CSR. First using the
+`csrc_zero_check`, and then using the `csrc_const_check` with `RISCV_FORMAL_CSRC_CONSTVAL` defined
+as `32'h 0`.
+
+Each named CSR must be connected as described in the [RVFI specification](rvfi.md).
+
+`const` is currently the only test which supports value assignment.  If no value is provided, a
+value of `rdata_shadow` will be assigned such that any value is accepted provided it is constant.
+
+#### `[custom_csrs]`
+
+Platform defined CSRs can be included for testing in the `custom_csrs` section.  Each line is a
+space separated list of values defining one CSR and the corresponding tests.  The first value is the
+CSR address in hexadecimal, and the second value is the privilege modes in which the CSR is
+available.  The rest of the line follows the same format as the `csrs` config section with the CSR name followed by any tests in addition to `csrw`.
+
+e.g. `fc0 m custom_ro const="32'h dead_beef"` defines a CSR in the machine-level custom read-only
+address space at address `0xFC0` called `custom_ro` which can be accessed from machine mode and
+should be tested for a constant value of `0xdeadbeef` using `csrc_const_check`.
+
+As with the standard CSRs, each of the custom CSRs must be connected through the RVFI wrapper.
+
+Note that the privilege modes defined will not prevent the CSR instruction check from expecting an
+illegal access exception based on the address.
+
+#### `[illegal_csrs]`
+
+The `illegal_csrs` section lists unnamed CSRs not available through the RVFI wrapper interface. Each
+line lists one CSR address to be tested with `csr_ill`, along with the relevant modes to check.
+Three space separated values are expected; the first provides the address in hexadecimal, the second
+is the privilege modes to test, and the third indicates whether to test reads and writes or just
+writes.
+
+e.g. `fff msu rw` defines a test at address oxFFF for machine, supervisor, and user modes which should cause an illegal access exception on both reads and writes.
+
+#### CSR spec test generation
+
+By setting `csr_spec` in the `options` section, it is possible to automatically generate tests for
+all CSRs to match the specification recommendations/requirements.  This option will add all defined
+CSRs to be tested under `csrw` as well as generating corresponding `csrc` tests where relevant.  For
+those CSRs which should only exist in certain conditions, e.g. if U mode is available, then those
+CSRs are included if the `isa` option includes them, otherwise the addresses are checked as being an
+expected illegal access exception.  Optional CSRs are not automatically tested and will need to be specified as described above.
+
+At present the only supported value for `csr_spec` is `1.12`, corresponding to version 1.12 of the
+Machine ISA, as defined in the 20211203 Priveleged Architecture document.
+
 Other Checks
 ------------
 
@@ -59,11 +215,15 @@ This check adds a memory abstraction that only emulates a single word of memory 
 
 See `imemcheck.sv` in [cores/picorv32/](../cores/picorv32/) for an example implementation.
 
+This check is superseded by the equivalent standard bus check above.
+
 ### Data Memcheck
 
 This check adds a memory abstraction that only emulates a single word of memory (at an unconstrained address). The memory word is read/write. The check tests if writes to and reads from the memory location (as reported via RVFI) are consistent.
 
 See `dmemcheck.sv` in [cores/picorv32/](../cores/picorv32/) for one possible implementation of this test.
+
+This check is superseded by the equivalent standard bus check above.
 
 ### Checking for equivalence of core with and without RVFI
 

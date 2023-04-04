@@ -19,16 +19,7 @@ module rvfi_csrw_check (
 	`RVFI_CHANNEL(rvfi, `RISCV_FORMAL_CHANNEL_IDX)
 
 	localparam [11:0] csr_none = 12'hFFF;
-	`define DECLARE_CSR(_name, _maddr, _saddr, _uaddr) \
-		localparam [11:0] csr_mindex_``_name = _maddr; \
-		localparam [11:0] csr_sindex_``_name = _saddr; \
-		localparam [11:0] csr_uindex_``_name = _uaddr;
-
-	`DECLARE_CSR(misa,      12'h 301, csr_none, csr_none)
-	`DECLARE_CSR(mcycle,    12'h B00, csr_none, 12'h C00)
-	`DECLARE_CSR(minstret,  12'h B02, csr_none, 12'h C02)
-	`DECLARE_CSR(mcycleh,   12'h B80, csr_none, 12'h C80)
-	`DECLARE_CSR(minstreth, 12'h B82, csr_none, 12'h C82)
+	`RVFI_INDICES
 
 	`define quoted(txt) txt
 	`define csrget(_name, _type) rvfi.csr_``_name```quoted(_``_type)

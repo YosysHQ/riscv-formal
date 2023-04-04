@@ -37,7 +37,7 @@ module rvfi_pc_fwd_check (
 
 				assume(rvfi_valid[`RISCV_FORMAL_CHANNEL_IDX]);
 				assume(insn_order == rvfi_order[64*`RISCV_FORMAL_CHANNEL_IDX +: 64]);
-				if (expect_pc_valid) begin
+				if (expect_pc_valid && !rvfi_intr[`RISCV_FORMAL_CHANNEL_IDX]) begin
 					assert(`rvformal_addr_eq(expect_pc, pc_rdata));
 				end
 			end else begin

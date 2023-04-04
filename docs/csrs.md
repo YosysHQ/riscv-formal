@@ -16,25 +16,34 @@ M-mode CSRs
 
 ### Machine Information Registers
 
-#### mvendorid, marchid, mimpid, mhartid
+#### mvendorid, marchid, mimpid, mhartid, mconfigptr
 
 Nothing special for these CSRs.
 
 ### Machine Trap Setup
 
-#### mstatus, misa
+#### mstatus
 
-Nothing special for these CSRs. (Reminder: RV64 processors in RV32 mode are
-expected to output the RV64 format.)
+Mandatory. (Reminder: RV64 processors in RV32 mode are expected to output the
+RV64 format.)
 
-#### medeleg, mideleg, mie, mtvec
+#### misa
 
-Nothing special for these CSRs.
+Can be read-only 0, but existence is mandatory.
+
+#### medeleg, mideleg
+
+Only exist if S mode is supported.
+
+#### mie, mtvec
+
+Mandatory.
 
 #### mcounteren
 
 Currently only the `IR` and `CY` bits of `mcounteren` are supported by
 riscv-formal. The other bits are ignored.
+mcounteren must only exist if U mode is supported.
 
 ### Machine Trap Handling
 
@@ -73,6 +82,10 @@ always have `rvfi_csr_mcycle_rdata == rvfi_csr_mcycle_wdata`.
 #### mhpmcounter<N>, mhpmevent<N>
 
 Machine performance-monitoring counters are currently not supported by riscv-formal.
+
+### CSR 0xFFF
+
+This address is used as a catch-all to mean no address and thus is not able to be tested normally.
 
 Debug-Mode CSRs
 ---------------

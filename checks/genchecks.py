@@ -20,7 +20,13 @@ nret = 1
 isa = "rv32i"
 ilen = 32
 xlen = 32
+buslen = 32
+nbus = 1
 csrs = set()
+custom_csrs = set()
+illegal_csrs = set()
+csr_tests = {}
+csr_spec = None
 compr = False
 
 depths = list()
@@ -105,14 +111,105 @@ if "options" in config:
             assert(line[1] in ("bmc", "prove"))
             mode = line[1]
 
+        elif line[0] == "buslen":
+            assert len(line) == 2
+            buslen = int(line[1])
+
+        elif line[0] == "nbus":
+            assert len(line) == 2
+            nbus = int(line[1])
+
+        elif line[0] == "csr_spec":
+            assert len(line) == 2
+            csr_spec = line[1]
+
         else:
             print(line)
             assert 0
 
+def add_csr_tests(name, test_str):
+    # use regex to split by spaces, unless those spaces are inside quotation marks
+    # e.g. const="32'h dead_beef" is one match not two
+    tests = re.findall("(\S*?\"[^\"]*\"|\S+)", test_str)
+    csr_tests[name] = tests
+
+def add_csr(csr_str):
+    try:
+        (name, tests) = csr_str.split(maxsplit=1)
+        add_csr_tests(name, tests)
+    except ValueError: # no tests
+        name = csr_str.strip()
+    csrs.add(name)
+    return name
+
+if csr_spec == "1.12":
+    spec_csrs = {
+        "mvendorid"     : ["const"],
+        "marchid"       : ["const"],
+        "mimpid"        : ["const"],
+        "mhartid"       : ["const"],
+        "mconfigptr"    : ["const"],
+        "mstatus"       : None,
+        "misa"          : None,
+        "mie"           : None,
+        "mtvec"         : None,
+        "mscratch"      : ["any"],
+        "mepc"          : None,
+        "mcause"        : None,
+        "mtval"         : None,
+        "mip"           : None,
+        "mcycle"        : ["inc"],
+        "minstret"      : ["inc"],
+    }
+    spec_csrs.update({f"mhpmcounter{i}" : None for i in range(3, 32)})
+    spec_csrs.update({f"mhpmevent{i}" : None for i in range(3, 32)})
+
+    restricted_csrs = {
+        "medeleg"       : ("s",  "302", None),
+        "mideleg"       : ("s",  "303", None),
+        "mcounteren"    : ("u",  "306", None),
+        "mstatush"      : ("32", "310", None),
+        "mtinst"        : ("h",  "34A", None),
+        "mtval2"        : ("h",  "34B", None),
+        "menvcfg"       : ("u",  "30A", None),
+        "menvcfgh"      : ("u",  "31A", None),  # u-mode only *and* 32bit only
+    }
+    for (name, data) in restricted_csrs.items():
+        if data[0] in isa:
+            spec_csrs[name] = data[2]
+        else:
+            illegal_csrs.add(
+                (data[1], "m", "rw"),
+            )
+
+    for (name, tests) in spec_csrs.items():
+        csrs.add(name)
+        if tests:
+            csr_tests[name] = tests
+
 if "csrs" in config:
     for line in config["csrs"].split("\n"):
-        for item in line.split():
-            csrs.add(item)
+        if line:
+            add_csr(line)
+
+if "custom_csrs" in config:
+    for line in config["custom_csrs"].split("\n"):
+        try:
+            (addr, levels, csr_str) = line.split(maxsplit=2)
+        except ValueError: # no csr
+            continue
+        name = add_csr(csr_str)
+        custom_csrs.add((name, int(addr, base=16), levels))
+
+if "illegal_csrs" in config:
+    for line in config["illegal_csrs"].split("\n"):
+        line = tuple(line.split())
+
+        if len(line) == 0:
+            continue
+
+        assert len(line) == 3
+        illegal_csrs.add(line)
 
 if "64" in isa:
     xlen = 64
@@ -149,6 +246,8 @@ hargs["core"] = corename
 hargs["nret"] = nret
 hargs["xlen"] = xlen
 hargs["ilen"] = ilen
+hargs["buslen"] = buslen
+hargs["nbus"] = nbus
 hargs["append"] = 0
 hargs["mode"] = mode
 
@@ -190,11 +289,48 @@ def get_depth_cfg(patterns):
                     ret = [int(s) for s in line[1:]]
     return ret
 
+def print_custom_csrs(sby_file):
+    fstrings = {
+        "inputs": "  ,input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal} \\",
+        "wires": "  (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal}; \\",
+        "conn": "  ,.rvfi_csr_{csr}_{signal} (rvfi_csr_{csr}_{signal}) \\",
+        "channel": "  wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_{csr}_{signal} = rvfi_csr_{csr}_{signal} [(_idx)*(`RISCV_FORMAL_XLEN) +: `RISCV_FORMAL_XLEN]; \\",
+        "signals": "`RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN, csr_{csr}_{signal}) \\",
+        "outputs": "  ,output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal} \\",
+        "indices": "  localparam [11:0] csr_{level}index_{name} = 12'h{index:03X}; \\"
+    }
+    for (macro, fstring) in fstrings.items():
+        if macro == "channel":
+            print("`define RISCV_FORMAL_CUSTOM_CSR_%s(_idx) \\" % macro.upper(), file=sby_file)
+        else:
+            print("`define RISCV_FORMAL_CUSTOM_CSR_%s \\" % macro.upper(), file=sby_file)
+        for custom_csr in custom_csrs:
+            name = custom_csr[0]
+            addr = custom_csr[1]
+            levels = custom_csr[2]
+            if macro == "indices":
+                for level in ["m", "s", "u"]:
+                    if level in levels:
+                        macro_string = fstring.format(level=level, name=name, index=addr)
+                    else:
+                        macro_string = fstring.format(level=level, name=name, index=0xfff)
+                    print(macro_string, file=sby_file)
+            else:
+                for signal in ["rmask", "wmask", "rdata", "wdata"]:
+                    macro_string = fstring.format(csr=name, signal=signal)
+                    print(macro_string, file=sby_file)
+        print("", file=sby_file)
+
 # ------------------------------ Instruction Checkers ------------------------------
 
-def check_insn(grp, insn, chanidx, csr_mode=False):
+def check_insn(grp, insn, chanidx, csr_mode=False, illegal_csr=False):
     pf = "" if grp is None else grp+"_"
-    if csr_mode:
+    if illegal_csr:
+        (ill_addr, ill_modes, ill_rw) = insn
+        insn = f"12'h{int(ill_addr, base=16):03X}"
+        check = "%scsr_ill_%s_ch%d" % (pf, ill_addr, chanidx)
+        depth_cfg = get_depth_cfg(["%scsr_ill" % (pf,), "%sscsr_ill_ch%d" % (pf, chanidx), "%sscsr_ill_%s" % (pf, ill_addr), "%sscsr_ill_%s_ch%d" % (pf, ill_addr, chanidx)])
+    elif csr_mode:
         check = "%scsrw_%s_ch%d" % (pf, insn, chanidx)
         depth_cfg = get_depth_cfg(["%scsrw" % (pf,), "%scsrw_ch%d" % (pf, chanidx), "%scsrw_%s" % (pf, insn), "%scsrw_%s_ch%d" % (pf, insn, chanidx)])
     else:
@@ -265,7 +401,11 @@ def check_insn(grp, insn, chanidx, csr_mode=False):
                 : @basedir@/checks/rvfi_testbench.sv
         """, **hargs)
 
-        if csr_mode:
+        if illegal_csr:
+            print_hfmt(sby_file, """
+                    : @basedir@/checks/rvfi_csr_ill_check.sv
+            """, **hargs)
+        elif csr_mode:
             print_hfmt(sby_file, """
                     : @basedir@/checks/rvfi_csrw_check.sv
             """, **hargs)
@@ -299,7 +439,22 @@ def check_insn(grp, insn, chanidx, csr_mode=False):
         if csr_mode and insn in ("mcycle", "minstret"):
             print("`define RISCV_FORMAL_CSRWH", file=sby_file)
 
-        if csr_mode:
+        if illegal_csr:
+            print_hfmt(sby_file, """
+                    : `define RISCV_FORMAL_CHECKER rvfi_csr_ill_check
+                    : `define RISCV_FORMAL_ILL_CSR_ADDR @insn@
+            """, **hargs)
+            if 'm' in ill_modes:
+                print("`define RISCV_FORMAL_ILL_MMODE", file=sby_file)
+            if 's' in ill_modes:
+                print("`define RISCV_FORMAL_ILL_SMODE", file=sby_file)
+            if 'u' in ill_modes:
+                print("`define RISCV_FORMAL_ILL_UMODE", file=sby_file)
+            if 'r' in ill_rw:
+                print("`define RISCV_FORMAL_ILL_READ", file=sby_file)
+            if 'w' in ill_rw:
+                print("`define RISCV_FORMAL_ILL_WRITE", file=sby_file)
+        elif csr_mode:
             print_hfmt(sby_file, """
                     : `define RISCV_FORMAL_CHECKER rvfi_csrw_check
                     : `define RISCV_FORMAL_CSRW_NAME @insn@
@@ -309,6 +464,9 @@ def check_insn(grp, insn, chanidx, csr_mode=False):
                     : `define RISCV_FORMAL_CHECKER rvfi_insn_check
                     : `define RISCV_FORMAL_INSN_MODEL rvfi_insn_@insn@
             """, **hargs)
+
+        if custom_csrs:
+            print_custom_csrs(sby_file)
 
         if blackbox:
             print("`define RISCV_FORMAL_BLACKBOX_REGS", file=sby_file)
@@ -328,7 +486,11 @@ def check_insn(grp, insn, chanidx, csr_mode=False):
                 : `include "rvfi_testbench.sv"
         """, **hargs)
 
-        if csr_mode:
+        if illegal_csr:
+            print_hfmt(sby_file, """
+                    : `include "rvfi_csr_ill_check.sv"
+            """, **hargs)
+        elif csr_mode:
             print_hfmt(sby_file, """
                     : `include "rvfi_csrw_check.sv"
             """, **hargs)
@@ -365,22 +527,50 @@ for grp in groups:
         for chanidx in range(nret):
             check_insn(grp, csr, chanidx, csr_mode=True)
 
+    for ill_csr in sorted(illegal_csrs, key=lambda csr: csr[0]):
+        for chanidx in range(nret):
+            check_insn(grp, ill_csr, chanidx, illegal_csr=True)
+
 # ------------------------------ Consistency Checkers ------------------------------
 
-def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_mode=False):
+def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_mode=False, csr_test=None, bus_mode=False):
     pf = "" if grp is None else grp+"_"
     if csr_mode:
         csr_name = check
-        check = pf + "csrc_" + csr_name
-        hargs["check"] = "csrc"
+        if csr_test is not None:
+            hpm_idx = csr_test.find("_hpm")
+            if hpm_idx >= 0:
+                try:
+                    hpm_addr = str(csr_test).split('=', maxsplit=1)[1].strip('"')
+                    hpm_event_csr = f"mhpmevent{hpm_addr}"
+                except IndexError: # no value provided
+                    print(csr_test)
+                    assert 0
+                csr_test = csr_test[:hpm_idx]
+            if csr_test.startswith("const"):
+                try:
+                    constval = str(csr_test).split('=', maxsplit=1)[1].strip('"')
+                except IndexError: # no value provided
+                    constval = "rdata_shadow"
+                check = f"{pf}csrc_const_{csr_name}"
+                check_name = f"csrc_const"
+            else:
+                check = pf + "csrc_" + csr_test + "_" + csr_name
+                check_name = "csrc_" + csr_test
+
+        else:
+            check = pf + "csrc_" + csr_name
+            check_name = "csrc"
+
+        hargs["check"] = check_name
 
         if chanidx is not None:
-            depth_cfg = get_depth_cfg(["%scsrc" % (pf,), check, "%scsrc_ch%d" % (pf, chanidx), "%s_ch%d" % (check, chanidx)])
+            depth_cfg = get_depth_cfg(["%s%s" % (pf,check_name), check, "%s%s_ch%d" % (pf, check_name, chanidx), "%s_ch%d" % (check, chanidx)])
             hargs["channel"] = "%d" % chanidx
             check += "_ch%d" % chanidx
 
         else:
-            depth_cfg = get_depth_cfg(["csrc", check])
+            depth_cfg = get_depth_cfg(["%s" % (check_name,), check])
     else:
         hargs["check"] = check
         check = pf + check
@@ -496,9 +686,18 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
             print("`define RISCV_FORMAL_CSR_%s" % csr.upper(), file=sby_file)
 
         if csr_mode:
-            if csr_name in ("mcycle", "minstret"):
-                print("`define RISCV_FORMAL_CSRC_UPCNT", file=sby_file)
+            try:
+                print("`define RISCV_FORMAL_CSRC_CONSTVAL " + constval, file=sby_file)
+            except UnboundLocalError: # no constval
+                pass
+            try:
+                print("`define RISCV_FORMAL_CSRC_HPMEVENT " + hpm_event_csr, file=sby_file)
+            except UnboundLocalError: # no hpm_event_csr
+                pass
             print("`define RISCV_FORMAL_CSRC_NAME " + csr_name, file=sby_file)
+
+        if custom_csrs:
+            print_custom_csrs(sby_file)
 
         if blackbox and hargs["check"] != "liveness":
             print("`define RISCV_FORMAL_BLACKBOX_ALU", file=sby_file)
@@ -511,6 +710,13 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
 
         if trig is not None:
             print("`define RISCV_FORMAL_TRIG_CYCLE %d" % trig, file=sby_file)
+
+        if bus_mode:
+            print_hfmt(sby_file, """
+                    : `define RISCV_FORMAL_BUS
+                    : `define RISCV_FORMAL_NBUS @nbus@
+                    : `define RISCV_FORMAL_BUSLEN @buslen@
+            """, **hargs)
 
         if hargs["check"] in ("liveness", "hang"):
             print("`define RISCV_FORMAL_FAIRNESS", file=sby_file)
@@ -565,12 +771,18 @@ for grp in groups:
         check_cons(grp, "causal", chanidx=i, start=0, depth=1)
         check_cons(grp, "ill", chanidx=i, depth=0)
 
+        check_cons(grp, "bus_imem", chanidx=i, start=0, depth=1, bus_mode=True)
+        check_cons(grp, "bus_imem_fault", chanidx=i, start=0, depth=1, bus_mode=True)
+        check_cons(grp, "bus_dmem", chanidx=i, start=0, depth=1, bus_mode=True)
+        check_cons(grp, "bus_dmem_fault", chanidx=i, start=0, depth=1, bus_mode=True)
+
     check_cons(grp, "hang", start=0, depth=1)
     check_cons(grp, "cover", start=0, depth=1)
 
     for csr in sorted(csrs):
         for chanidx in range(nret):
-            check_cons(grp, csr, chanidx, start=0, depth=1, csr_mode=True)
+            for csr_test in csr_tests.get(csr, [None]):
+                check_cons(grp, csr, chanidx, start=0, depth=1, csr_mode=True, csr_test=csr_test)
 
 # ------------------------------ Makefile ------------------------------
 

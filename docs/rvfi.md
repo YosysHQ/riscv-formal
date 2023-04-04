@@ -145,6 +145,54 @@ All RVFI packets output _prior_ to the cycle with asserted `rvfi_rollback_valid`
 
 RVFI packets output in the same cycle as `rvfi_rollback_valid` are already part of the new instruction stream re-starting at the instruction number indicated in `rvfi_rollback_order`.
 
+### Handling of Dynamic Faults
+
+Cores where the fault check for an instruction fetch or a data access is determined by an external bus response can signal such faults via RVFI.
+
+When `RISCV_FORMAL_MEM_FAULT` is defined, the RVFI interface is extended by the following signal:
+
+    output [NRET - 1 : 0] rvfi_mem_fault
+
+An instruction fetch that faults sets `rvfi_insn` to all zero and set `rvfi_mem_fault`. A memory access that faults sets `rvfi_mem_fault` and does not signal any register or memory writes.
+
+### Handling of External Memory Busses
+
+RISC-V Formal includes several checks that verify consistency properties between memory accesses observed via the RVFI and memory accesses observed on external instruction and/or data busses.
+To not tie those checks to a specific bus, those checks extend the RVFI with the RVFI_BUS interface.
+RVFI_BUS consists of further outputs that observe memory accesses on a bus while abstracting over the exact signalling used for the bus.
+
+To run these checks, the relevant busses of the core should be connected to an abstraction that implements the required bus signalling but provides unconstrai (This may be relaxed with an extensions )ned responses to the core. The accesses on the bus are then observed and constrained by these checks via the RVFI_BUS outputs.
+
+Note: When implementing such an abstraction it has to output the access using RVFI_BUS as soon as the access first appears on the bus, even when the reply to the core happens in a later cycle.
+
+For standard busses the same unconstrained abstractions and RVFI_BUS observers can be re-used for multiple cores.
+
+The RVFI_BUS extension can observe multiple busses using multiple RVFI_BUS channels. This is used to model separate data and instruction busses as well as busses that can transfer accesses to several unrelated addresses in the same cycle. The total number of channels is specified using `NBUS` which works like `NRET` for the main RVFI signals. The width of the observed bus is independent of `XLEN` and is specified using `BUSLEN`. If different channels observe busses of a different width, `BUSLEN` should be set to the maximum width in use.
+
+RVFI_BUS adds the following ouptuts:
+
+    output [NBUS *      1   - 1 : 0] bus_valid
+    output [NBUS *      1   - 1 : 0] bus_insn
+    output [NBUS *      1   - 1 : 0] bus_data
+    output [NBUS *      1   - 1 : 0] bus_fault
+    output [NBUS *   XLEN   - 1 : 0] bus_addr
+    output [NBUS * BUSLEN/8 - 1 : 0] bus_rmask
+    output [NBUS * BUSLEN/8 - 1 : 0] bus_wmask
+    output [NBUS * BUSLEN   - 1 : 0] bus_rdata
+    output [NBUS * BUSLEN   - 1 : 0] bus_wdata
+
+When `bus_valid` is set, there is an observed memory access present on the RVFI_BUS channel, otherwise, all other RVFI_BUS outputs are ignored.
+
+The outputs `bus_insn` and `bus_data` are used to indicate whether the access is an instruction fetch or a data access. For cores or busses that do not distinguish between those, both have to be set.
+
+The `bus_addr` output is the address of the access.
+
+The outputs `bus_rmask` and `bus_wmask` indicate which bytes starting with `bus_addr` are accessed. This is used for both, masked writes as well as for outputting busses smaller than `BUSLEN`. Note that when the LSBs of `bus_rmask` and `bus_wmask` are cleared, `bus_addr` may be lower than the first actually accessed byte.
+
+The outputs `bus_rdata` and `bus_wdata` contain the read and written data and are only valid for the bytes corresponding to the respective bits in `bus_rmask` and `bus_wmask`.
+
+All accesses observed using RVFI_BUS are assumed to be in order, including acceses in the same cycle which are ordered by increasing RVFI_BUS channel index. This may be relaxed by future extensions.
+
 
 RVFI TODOs and Requests for Comments
 ------------------------------------
