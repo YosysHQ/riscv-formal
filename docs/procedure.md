@@ -232,6 +232,8 @@ The following checks are managed by `genchecks.py` and can be implemented using 
 
 The `bus_imem` check adds a memory abstraction that only emulates a single word of memory (at an unconstrained address). This memory word is read-only and has an unconstrained value. The check makes sure that instructions fetched from this memory word are handled correctly and that the data from that memory word makes its way into `rvfi_insn` unharmed.
 
+When the granularity of access faults as observed from the core is coarser than the width of the bus, `RISCV_FORMAL_FAULT_WIDTH` needs to be defined and set to the corresponding width in bytes. E.g. for a setup where a single word fault the monitored bus means that from the perspective of the core, any access of the corresponding cache line will fault, you would define `RISCV_FORMAL_FAULT_WIDTH` to be the width of a cache line in bytes.
+
 ### Instruction Bus Fault Memcheck
 
 The `bus_imem_fault` check adds a memory abstraction that has a single always faulting word of memory (at an unconstrained address). The check makes sure that executing from this address causes an "instruction access fault" trap.
@@ -243,6 +245,8 @@ This check also verifies that the faulting instruction updates the `mcause` csr,
 ### Data Bus Memcheck
 
 This `bus_dmem` check adds a memory abstraction that only emulates a single word of memory (at an unconstrained address). The memory word is read/write. The check tests if writes to and reads from the memory location (as reported via RVFI) are consistent. Additionally it checks that an initial value as reported via RVFI matches the fetched value on the bus. This check does not require writes to appear on the bus and is thus compatible with caches between the core and the observed bus.
+
+When the granularity of access faults as observed from the core is coarser than the width of the bus, `RISCV_FORMAL_FAULT_WIDTH` needs to be defined. See "Instruction Bus Memcheck" above for more details.
 
 ### Data Bus Fault Memcheck
 

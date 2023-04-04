@@ -166,7 +166,7 @@ RVFI_BUS consists of further outputs that observe memory accesses on a bus while
 
 To run these checks, the relevant busses of the core should be connected to an abstraction that implements the required bus signalling but provides unconstrai (This may be relaxed with an extensions )ned responses to the core. The accesses on the bus are then observed and constrained by these checks via the RVFI_BUS outputs.
 
-Note: When implementing such an abstraction it has to output the access using RVFI_BUS as soon as the access first appears on the bus, even when the reply to the core happens in a later cycle.
+Note: When implementing such an abstraction it should output the access using RVFI_BUS as soon as the access first appears on the bus, even when the reply to the core happens in a later cycle. (Whether this is necessary and how much delay is acceptable depends on the checks performed and on the design of the core and the core's RVFI implementation. Too much delay can cause false positives by preventing the check from properly constraining the RVFI_BUS transfers.)
 
 For standard busses the same unconstrained abstractions and RVFI_BUS observers can be re-used for multiple cores.
 
@@ -196,6 +196,13 @@ The outputs `bus_rdata` and `bus_wdata` contain the read and written data and ar
 
 All accesses observed using RVFI_BUS are assumed to be in order, including acceses in the same cycle which are ordered by increasing RVFI_BUS channel index. This may be relaxed by future extensions.
 
+#### RVFI_BUS observers for standard interfaces
+
+The `bus` directory contains implementations RVFI_BUS observers for standard interfaces.
+
+Note that the observers are passive and do not constrain any signals on their own. That means to test a core in isolation, the core's interface may have to be connected to an abstraction that provides the handshaking that the core expects to properly function without constraining the data or timing beyond that.
+
+Currently only a limited AXI4 listener is proivded, see the contained `TODO` comments for limitations.
 
 RVFI TODOs and Requests for Comments
 ------------------------------------

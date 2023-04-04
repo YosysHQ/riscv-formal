@@ -52,11 +52,15 @@ class Group:
         if self.name.upper() == self.name:
             if s == "channel":
                 return f"{self.name}_GETCHANNEL{extra.upper()}(_idx)"
+            elif s == "channel_conn":
+                return f"{self.name}_CHANNEL_CONN{extra.upper()}(_idx)"
             else:
                 return f"{self.name}_{s.upper()}{extra.upper()}"
         else:
             if s == "channel":
                 return f"{self.name}_channel{extra}(_idx)"
+            elif s == "channel_conn":
+                return f"{self.name}_channel_conn{extra}(_idx)"
             else:
                 return f"{self.name}_{s}{extra}"
 
@@ -93,17 +97,35 @@ class Group:
         ], [
             "`" + group.macro_name('outputs') for group in self.append
         ]))
+        print(self.commas([f"`define {self.macro_name_nosep('channel_outputs')}"] + [
+            f"output {self.bitrange(width, no_channel=True)} rvfi_{name:<{self._cn}}"
+            for width, name in self.signals
+        ], [
+            "`" + group.macro_name('channel_outputs') for group in self.append
+        ]))
         print(self.commas([f"`define {self.macro_name_nosep('inputs')}"] + [
             f"input {self.bitrange(width)} rvfi_{name:<{self._cn}}"
             for width, name in self.signals
         ], [
             "`" + group.macro_name('inputs') for group in self.append
         ]))
+        print(self.commas([f"`define {self.macro_name_nosep('channel_inputs')}"] + [
+            f"input {self.bitrange(width, no_channel=True)} rvfi_{name:<{self._cn}}"
+            for width, name in self.signals
+        ], [
+            "`" + group.macro_name('channel_inputs') for group in self.append
+        ]))
         print(self.commas([f"`define {self.macro_name_nosep('conn')}"] + [
             f".rvfi_{name:<{self._cn}} (rvfi_{name:<{self._cn}})"
             for width, name in self.signals
         ], [
             "`" + group.macro_name('conn') for group in self.append
+        ]))
+        print(self.commas([f"`define {self.macro_name_nosep('channel_conn')}"] + [
+            f".rvfi_{name:<{self._cn}} (rvfi_{name:<{self._cn}} {self.channel_idx(width)})"
+            for width, name in self.signals
+        ], [
+            "`" + group.macro_name('channel_conn') for group in self.append
         ]))
         if self.csr_conn32:
             cn = self._cn + self.csr_conn32
@@ -142,6 +164,9 @@ class Group:
             print(f"`define {self.macro_name('outputs')} , `{self.macro_name_nosep('outputs')}")
             print(f"`define {self.macro_name('inputs')} , `{self.macro_name_nosep('inputs')}")
             print(f"`define {self.macro_name('conn')}  , `{self.macro_name_nosep('conn')}")
+            print(f"`define {self.macro_name('channel_outputs')} , `{self.macro_name_nosep('channel_outputs')}")
+            print(f"`define {self.macro_name('channel_inputs')} , `{self.macro_name_nosep('channel_inputs')}")
+            print(f"`define {self.macro_name('channel_conn')}  , `{self.macro_name_nosep('channel_conn')}")
             if self._has_conn32:
                 print(f"`define {self.macro_name('conn32')}")
 
