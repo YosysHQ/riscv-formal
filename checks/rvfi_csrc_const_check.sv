@@ -12,7 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-module rvfi_csrc_any_check (
+module rvfi_csrc_const_check (
 	input clock, reset, check,
 	`RVFI_INPUTS
 );
@@ -44,41 +44,26 @@ module rvfi_csrc_any_check (
 	wire csr_write_valid = csr_write && csr_insn_valid;
 	wire csr_read_valid = csr_read && csr_insn_valid;
 	wire [1:0] csr_mode = rvfi.insn[13:12];
-	wire [31:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
 
 	// Setup for reg testing
-	`rvformal_rand_const_reg [63:0] insn_order;
-	reg [`RISCV_FORMAL_XLEN-1:0] rsval_shadow = 0;
 	reg [`RISCV_FORMAL_XLEN-1:0] wdata_shadow = 0;
+	reg [`RISCV_FORMAL_XLEN-1:0] rdata_shadow = 0;
 	reg csr_written = 0;
-	reg [1:0] csr_mode_shadow = 0;
 
 	always @(posedge clock) begin
 		if (reset) begin
-			rsval_shadow = 0;
 			wdata_shadow = 0;
 			csr_written = 0;
-			csr_mode_shadow = 0;
 		end else begin
 			if (check) begin
 				if (csr_written && csr_read_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
-					case (csr_mode_shadow)
-						2'b 00 /* None */,
-						2'b 01 /* RW   */: begin
-							assert(rsval_shadow == csr_insn_rdata || csr_insn_rdata == wdata_shadow);
-							assert(rsval_shadow == wdata_shadow);
-						end
-						// Currently not testing set/clear from rsval
-						2'b 10 /* RS   */,
-						2'b 11 /* RC   */: begin assert(csr_insn_rdata == wdata_shadow); end
-					endcase
+					assert(csr_insn_rdata == `RISCV_FORMAL_CSRC_CONSTVAL);
 				end
 			end else begin
 				if (csr_write_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
-					rsval_shadow = csr_rsval;
+					rdata_shadow = csr_insn_rdata;
 					wdata_shadow = csr_insn_wdata;
 					csr_written = 1;
-					csr_mode_shadow = csr_mode;
 				end
 			end
 		end

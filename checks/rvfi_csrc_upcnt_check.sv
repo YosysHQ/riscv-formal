@@ -12,11 +12,11 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-module rvfi_csrc_any_check (
+module rvfi_csrc_upcnt_check (
 	input clock, reset, check,
 	`RVFI_INPUTS
 );
-	// Setup for csrs
+    // Setup for csrs
 	`RVFI_CHANNEL(rvfi, `RISCV_FORMAL_CHANNEL_IDX)
 
 	localparam [11:0] csr_none = 12'hFFF;
@@ -46,40 +46,41 @@ module rvfi_csrc_any_check (
 	wire [1:0] csr_mode = rvfi.insn[13:12];
 	wire [31:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
 
-	// Setup for reg testing
+    // Setup for reg testing
 	`rvformal_rand_const_reg [63:0] insn_order;
-	reg [`RISCV_FORMAL_XLEN-1:0] rsval_shadow = 0;
-	reg [`RISCV_FORMAL_XLEN-1:0] wdata_shadow = 0;
-	reg csr_written = 0;
-	reg [1:0] csr_mode_shadow = 0;
+	reg [`RISCV_FORMAL_XLEN-1:0] rdata_shadow = 0;
+	reg csr_event_written = 0;
+	reg csr_read_shadowed = 0;
 
 	always @(posedge clock) begin
 		if (reset) begin
-			rsval_shadow = 0;
-			wdata_shadow = 0;
-			csr_written = 0;
-			csr_mode_shadow = 0;
+			rdata_shadow = 0;
+			csr_event_written = 0;
+			csr_read_shadowed = 0;
 		end else begin
+			// No writes of CSR under test allowed
+			assume (!(csr_write_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)));
 			if (check) begin
-				if (csr_written && csr_read_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
-					case (csr_mode_shadow)
-						2'b 00 /* None */,
-						2'b 01 /* RW   */: begin
-							assert(rsval_shadow == csr_insn_rdata || csr_insn_rdata == wdata_shadow);
-							assert(rsval_shadow == wdata_shadow);
-						end
-						// Currently not testing set/clear from rsval
-						2'b 10 /* RS   */,
-						2'b 11 /* RC   */: begin assert(csr_insn_rdata == wdata_shadow); end
-					endcase
+				assume(csr_read_shadowed);
+				assume(rdata_shadow < 'h FFFF_FFFF);
+				if (csr_read_shadowed 
+					`ifdef RISCV_FORMAL_CSRC_HPMEVENT
+					&& csr_event_written
+					`endif
+					&& csr_read_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+					assert(csr_insn_rdata > rdata_shadow);
 				end
 			end else begin
-				if (csr_write_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
-					rsval_shadow = csr_rsval;
-					wdata_shadow = csr_insn_wdata;
-					csr_written = 1;
-					csr_mode_shadow = csr_mode;
+				if (csr_read_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+					rdata_shadow = csr_insn_rdata;
+					csr_read_shadowed = 1;
 				end
+				`ifdef RISCV_FORMAL_CSRC_HPMEVENT
+				if (csr_write_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_HPMEVENT)) begin
+					assume(csr_insn_wdata > 0);
+					csr_event_written = 1;
+				end
+				`endif //RISCV_FORMAL_CSRC_HPMADDR
 			end
 		end
 	end
