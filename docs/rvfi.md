@@ -91,7 +91,10 @@ Some arithmetic operations (such as multiplication and division) are beyond to p
 
 Commutative operations (like multiplication) are replaced with addition followed by applying XOR with a bitmask that indicates the type of the operation. Noncommutative operations (like division) are replaced with subtraction followed by applying XOR with a bitmask that indicates the type of the operation.
 
-The bitmasks are 64 bits wide. RV32 implementations only use the lower 32 bits of the bitmasks. The `*W` instructions in RV64 (suchg as `MULW`) are implemented by adding or subtracting the lower 32 bits of the operands, then XORing with the lower 32 bits of the bitmask, then sign extending the result to 64 bits.
+The bitmasks are 64 bits wide. RV32 implementations only use the lower 32 bits of the bitmasks. The
+`*W` instructions in RV64 (such as `MULW`) are implemented by adding or subtracting the lower 32
+bits of the operands, then XORing with the lower 32 bits of the bitmask, then sign extending the
+result to 64 bits.
 
 #### Integer Multiply/Divide Instructions
 
@@ -129,7 +132,7 @@ If reading a CSR has side effects, those side effects are not triggered by raise
 The Verilog define `RISCV_FORMAL_CSR_<CSRNAME>` must be set for each CSR traced
 via RVFI by the core under test.
 
-See [RISC-V Formal CSR Sematics](csrs.md) for the exact semantics of CSR values
+See [RISC-V Formal CSR Semantics](csrs.md) for the exact semantics of CSR values
 output via RVFI.
 
 ### Handling of Speculative Execution
