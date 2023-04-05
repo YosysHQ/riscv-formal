@@ -303,6 +303,15 @@ as written.
 The `csrc_inc` check tests whether the value in a CSR is always greater than or equal to a previous
 read/write of the csr.  
 
+#### CSR up-counter
+
+The `csrc_upcnt` check is similar to the CSR increments check but with more constraints and better
+support for hardware performance monitors.  First, no writes of the csr under test are allowed.
+Second, the test value *must* be greater than the previously read value.  And finally, if
+`RISCV_FORMAL_CSRC_HPMEVENT <csrname>` has been defined then that CSR will be written with a
+non-zero value prior to testing.  This is intended to be used with the hpmevent CSRs where
+`RISCV_FORMAL_CSRC_NAME` is defined as the corresponding hpmcounter.
+
 #### CSR read-constant
 
 The `csrc_const` check tests whether the value in a CSR is always the same, ignoring any value which
@@ -342,7 +351,13 @@ as `32'h 0`.
 
 Each named CSR must be connected as described in the [RVFI specification](rvfi.md).
 
-`const` is currently the only test which supports value assignment.  If no value is provided, a
+Any consistency check can be appended with `_hpm=` and the corresponding hpmevent CSR number used to
+control the listed CSR.  This value will be used to assign `RISCV_FORMAL_CSRC_HPMEVENT`.  For
+example, `mhpmcounter3 upcnt_hpm=3` declares that the `mhpmcounter3` is controlled by `mhpmevent3`
+and should be tested with the `csrc_upcnt_check`.  The CSR up-counter check is the only
+check to utilise the hpmevent macro at this time.
+
+`const` is currently the only other test to support value assignment.  If no value is provided, a
 value of `rdata_shadow` will be assigned such that any value is accepted provided it is constant.
 
 #### `[custom_csrs]`
