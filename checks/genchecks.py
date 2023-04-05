@@ -330,12 +330,13 @@ def check_insn(grp, insn, chanidx, csr_mode=False, illegal_csr=False):
         insn = f"12'h{int(ill_addr, base=16):03X}"
         check = f"{pf}csr_ill_{ill_addr}_ch{chanidx:d}"
         depth_cfg = get_depth_cfg([f"{pf}csr_ill", f"{pf}csr_ill_ch{chanidx:d}", f"{pf}csr_ill_{ill_addr}", f"{pf}csr_ill_{ill_addr}_ch{chanidx:d}"])
-    elif csr_mode:
-        check = f"{pf}csrw_{insn}_ch{chanidx:d}"
-        depth_cfg = get_depth_cfg([f"{pf}csrw", f"{pf}csrw_ch{chanidx:d}", f"{pf}csrw_{insn}", f"{pf}csrw_{insn}_ch{chanidx:d}"])
     else:
-        check = f"{pf}insn_{insn}_ch{chanidx:d}"
-        depth_cfg = get_depth_cfg([f"{pf}insn", f"{pf}insn_ch{chanidx:d}", f"{pf}insn_{insn}", f"{pf}insn_{insn}_ch{chanidx:d}"])
+        if csr_mode:
+            check = "csrw"
+        else:
+            check = "insn"
+        depth_cfg = get_depth_cfg([f"{pf}{check}", f"{pf}{check}_ch{chanidx:d}", f"{pf}{check}_{insn}", f"{pf}{check}_{insn}_ch{chanidx:d}"])
+        check = f"{pf}{check}_{insn}_ch{chanidx:d}"
 
     if depth_cfg is None: return
     assert len(depth_cfg) == 1
