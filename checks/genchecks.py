@@ -69,7 +69,7 @@ with open(f"{cfgname}.cfg", "r") as f:
             if cfgsubsection is None:
                 if cfgsection not in config:
                     config[cfgsection] = ""
-                config[cfgsection] += line + "\n"
+                config[cfgsection] += f"{line}\n"
             else:
                 if cfgsection not in config:
                     config[cfgsection] = []
@@ -259,13 +259,13 @@ consistency_checks = set()
 
 if solver == "bmc3":
     hargs["engine"] = "abc bmc3"
-    hargs["ilang_file"] = corename + "-gates.il"
+    hargs["ilang_file"] = f"{corename}-gates.il"
 elif solver == "btormc":
     hargs["engine"] = "btor btormc"
-    hargs["ilang_file"] = corename + "-hier.il"
+    hargs["ilang_file"] = f"{corename}-hier.il"
 else:
     hargs["engine"] = f"smtbmc {'--dumpsmt2 ' if dumpsmt2 else ''}{solver}"
-    hargs["ilang_file"] = corename + "-hier.il"
+    hargs["ilang_file"] = f"{corename}-hier.il"
 
 def test_disabled(check):
     if "filter-checks" in config:
@@ -378,10 +378,10 @@ def check_insn(grp, insn, chanidx, csr_mode=False, illegal_csr=False):
             vhdl_files += hfmt(config["vhdl-files"], **hargs)
 
         if len(sv_files):
-            print("read -sv " + " ".join(sv_files), file=sby_file)
+            print(f"read -sv {' '.join(sv_files)}", file=sby_file)
 
         if len(vhdl_files):
-            print("read -vhdl " + " ".join(vhdl_files), file=sby_file)
+            print(f"read -vhdl {' '.join(vhdl_files)}", file=sby_file)
 
         if "script-sources" in config:
             print_hfmt(sby_file, config["script-sources"], **hargs)
@@ -556,11 +556,11 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
                 check = f"{pf}csrc_const_{csr_name}"
                 check_name = f"csrc_const"
             else:
-                check = pf + "csrc_" + csr_test + "_" + csr_name
-                check_name = "csrc_" + csr_test
+                check = f"{pf}csrc_{csr_test}_{csr_name}"
+                check_name =f"csrc_{csr_test}"
 
         else:
-            check = pf + "csrc_" + csr_name
+            check = f"{pf}csrc_{csr_name}"
             check_name = "csrc"
 
         hargs["check"] = check_name
@@ -568,7 +568,7 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
         if chanidx is not None:
             depth_cfg = get_depth_cfg([f"{pf}{check_name}", check, f"{pf}{check_name}_ch{chanidx:d}", f"{check}_ch{chanidx:d}"])
             hargs["channel"] = f"{chanidx:d}"
-            check += f"_ch{chanidx:d}"
+            check = f"{check}_ch{chanidx:d}"
 
         else:
             depth_cfg = get_depth_cfg([f"{check_name}", check])
@@ -579,7 +579,7 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
         if chanidx is not None:
             depth_cfg = get_depth_cfg([check, f"{check}_ch{chanidx:d}"])
             hargs["channel"] = f"{chanidx:d}"
-            check += f"_ch{chanidx:d}"
+            check = f"{check}_ch{chanidx:d}"
 
         else:
             depth_cfg = get_depth_cfg([check])
@@ -640,10 +640,10 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
             vhdl_files += hfmt(config["vhdl-files"], **hargs)
 
         if len(sv_files):
-            print("read -sv " + " ".join(sv_files), file=sby_file)
+            print(f"read -sv {' '.join(sv_files)}", file=sby_file)
 
         if len(vhdl_files):
-            print("read -vhdl " + " ".join(vhdl_files), file=sby_file)
+            print(f"read -vhdl {' '.join(vhdl_files)}", file=sby_file)
 
         if "script-sources" in config:
             print_hfmt(sby_file, config["script-sources"], **hargs)
@@ -688,14 +688,14 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
 
         if csr_mode:
             try:
-                print("`define RISCV_FORMAL_CSRC_CONSTVAL " + constval, file=sby_file)
+                print(f"`define RISCV_FORMAL_CSRC_CONSTVAL {constval}", file=sby_file)
             except UnboundLocalError: # no constval
                 pass
             try:
-                print("`define RISCV_FORMAL_CSRC_HPMEVENT " + hpm_event_csr, file=sby_file)
+                print(f"`define RISCV_FORMAL_CSRC_HPMEVENT {hpm_event_csr}", file=sby_file)
             except UnboundLocalError: # no hpm_event_csr
                 pass
-            print("`define RISCV_FORMAL_CSRC_NAME " + csr_name, file=sby_file)
+            print(f"`define RISCV_FORMAL_CSRC_NAME {csr_name}", file=sby_file)
 
         if custom_csrs:
             print_custom_csrs(sby_file)
