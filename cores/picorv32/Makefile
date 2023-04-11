@@ -13,3 +13,5 @@ check: checks
 clean:
 	rm -f picorv32.v cexdata-*.zip
 	rm -rf disasm.o disasm.s checks/ cexdata-*/
+	rm -f testbug*.cfg
+	rm -rf testbug*/
