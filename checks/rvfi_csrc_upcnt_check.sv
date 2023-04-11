@@ -16,7 +16,7 @@ module rvfi_csrc_upcnt_check (
 	input clock, reset, check,
 	`RVFI_INPUTS
 );
-    // Setup for csrs
+	// Setup for csrs
 	`RVFI_CHANNEL(rvfi, `RISCV_FORMAL_CHANNEL_IDX)
 
 	localparam [11:0] csr_none = 12'hFFF;
@@ -33,6 +33,14 @@ module rvfi_csrc_upcnt_check (
 
 	wire csr_insn_valid = rvfi.valid && (rvfi.insn[6:0] == 7'b 1110011) && (rvfi.insn[13:12] != 0) && ((rvfi.insn >> 16 >> 16) == 0);
 	wire [11:0] csr_insn_addr = rvfi.insn[31:20];
+	wire csr_insn_under_test = (csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)
+		`ifdef RISCV_FORMAL_SMODE
+			|| csr_insn_addr == `csr_sindex(`RISCV_FORMAL_CSRC_NAME)
+		`endif
+		`ifdef RISCV_FORMAL_UMODE
+			|| csr_insn_addr == `csr_uindex(`RISCV_FORMAL_CSRC_NAME)
+		`endif
+	);
 
 	wire [`RISCV_FORMAL_XLEN-1:0] csr_insn_rmask = `csrget(`RISCV_FORMAL_CSRC_NAME, rmask);
 	wire [`RISCV_FORMAL_XLEN-1:0] csr_insn_wmask = `csrget(`RISCV_FORMAL_CSRC_NAME, wmask);
@@ -46,7 +54,7 @@ module rvfi_csrc_upcnt_check (
 	wire [1:0] csr_mode = rvfi.insn[13:12];
 	wire [31:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
 
-    // Setup for reg testing
+	// Setup for reg testing
 	`rvformal_rand_const_reg [63:0] insn_order;
 	reg [`RISCV_FORMAL_XLEN-1:0] rdata_shadow = 0;
 	reg csr_event_written = 0;
@@ -59,7 +67,7 @@ module rvfi_csrc_upcnt_check (
 			csr_read_shadowed = 0;
 		end else begin
 			// No writes of CSR under test allowed
-			assume (!(csr_write_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)));
+			assume (!(csr_write_valid && csr_insn_under_test));
 			if (check) begin
 				assume(csr_read_shadowed);
 				assume(rdata_shadow < 'h FFFF_FFFF);
@@ -67,11 +75,11 @@ module rvfi_csrc_upcnt_check (
 					`ifdef RISCV_FORMAL_CSRC_HPMEVENT
 					&& csr_event_written
 					`endif
-					&& csr_read_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+					&& csr_read_valid && csr_insn_under_test) begin
 					assert(csr_insn_rdata > rdata_shadow);
 				end
 			end else begin
-				if (csr_read_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+				if (csr_read_valid && csr_insn_under_test) begin
 					rdata_shadow = csr_insn_rdata;
 					csr_read_shadowed = 1;
 				end

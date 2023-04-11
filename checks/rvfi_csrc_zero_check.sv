@@ -16,7 +16,7 @@ module rvfi_csrc_zero_check (
 	input clock, reset, check,
 	`RVFI_INPUTS
 );
-    // Setup for csrs
+	// Setup for csrs
 	`RVFI_CHANNEL(rvfi, `RISCV_FORMAL_CHANNEL_IDX)
 
 	localparam [11:0] csr_none = 12'hFFF;
@@ -33,6 +33,14 @@ module rvfi_csrc_zero_check (
 
 	wire csr_insn_valid = rvfi.valid && (rvfi.insn[6:0] == 7'b 1110011) && (rvfi.insn[13:12] != 0) && ((rvfi.insn >> 16 >> 16) == 0);
 	wire [11:0] csr_insn_addr = rvfi.insn[31:20];
+	wire csr_insn_under_test = (csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)
+		`ifdef RISCV_FORMAL_SMODE
+			|| csr_insn_addr == `csr_sindex(`RISCV_FORMAL_CSRC_NAME)
+		`endif
+		`ifdef RISCV_FORMAL_UMODE
+			|| csr_insn_addr == `csr_uindex(`RISCV_FORMAL_CSRC_NAME)
+		`endif
+	);
 
 	wire [`RISCV_FORMAL_XLEN-1:0] csr_insn_rmask = `csrget(`RISCV_FORMAL_CSRC_NAME, rmask);
 	wire [`RISCV_FORMAL_XLEN-1:0] csr_insn_wmask = `csrget(`RISCV_FORMAL_CSRC_NAME, wmask);
@@ -46,7 +54,7 @@ module rvfi_csrc_zero_check (
 	wire [1:0] csr_mode = rvfi.insn[13:12];
 	wire [31:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
 
-    // Setup for reg testing
+	// Setup for reg testing
 	`rvformal_rand_const_reg [63:0] insn_order;
 	reg [`RISCV_FORMAL_XLEN-1:0] wdata_shadow = 0;
 	reg csr_written = 0;
@@ -57,12 +65,12 @@ module rvfi_csrc_zero_check (
 			csr_written = 0;
 		end else begin
 			if (check) begin
-				if (csr_written && csr_read_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+				if (csr_written && csr_read_valid && csr_insn_under_test) begin
 					assert(csr_insn_rdata == 0);
 					assume(wdata_shadow != 0);
 				end
 			end else begin
-				if (csr_write_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+				if (csr_write_valid && csr_insn_under_test) begin
 					// simplify things by only testing reg write, and not set/clear
 					assume(csr_mode == 0 || csr_mode == 1);
 					wdata_shadow = csr_insn_wdata;
