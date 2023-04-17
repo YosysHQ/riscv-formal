@@ -38,6 +38,7 @@ module rvfi_bus_dmem_fault_check (
 	reg [`RISCV_FORMAL_XLEN-1:0] csr_mcause_wdata;
 `endif
 
+	reg activated = 0;
 
 	integer channel_idx, i, j;
 
