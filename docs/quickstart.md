@@ -14,6 +14,12 @@ You'll need Yosys, SymbiYosys, and Boolector for the formal proofs. See
 [here](https://yosyshq.readthedocs.io/projects/sby/en/latest/install.html)
 for install instructions.
 
+For additional python requirements:
+
+```
+python3 -m pip install Verilog_VCD
+```
+
 Some of those tools are packaged for some of the major Linux distribution, but
 those packages are sometimes a few years old and do not work with riscv-formal.
 Follow the descriptions linked above and install from the latest sources instead.
@@ -44,16 +50,16 @@ Formally verify that the NERV processor complies with the RISC-V ISA:
 
 ```
 cd riscv-formal
-git clone -b csr https://github.com/yosyshq/nerv.git cores/nerv/
+git clone https://github.com/yosyshq/nerv.git cores/nerv/
 cd cores/nerv/
-make -j8 check
+make -j$(nproc) check
 ```
 
-Now make a random change to `nerv.v` and re-run the tests:
+Now make a random change to `nerv.sv` and re-run the tests:
 
 ```
 make clean
-make -j8 check
+make -j$(nproc) check
 ```
 
 The check will likely fail now. (It will if the change did break ISA compliance
@@ -72,7 +78,7 @@ python3 disasm.py checks/liveness_ch0/engine_0/trace.vcd
 Or you can simply use gtkwave to display the counter example trace:
 
 ```
-gtkwave checks/liveness_ch0/engine_0/trace.vcd checks.gtkw
+gtkwave checks/liveness_ch0/engine_0/trace.vcd trace.gtkw
 ```
 
 Exercise 2: Build an RVFI Monitor and run it
