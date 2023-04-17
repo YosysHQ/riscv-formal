@@ -31,8 +31,8 @@ module rvfi_bus_axi4_observer_write #(
 
     localparam AXI_STRB_WIDTH = AXI_DATA_WIDTH / 8
 ) (
-	input         clock,
-	input         reset,
+    input         clock,
+    input         reset,
 
     // Write Address Channel (AW)
     input [AXI_ID_WIDTH-1:0]       axi_awid,
@@ -62,7 +62,7 @@ module rvfi_bus_axi4_observer_write #(
     input                          axi_bvalid,
     input                          axi_bready
 
-	`RVFI_BUS_CHANNEL_OUTPUTS
+    `RVFI_BUS_CHANNEL_OUTPUTS
 );
 
     wire aw_transfer = axi_awvalid && axi_awready;
@@ -156,8 +156,8 @@ module rvfi_bus_axi4_observer_read #(
 
     parameter IGNORE_PROT_DATA_INSN = 0
 ) (
-	input         clock,
-	input         reset,
+    input         clock,
+    input         reset,
 
     // Read Address Channel (AR)
     input [AXI_ID_WIDTH-1:0]       axi_arid,
@@ -182,7 +182,7 @@ module rvfi_bus_axi4_observer_read #(
     input                          axi_rvalid,
     input                          axi_rready
 
-	`RVFI_BUS_CHANNEL_OUTPUTS
+    `RVFI_BUS_CHANNEL_OUTPUTS
 );
 
     wire ar_transfer = axi_arvalid && axi_arready;

@@ -35,11 +35,11 @@ module rvfi_bus_dmem_check (
 
 	reg [  `RISCV_FORMAL_XLEN-1:0] dmem_shadow;
 
-	reg [  `RISCV_FORMAL_XLEN   - 1:0] bus_addr;
-	reg [`RISCV_FORMAL_BUSLEN/8 - 1:0] bus_rmask;
-	reg [`RISCV_FORMAL_BUSLEN   - 1:0] bus_rdata;
-	reg [`RISCV_FORMAL_BUSLEN/8 - 1:0] bus_wmask;
-	reg [`RISCV_FORMAL_BUSLEN   - 1:0] bus_wdata;
+	(* keep *) reg [  `RISCV_FORMAL_XLEN   - 1:0] bus_addr;
+	(* keep *) reg [`RISCV_FORMAL_BUSLEN/8 - 1:0] bus_rmask;
+	(* keep *) reg [`RISCV_FORMAL_BUSLEN   - 1:0] bus_rdata;
+	(* keep *) reg [`RISCV_FORMAL_BUSLEN/8 - 1:0] bus_wmask;
+	(* keep *) reg [`RISCV_FORMAL_BUSLEN   - 1:0] bus_wdata;
 
 	reg [`RISCV_FORMAL_XLEN-1:0] bus_shadow;
 

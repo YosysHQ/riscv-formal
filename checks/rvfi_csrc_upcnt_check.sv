@@ -16,7 +16,7 @@ module rvfi_csrc_upcnt_check (
 	input clock, reset, check,
 	`RVFI_INPUTS
 );
-    // Setup for csrs
+	// Setup for csrs
 	`RVFI_CHANNEL(rvfi, `RISCV_FORMAL_CHANNEL_IDX)
 
 	localparam [11:0] csr_none = 12'hFFF;
@@ -46,7 +46,7 @@ module rvfi_csrc_upcnt_check (
 	wire [1:0] csr_mode = rvfi.insn[13:12];
 	wire [31:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
 
-    // Setup for reg testing
+	// Setup for reg testing
 	`rvformal_rand_const_reg [63:0] insn_order;
 	reg [`RISCV_FORMAL_XLEN-1:0] rdata_shadow = 0;
 	reg csr_event_written = 0;
@@ -63,7 +63,7 @@ module rvfi_csrc_upcnt_check (
 			if (check) begin
 				assume(csr_read_shadowed);
 				assume(rdata_shadow < 'h FFFF_FFFF);
-				if (csr_read_shadowed 
+				if (csr_read_shadowed
 					`ifdef RISCV_FORMAL_CSRC_HPMEVENT
 					&& csr_event_written
 					`endif
