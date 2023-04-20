@@ -108,7 +108,7 @@ if "options" in config:
 
         elif line[0] == "mode":
             assert len(line) == 2
-            assert(line[1] in ("bmc", "prove"))
+            assert(line[1] in ("bmc", "prove", "cover"))
             mode = line[1]
 
         elif line[0] == "buslen":
