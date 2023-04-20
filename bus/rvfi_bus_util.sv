@@ -44,7 +44,7 @@ module rvfi_bus_util_fifo_stage #(
 			buffer_valid <= 0;
 		end else begin
 			if (in_txn != out_txn)
-				buffer_valid = in_txn;
+				buffer_valid <= in_txn;
 		end
 		if (in_txn)
 			buffered <= in_data;

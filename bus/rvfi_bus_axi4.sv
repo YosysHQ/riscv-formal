@@ -491,3 +491,388 @@ module rvfi_bus_axi4_observer_read #(
     assign rvfi_bus_fault = axi_rresp[1];
     assign rvfi_bus_valid = r_transfer_match;
 endmodule
+
+module rvfi_bus_axi4_abstract_read #(
+    parameter AXI_ADDRESS_WIDTH = 32,
+    parameter AXI_DATA_WIDTH = 32,
+    parameter AXI_ID_WIDTH = 1,
+    parameter AXI_ARUSER_WIDTH = 1,
+    parameter AXI_RUSER_WIDTH = 1,
+
+    parameter DEPTH = 2
+) (
+    input wire clock,
+    input wire reset,
+
+    // Read Address Channel (AR)
+    input wire [AXI_ID_WIDTH-1:0]       axi_arid,
+    input wire [AXI_ADDRESS_WIDTH-1:0]  axi_araddr,
+    input wire [3:0]                    axi_arregion,
+    input wire [7:0]                    axi_arlen,
+    input wire [2:0]                    axi_arsize,
+    input wire [1:0]                    axi_arburst,
+    input wire                          axi_arlock,
+    input wire [3:0]                    axi_arcache,
+    input wire [2:0]                    axi_arprot,
+    input wire [3:0]                    axi_arqos,
+    input wire [AXI_ARUSER_WIDTH-1:0]   axi_aruser,
+    input wire                          axi_arvalid,
+    output var                          axi_arready,
+    // Read Data Channel (R)
+    output var [AXI_ID_WIDTH-1:0]       axi_rid,
+    output var [AXI_DATA_WIDTH-1:0]     axi_rdata,
+    output var [1:0]                    axi_rresp,
+    output var                          axi_rlast,
+    output var [AXI_RUSER_WIDTH-1:0]    axi_ruser,
+    output var                          axi_rvalid,
+    input wire                          axi_rready
+);
+
+    `rvformal_rand_reg                       rand_arready;
+    `rvformal_rand_reg [AXI_ID_WIDTH-1:0]    rand_rid;
+    `rvformal_rand_reg [AXI_DATA_WIDTH-1:0]  rand_rdata;
+    `rvformal_rand_reg [1:0]                 rand_rresp;
+    `rvformal_rand_reg                       rand_rlast;
+    `rvformal_rand_reg [AXI_RUSER_WIDTH-1:0] rand_ruser;
+    `rvformal_rand_reg                       rand_rvalid;
+
+    logic reset_q;
+
+    // Read Address Channel (AR)
+    logic [AXI_ID_WIDTH-1:0]       axi_arid_q;
+    logic [AXI_ADDRESS_WIDTH-1:0]  axi_araddr_q;
+    logic [3:0]                    axi_arregion_q;
+    logic [7:0]                    axi_arlen_q;
+    logic [2:0]                    axi_arsize_q;
+    logic [1:0]                    axi_arburst_q;
+    logic                          axi_arlock_q;
+    logic [3:0]                    axi_arcache_q;
+    logic [2:0]                    axi_arprot_q;
+    logic [3:0]                    axi_arqos_q;
+    logic [AXI_ARUSER_WIDTH-1:0]   axi_aruser_q;
+    logic                          axi_arvalid_q;
+    logic                          axi_arready_q;
+    // Read Data Channel (R)
+    logic [AXI_ID_WIDTH-1:0]       axi_rid_q;
+    logic [AXI_DATA_WIDTH-1:0]     axi_rdata_q;
+    logic [1:0]                    axi_rresp_q;
+    logic                          axi_rlast_q;
+    logic [AXI_RUSER_WIDTH-1:0]    axi_ruser_q;
+    logic                          axi_rvalid_q;
+    logic                          axi_rready_q;
+
+    always @(posedge clock) begin
+        reset_q <= reset;
+        axi_arid_q <= axi_arid;
+        axi_araddr_q <= axi_araddr;
+        axi_arregion_q <= axi_arregion;
+        axi_arlen_q <= axi_arlen;
+        axi_arsize_q <= axi_arsize;
+        axi_arburst_q <= axi_arburst;
+        axi_arlock_q <= axi_arlock;
+        axi_arcache_q <= axi_arcache;
+        axi_arprot_q <= axi_arprot;
+        axi_arqos_q <= axi_arqos;
+        axi_aruser_q <= axi_aruser;
+        axi_arvalid_q <= axi_arvalid;
+        axi_arready_q <= axi_arready;
+        axi_rid_q <= axi_rid;
+        axi_rdata_q <= axi_rdata;
+        axi_rresp_q <= axi_rresp;
+        axi_rlast_q <= axi_rlast;
+        axi_ruser_q <= axi_ruser;
+        axi_rvalid_q <= axi_rvalid;
+        axi_rready_q <= axi_rready;
+    end
+
+    wire logic ar_transfer   = axi_arvalid   && axi_arready;
+    wire logic ar_transfer_q = axi_arvalid_q && axi_arready_q;
+    wire logic r_transfer    = axi_rvalid    && axi_rready;
+    wire logic r_transfer_q  = axi_rvalid_q  && axi_rready_q;
+
+    wire logic r_new = axi_rvalid && (!axi_rvalid_q || axi_rready_q);
+
+    wire logic r_stable = axi_rvalid_q && !axi_rvalid_q;
+
+    assign axi_arready = rand_arready;
+
+    assign axi_rid    = r_stable ? axi_rid_q    : rand_rid;
+    assign axi_rdata  = r_stable ? axi_rdata_q  : rand_rdata;
+    assign axi_rresp  = r_stable ? axi_rresp_q  : rand_rresp;
+    assign axi_rlast  = r_stable ? axi_rlast_q  : rand_rlast;
+    assign axi_ruser  = r_stable ? axi_ruser_q  : rand_ruser;
+    assign axi_rvalid = r_stable ? axi_rvalid_q : rand_rvalid;
+
+    logic [AXI_ID_WIDTH-1:0] read_id [0:DEPTH];
+    logic [AXI_ID_WIDTH-1:0] read_id_q [0:DEPTH];
+    logic [7:0] read_len [0:DEPTH];
+    logic [7:0] read_len_q [0:DEPTH];
+    logic [DEPTH:0] ar_mask;
+    logic [DEPTH:0] ar_mask_q;
+
+    logic matched;
+    logic last_read;
+
+    always @* begin
+        for (int i = 0; i <= DEPTH; i++) begin
+            read_id[i] = read_id_q[i];
+            read_len[i] = read_len_q[i];
+        end
+
+        matched = 0;
+        last_read = 0;
+        ar_mask = 0;
+        if (!reset) begin
+            ar_mask = ar_mask_q;
+
+            if (ar_transfer_q) begin
+                // insert new read burst
+                assume(!ar_mask[0]);
+
+                for (int i = 0; i <= DEPTH; i++) begin
+                    if (!ar_mask[i]) begin
+                        read_id[i] = axi_arid_q;
+                        read_len[i] = axi_arlen_q;
+                    end
+                end
+
+                ar_mask = (ar_mask << 1) | 1'b1;
+            end
+
+            if (r_new) begin
+                // update oldest read burst with a matching id, removing it
+                // when it is completed
+                for (int i = DEPTH; i >= 0; i--) begin
+                    if (!matched && ar_mask[i] && read_id[i] == axi_rid) begin
+                        matched = 1;
+                        if (read_len[i] > 0) begin
+                            read_len[i] -= 1;
+                        end else begin
+                            last_read = 1;
+                        end
+                    end
+
+                    if (last_read) begin
+                        if (i > 0) begin
+                            read_len[i] = read_len[i - 1];
+                        end
+                    end
+                end
+
+                assume (matched);
+                assume (axi_rlast == last_read);
+
+                if (last_read) begin
+                    ar_mask >>= 1;
+                end
+            end
+        end
+    end
+
+    always @(posedge clock) begin
+        for (int i = 0; i <= DEPTH; i++) begin
+            read_id_q[i] <= read_id[i];
+            read_len_q[i] <= read_len[i];
+        end
+        ar_mask_q <= ar_mask;
+    end
+endmodule
+
+module rvfi_bus_axi4_abstract_write #(
+    parameter AXI_ADDRESS_WIDTH = 32,
+    parameter AXI_DATA_WIDTH = 32,
+    parameter AXI_ID_WIDTH = 1,
+    parameter AXI_AWUSER_WIDTH = 1,
+    parameter AXI_WUSER_WIDTH = 1,
+    parameter AXI_BUSER_WIDTH = 1,
+
+    parameter DEPTH = 2,
+
+    localparam AXI_STRB_WIDTH = AXI_DATA_WIDTH / 8
+) (
+    input wire clock,
+    input wire reset,
+
+    // Write Address Channel (AW)
+    input wire [AXI_ID_WIDTH-1:0]       axi_awid,
+    input wire [AXI_ADDRESS_WIDTH-1:0]  axi_awaddr,
+    input wire [3:0]                    axi_awregion,
+    input wire [7:0]                    axi_awlen,
+    input wire [2:0]                    axi_awsize,
+    input wire [1:0]                    axi_awburst,
+    input wire                          axi_awlock,
+    input wire [3:0]                    axi_awcache,
+    input wire [2:0]                    axi_awprot,
+    input wire [3:0]                    axi_awqos,
+    input wire [AXI_AWUSER_WIDTH-1:0]   axi_awuser,
+    input wire                          axi_awvalid,
+    output var                          axi_awready,
+    // Write Data Channel (W)
+    input wire [AXI_DATA_WIDTH-1:0]     axi_wdata,
+    input wire [AXI_STRB_WIDTH-1:0]     axi_wstrb,
+    input wire                          axi_wlast,
+    input wire [AXI_WUSER_WIDTH-1:0]    axi_wuser,
+    input wire                          axi_wvalid,
+    output var                          axi_wready,
+    // Write Response Channel (B)
+    output var [AXI_ID_WIDTH-1:0]       axi_bid,
+    output var [1:0]                    axi_bresp,
+    output var [AXI_BUSER_WIDTH-1:0]    axi_buser,
+    output var                          axi_bvalid,
+    input wire                          axi_bready
+);
+
+    `rvformal_rand_reg                       rand_awready;
+    `rvformal_rand_reg                       rand_wready;
+    `rvformal_rand_reg [AXI_ID_WIDTH-1:0]    rand_bid;
+    `rvformal_rand_reg [1:0]                 rand_bresp;
+    `rvformal_rand_reg [AXI_BUSER_WIDTH-1:0] rand_buser;
+    `rvformal_rand_reg [AXI_DATA_WIDTH-1:0]  rand_bvalid;
+
+    logic reset_q;
+
+    // Write Address Channel (AW)
+    logic [AXI_ID_WIDTH-1:0]       axi_awid_q;
+    logic [AXI_ADDRESS_WIDTH-1:0]  axi_awaddr_q;
+    logic [3:0]                    axi_awregion_q;
+    logic [7:0]                    axi_awlen_q;
+    logic [2:0]                    axi_awsize_q;
+    logic [1:0]                    axi_awburst_q;
+    logic                          axi_awlock_q;
+    logic [3:0]                    axi_awcache_q;
+    logic [2:0]                    axi_awprot_q;
+    logic [3:0]                    axi_awqos_q;
+    logic [AXI_AWUSER_WIDTH-1:0]   axi_awuser_q;
+    logic                          axi_awvalid_q;
+    logic                          axi_awready_q;
+    // Write Data Channel (W)
+    logic [AXI_DATA_WIDTH-1:0]     axi_wdata_q;
+    logic [AXI_STRB_WIDTH-1:0]     axi_wstrb_q;
+    logic                          axi_wlast_q;
+    logic [AXI_WUSER_WIDTH-1:0]    axi_wuser_q;
+    logic                          axi_wvalid_q;
+    logic                          axi_wready_q;
+    // Write Response Channel (B)
+    logic [AXI_ID_WIDTH-1:0]       axi_bid_q;
+    logic [1:0]                    axi_bresp_q;
+    logic [AXI_BUSER_WIDTH-1:0]    axi_buser_q;
+    logic                          axi_bvalid_q;
+    logic                          axi_bready_q;
+
+    always @(posedge clock) begin
+        reset_q <= reset;
+        axi_awid_q <= axi_awid;
+        axi_awaddr_q <= axi_awaddr;
+        axi_awregion_q <= axi_awregion;
+        axi_awlen_q <= axi_awlen;
+        axi_awsize_q <= axi_awsize;
+        axi_awburst_q <= axi_awburst;
+        axi_awlock_q <= axi_awlock;
+        axi_awcache_q <= axi_awcache;
+        axi_awprot_q <= axi_awprot;
+        axi_awqos_q <= axi_awqos;
+        axi_awuser_q <= axi_awuser;
+        axi_awvalid_q <= axi_awvalid;
+        axi_awready_q <= axi_awready;
+        axi_wdata_q <= axi_wdata;
+        axi_wstrb_q <= axi_wstrb;
+        axi_wlast_q <= axi_wlast;
+        axi_wuser_q <= axi_wuser;
+        axi_wvalid_q <= axi_wvalid;
+        axi_wready_q <= axi_wready;
+        axi_bid_q <= axi_bid;
+        axi_bresp_q <= axi_bresp;
+        axi_buser_q <= axi_buser;
+        axi_bvalid_q <= axi_bvalid;
+        axi_bready_q <= axi_bready;
+    end
+
+    wire logic aw_transfer   = axi_awvalid   && axi_awready;
+    wire logic aw_transfer_q = axi_awvalid_q && axi_awready_q;
+    wire logic w_transfer    = axi_wvalid    && axi_wready;
+    wire logic w_transfer_q  = axi_wvalid_q  && axi_wready_q;
+    wire logic b_transfer    = axi_bvalid    && axi_bready;
+    wire logic b_transfer_q  = axi_bvalid_q  && axi_bready_q;
+
+    wire logic b_stable = axi_bvalid_q && !axi_bready_q;
+
+    wire logic b_new = axi_bvalid && (!axi_bvalid_q || axi_bready_q);
+
+    assign axi_awready = rand_awready;
+    assign axi_wready  = rand_wready;
+
+    assign axi_bid    = b_stable ? axi_bid_q    : rand_bid;
+    assign axi_bresp  = b_stable ? axi_bresp_q  : rand_bresp;
+    assign axi_buser  = b_stable ? axi_buser_q  : rand_buser;
+    assign axi_bvalid = b_stable ? axi_bvalid_q : rand_bvalid;
+
+    logic [AXI_ID_WIDTH-1:0] write_id [0:DEPTH];
+    logic [AXI_ID_WIDTH-1:0] write_id_q [0:DEPTH];
+
+    logic [DEPTH:0] aw_mask;
+    logic [DEPTH:0] aw_mask_q;
+
+    logic [DEPTH:0] wlast_mask;
+    logic [DEPTH:0] wlast_mask_q;
+
+    logic matched;
+
+    always @* begin
+        for (int i = 0; i <= DEPTH; i++) begin
+            write_id[i] = write_id_q[i];
+        end
+
+        aw_mask = 0;
+        wlast_mask = 0;
+        matched = 0;
+
+        if (!reset) begin
+            aw_mask = aw_mask_q;
+            wlast_mask = wlast_mask_q;
+
+            if (aw_transfer_q) begin
+                assume (!aw_mask[0]);
+
+                for (int i = 0; i <= DEPTH; i++) begin
+                    if (!aw_mask[i]) begin
+                        write_id[i] = axi_awid_q;
+                    end
+                end
+                aw_mask = (aw_mask << 1) | 1'b1;
+            end
+
+            if (w_transfer_q && axi_wlast_q) begin
+                assume (wlast_mask[0] == 0);
+                wlast_mask = (wlast_mask << 1) | 1'b1;
+            end
+
+            if (b_new) begin
+                for (int i = DEPTH; i >= 0; i--) begin
+                    if (!matched && aw_mask[i] && wlast_mask[i] && write_id[i] == axi_bid) begin
+                        matched = 1;
+                    end
+
+                    if (matched) begin
+                        if (i > 0) begin
+                           write_id[i] = write_id[i-1];
+                        end
+                    end
+                end
+                assume (matched);
+
+                aw_mask = aw_mask >> 1;
+                wlast_mask = wlast_mask >> 1;
+            end
+        end
+    end
+
+    always @(posedge clock) begin
+        aw_mask_q <= aw_mask;
+        wlast_mask_q <= wlast_mask;
+
+        for (int i = 0; i <= DEPTH; i++) begin
+            write_id_q[i] <= write_id[i];
+        end
+    end
+
+endmodule
