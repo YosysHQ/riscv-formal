@@ -1,0 +1,151 @@
+[*]
+[*] GTKWave Analyzer v3.3.107 (w)1999-2020 BSI
+[*] Tue Oct 20 19:25:31 2020
+[*]
+[dumpfile] "/home/claire/Work/riscv-formal/cores/nerv/testbench.vcd"
+[dumpfile_mtime] "Tue Oct 20 19:24:49 2020"
+[dumpfile_size] 76428
+[savefile] "/home/claire/Work/riscv-formal/cores/nerv/testbench.gtkw"
+[timestart] 305
+[size] 1397 995
+[pos] -1 -1
+*-6.000000 497 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] testbench.
+[sst_width] 240
+[signals_width] 174
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+testbench.dut.clock
+testbench.dut.reset
+testbench.dut.stall
+testbench.dut.trap
+@200
+-
+@22
+testbench.dut.imem_addr[31:0]
+testbench.dut.imem_data[31:0]
+@200
+-
+@28
+testbench.dut.dmem_valid
+@22
+testbench.dut.dmem_addr[31:0]
+testbench.dut.dmem_wstrb[3:0]
+testbench.dut.dmem_wdata[31:0]
+testbench.dut.dmem_rdata[31:0]
+@200
+-
+@22
+testbench.dut.pc[31:0]
+testbench.dut.insn[31:0]
+@28
+testbench.dut.illinsn
+@c00200
+-insn_decoded
+@22
+testbench.dut.insn_funct7[6:0]
+testbench.dut.insn_rs2[4:0]
+testbench.dut.insn_rs1[4:0]
+@28
+testbench.dut.insn_funct3[2:0]
+@22
+testbench.dut.insn_rd[4:0]
+testbench.dut.insn_opcode[6:0]
+@200
+-
+@22
+testbench.dut.imm_b_sext[31:0]
+testbench.dut.imm_i_sext[31:0]
+testbench.dut.imm_j_sext[31:0]
+testbench.dut.imm_s_sext[31:0]
+@1401200
+-insn_decoded
+@22
+testbench.dut.rs1_value[31:0]
+testbench.dut.rs2_value[31:0]
+@28
+testbench.dut.next_wr
+@22
+testbench.dut.next_rd[31:0]
+@c00200
+-registers
+@22
+testbench.dut.dbg_reg_x0[31:0]
+testbench.dut.dbg_reg_x1[31:0]
+testbench.dut.dbg_reg_x2[31:0]
+testbench.dut.dbg_reg_x3[31:0]
+testbench.dut.dbg_reg_x4[31:0]
+testbench.dut.dbg_reg_x5[31:0]
+testbench.dut.dbg_reg_x6[31:0]
+testbench.dut.dbg_reg_x7[31:0]
+testbench.dut.dbg_reg_x8[31:0]
+testbench.dut.dbg_reg_x9[31:0]
+testbench.dut.dbg_reg_x10[31:0]
+testbench.dut.dbg_reg_x11[31:0]
+testbench.dut.dbg_reg_x12[31:0]
+testbench.dut.dbg_reg_x13[31:0]
+testbench.dut.dbg_reg_x14[31:0]
+testbench.dut.dbg_reg_x15[31:0]
+testbench.dut.dbg_reg_x16[31:0]
+testbench.dut.dbg_reg_x17[31:0]
+testbench.dut.dbg_reg_x18[31:0]
+testbench.dut.dbg_reg_x19[31:0]
+testbench.dut.dbg_reg_x20[31:0]
+testbench.dut.dbg_reg_x21[31:0]
+testbench.dut.dbg_reg_x22[31:0]
+testbench.dut.dbg_reg_x23[31:0]
+testbench.dut.dbg_reg_x24[31:0]
+testbench.dut.dbg_reg_x25[31:0]
+testbench.dut.dbg_reg_x26[31:0]
+testbench.dut.dbg_reg_x27[31:0]
+testbench.dut.dbg_reg_x28[31:0]
+testbench.dut.dbg_reg_x29[31:0]
+testbench.dut.dbg_reg_x30[31:0]
+testbench.dut.dbg_reg_x31[31:0]
+@1401200
+-registers
+@200
+-
+@28
+testbench.dut.mem_rd_enable
+@22
+testbench.dut.mem_rd_addr[31:0]
+testbench.dut.mem_rd_func[4:0]
+testbench.dut.mem_rd_reg[4:0]
+@200
+-
+@28
+testbench.dut.mem_rd_enable_q
+@22
+testbench.dut.mem_rd_func_q[4:0]
+testbench.dut.mem_rd_reg_q[4:0]
+testbench.dut.mem_rdata[31:0]
+@200
+-
+@28
+testbench.dut.mem_wr_enable
+@22
+testbench.dut.mem_wr_addr[31:0]
+testbench.dut.mem_wr_data[31:0]
+testbench.dut.mem_wr_strb[3:0]
+@200
+-
+-CSRs
+@24
+testbench.dut.csr_mcycle_value[31:0]
+testbench.dut.csr_minstret_value[31:0]
+@28
+testbench.dut.csr_mstatus_value[31:0]
+@22
+testbench.dut.csr_mtvec_value[31:0]
+testbench.dut.csr_mcause_value[31:0]
+testbench.dut.csr_mepc_value[31:0]
+@201
+-Interrupts
+@22
+testbench.dut.irq[31:0]
+testbench.dut.irq_en[31:0]
+testbench.dut.irq_num[4:0]
+[pattern_trace] 1
+[pattern_trace] 0

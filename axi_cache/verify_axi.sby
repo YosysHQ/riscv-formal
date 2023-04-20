@@ -1,0 +1,81 @@
+[tasks]
+prove
+cover
+
+[options]
+prove: mode prove
+cover: mode cover
+
+# The cache's AXI interface is too simple to cover everything SVA-AXI-FVIP's
+# can check for
+cover: expect fail
+
+[engines]
+prove: abc pdr
+cover: smtbmc boolector
+
+[script]
+
+verific -set-ignore VERI-1875
+
+# Read packages first
+# This one should be alwyas read first
+read -sv amba_axi4_protocol_checker_pkg.sv
+# Then the rest of them
+read -sv amba_axi4_single_interface_requirements.sv
+read -sv amba_axi4_definition_of_axi4_lite.sv
+read -sv amba_axi4_atomic_accesses.sv
+read -sv amba_axi4_transaction_structure.sv
+read -sv amba_axi4_transaction_attributes.sv
+read -sv amba_axi4_low_power_interface.sv
+read -sv amba_axi4_low_power_channel.sv
+
+# This is a checker, not a package
+read -sv amba_axi4_write_response_dependencies.sv
+read -sv amba_axi4_exclusive_access_source_perspective.sv
+
+# The modules containing the properties
+read -sv amba_axi4_protocol_checker.sv
+read -sv amba_axi4_read_address_channel.sv
+read -sv amba_axi4_read_data_channel.sv
+read -sv amba_axi4_write_data_channel.sv
+read -sv amba_axi4_write_response_channel.sv
+read -sv amba_axi4_write_address_channel.sv
+
+# Then the dut
+read -sv nerv_axi_cache_icache.sv nerv_axi_cache_dcache.sv nerv_axi_cache.sv
+
+# The bind file
+read -sv verify_axi.sv
+
+# Elaborate
+prep -top nerv_axi_cache
+
+[files]
+# Packages
+SVA-AXI4-FVIP/AXI4/src/amba_axi4_protocol_checker_pkg.sv
+SVA-AXI4-FVIP/AXI4/src/amba_axi4_low_power_channel.sv
+SVA-AXI4-FVIP/AXI4/src/axi4_spec/amba_axi4_single_interface_requirements.sv
+SVA-AXI4-FVIP/AXI4/src/axi4_spec/amba_axi4_definition_of_axi4_lite.sv
+SVA-AXI4-FVIP/AXI4/src/axi4_spec/amba_axi4_atomic_accesses.sv
+SVA-AXI4-FVIP/AXI4/src/axi4_spec/amba_axi4_transaction_structure.sv
+SVA-AXI4-FVIP/AXI4/src/axi4_spec/amba_axi4_transaction_attributes.sv
+SVA-AXI4-FVIP/AXI4/src/axi4_spec/amba_axi4_low_power_interface.sv
+SVA-AXI4-FVIP/AXI4/src/axi4_lib/amba_axi4_write_response_dependencies.sv
+SVA-AXI4-FVIP/AXI4/src/axi4_lib/amba_axi4_exclusive_access_source_perspective.sv
+
+# Modules containing the properties
+SVA-AXI4-FVIP/AXI4/src/amba_axi4_protocol_checker.sv
+SVA-AXI4-FVIP/AXI4/src/amba_axi4_read_address_channel.sv
+SVA-AXI4-FVIP/AXI4/src/amba_axi4_read_data_channel.sv
+SVA-AXI4-FVIP/AXI4/src/amba_axi4_write_data_channel.sv
+SVA-AXI4-FVIP/AXI4/src/amba_axi4_write_response_channel.sv
+SVA-AXI4-FVIP/AXI4/src/amba_axi4_write_address_channel.sv
+
+# Bind file
+verify_axi.sv
+
+# # DUT
+nerv_axi_cache_icache.sv
+nerv_axi_cache_dcache.sv
+nerv_axi_cache.sv
