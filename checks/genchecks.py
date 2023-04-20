@@ -130,7 +130,8 @@ if "options" in config:
 def add_csr_tests(name, test_str):
     # use regex to split by spaces, unless those spaces are inside quotation marks
     # e.g. const="32'h dead_beef" is one match not two
-    tests = re.findall("(\S*?\"[^\"]*\"|\S+)", test_str)
+    #      const="32'h 0"_mask="32'h dead_beef" is also one match
+    tests = re.findall("((?:\S*?\"[^\"]*\")+|\S+)", test_str)
     csr_tests[name] = tests
 
 def add_csr(csr_str):
@@ -542,12 +543,21 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
             hpm_idx = csr_test.find("_hpm")
             if hpm_idx >= 0:
                 try:
-                    hpm_addr = str(csr_test).split('=', maxsplit=1)[1].strip('"')
+                    hpm_addr = str(csr_test[hpm_idx:]).split('=', maxsplit=1)[1].strip('"')
                     hpm_event_csr = f"mhpmevent{hpm_addr}"
                 except IndexError: # no value provided
                     print(csr_test)
                     assert 0
                 csr_test = csr_test[:hpm_idx]
+            # Check for provided mask
+            mask_idx = csr_test.find("_mask")
+            if mask_idx >= 0:
+                try:
+                    csr_mask = str(csr_test[mask_idx:]).split('=', maxsplit=1)[1].strip('"')
+                except IndexError: # no value provided
+                    print(csr_test)
+                    assert 0
+                csr_test = csr_test[:mask_idx]
             if csr_test.startswith("const"):
                 try:
                     constval = str(csr_test).split('=', maxsplit=1)[1].strip('"')
@@ -694,6 +704,10 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
             try:
                 print(f"`define RISCV_FORMAL_CSRC_HPMEVENT {hpm_event_csr}", file=sby_file)
             except UnboundLocalError: # no hpm_event_csr
+                pass
+            try:
+                print(f"`define RISCV_FORMAL_CSRC_MASK {csr_mask}", file=sby_file)
+            except UnboundLocalError: # no csr_mask
                 pass
             print(f"`define RISCV_FORMAL_CSRC_NAME {csr_name}", file=sby_file)
 
