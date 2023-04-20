@@ -357,6 +357,12 @@ example, `mhpmcounter3 upcnt_hpm=3` declares that the `mhpmcounter3` is controll
 and should be tested with the `csrc_upcnt_check`.  The CSR up-counter check is the only
 check to utilise the hpmevent macro at this time.
 
+Consistency checks can also be appended with `_mask=` with a verilog expression which will be
+applied to the CSR as a bit mask before testing the return value.  Note that `_mask` must be defined
+*after* any other value assignment for the check, but *before* `_hpm`.  For example, the statement
+`misa const=0_mask="32'h 0aaa_ffff"` masks the `misa` CSR and then checks for a constant value of 0.
+A mask value is currently only supported in the `const`, `zero`, and `any` checks.
+
 `const` is currently the only other test to support value assignment.  If no value is provided, a
 value of `rdata_shadow` will be assigned such that any value is accepted provided it is constant.
 
