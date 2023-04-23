@@ -6,7 +6,7 @@ Quickstart guide:
 First install Yosys, SymbiYosys, and the solvers. See
 [here](http://symbiyosys.readthedocs.io/en/latest/quickstart.html#installing)
 for instructions. Then build the version of SERV with RVFI support and
-rsicv-tools, and generate the formal checks:
+riscv-tools, and generate the formal checks:
 
 ```
 bash generate.sh
