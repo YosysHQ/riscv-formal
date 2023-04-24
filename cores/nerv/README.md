@@ -21,10 +21,26 @@ Running the riscv-formal testbench
 
 ```
 git clone https://github.com/yosyshq/riscv-formal.git
-cd riscv-formal/cores/
-git clone https://github.com/yosyshq/nerv.git
-cd nerv
+cd riscv-formal/cores/nerv
 make -j8 check
+```
+
+Updating riscv-formal's included nerv core
+------------------------------------------
+
+From root `riscv-formal` directory:
+
+```
+git subtree pull --prefix cores/nerv git@github.com:YosysHQ/nerv.git main --squash
+```
+
+Updating upstream nerv with changes from riscv-formal
+-----------------------------------------------------
+
+From root `riscv-formal` directory:
+
+```
+git subtree push --prefix cores/nerv git@github.com:YosysHQ/nerv.git main
 ```
 
 iCEBreaker SOC example
