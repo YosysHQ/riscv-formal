@@ -50,7 +50,6 @@ Formally verify that the NERV processor complies with the RISC-V ISA:
 
 ```
 cd riscv-formal
-git clone https://github.com/yosyshq/nerv.git cores/nerv/
 cd cores/nerv/
 make -j$(nproc) check
 ```
