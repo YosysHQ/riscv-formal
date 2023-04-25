@@ -278,8 +278,14 @@ print("`ifndef RISCV_FORMAL_VALIDADDR")
 print("`define RISCV_FORMAL_VALIDADDR(addr) 1")
 print("`endif")
 print("")
+print("`ifndef RISCV_FORMAL_IOADDR")
+print("`define RISCV_FORMAL_IOADDR(addr) 1")
+print("`endif")
+print("")
 print("`define rvformal_addr_valid(a) (`RISCV_FORMAL_VALIDADDR(a))")
+print("`define rvformal_addr_io(a) (`rvformal_addr_valid(a) && (`RISCV_FORMAL_IOADDR(a)))")
 print("`define rvformal_addr_eq(a, b) ((`rvformal_addr_valid(a) == `rvformal_addr_valid(b)) && (!`rvformal_addr_valid(a) || (a == b)))")
+print("`define rvformal_addr_eq_io(a, b) (`rvformal_addr_io(a) ? `rvformal_addr_io(b) : `rvformal_addr_eq(a, b))")
 print("")
 
 csr_groups = []
@@ -359,7 +365,9 @@ group_fault = Group(
     name="rvformal_mem_fault",
     channels="`RISCV_FORMAL_NRET",
     signals=[
-        ("1", "mem_fault"),
+        ("                 1  ", "mem_fault"),
+        ("`RISCV_FORMAL_XLEN/8", "mem_fault_rmask"),
+        ("`RISCV_FORMAL_XLEN/8", "mem_fault_wmask"),
     ]
 ).print_macros()
 

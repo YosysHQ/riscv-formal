@@ -154,9 +154,11 @@ Cores where the fault check for an instruction fetch or a data access is determi
 
 When `RISCV_FORMAL_MEM_FAULT` is defined, the RVFI interface is extended by the following signal:
 
-    output [NRET - 1 : 0] rvfi_mem_fault
+    output [NRET          - 1 : 0] rvfi_mem_fault
+    output [NRET * XLEN/8 - 1 : 0] rvfi_mem_fault_rmask
+    output [NRET * XLEN/8 - 1 : 0] rvfi_mem_fault_wmask
 
-An instruction fetch that faults sets `rvfi_insn` to all zero and set `rvfi_mem_fault`. A memory access that faults sets `rvfi_mem_fault` and does not signal any register or memory writes.
+An instruction fetch that faults sets `rvfi_insn` to all zero and set `rvfi_mem_fault`. A memory access that faults sets `rvfi_mem_fault` and does not signal any register or memory writes. Instead the bytes that would have been accessed (if the access hadn't faulted) are output to `rvfi_mem_fault_rmask` and `rvfi_mem_fault_wmask` instead. The address is still output via `rvfi_mem_addr`.
 
 ### Handling of External Memory Busses
 
@@ -174,35 +176,36 @@ The RVFI_BUS extension can observe multiple busses using multiple RVFI_BUS chann
 
 RVFI_BUS adds the following ouptuts:
 
-    output [NBUS *      1   - 1 : 0] bus_valid
-    output [NBUS *      1   - 1 : 0] bus_insn
-    output [NBUS *      1   - 1 : 0] bus_data
-    output [NBUS *      1   - 1 : 0] bus_fault
-    output [NBUS *   XLEN   - 1 : 0] bus_addr
-    output [NBUS * BUSLEN/8 - 1 : 0] bus_rmask
-    output [NBUS * BUSLEN/8 - 1 : 0] bus_wmask
-    output [NBUS * BUSLEN   - 1 : 0] bus_rdata
-    output [NBUS * BUSLEN   - 1 : 0] bus_wdata
+    output [NBUS *      1   - 1 : 0] rvfi_bus_valid
+    output [NBUS *      1   - 1 : 0] rvfi_bus_insn
+    output [NBUS *      1   - 1 : 0] rvfi_bus_data
+    output [NBUS *      1   - 1 : 0] rvfi_bus_fault
+    output [NBUS *   XLEN   - 1 : 0] rvfi_bus_addr
+    output [NBUS * BUSLEN/8 - 1 : 0] rvfi_bus_rmask
+    output [NBUS * BUSLEN/8 - 1 : 0] rvfi_bus_wmask
+    output [NBUS * BUSLEN   - 1 : 0] rvfi_bus_rdata
+    output [NBUS * BUSLEN   - 1 : 0] rvfi_bus_wdata
 
-When `bus_valid` is set, there is an observed memory access present on the RVFI_BUS channel, otherwise, all other RVFI_BUS outputs are ignored.
+When `rvfi_bus_valid` is set, there is an observed memory access present on the RVFI_BUS channel, otherwise, all other RVFI_BUS outputs are ignored.
 
-The outputs `bus_insn` and `bus_data` are used to indicate whether the access is an instruction fetch or a data access. For cores or busses that do not distinguish between those, both have to be set.
+The outputs `rvfi_bus_insn` and `rvfi_bus_data` are used to indicate whether the access is an instruction fetch or a data access. For cores or busses that do not distinguish between those, both have to be set.
 
-The `bus_addr` output is the address of the access.
+The `rvfi_bus_addr` output is the address of the access.
 
-The outputs `bus_rmask` and `bus_wmask` indicate which bytes starting with `bus_addr` are accessed. This is used for both, masked writes as well as for outputting busses smaller than `BUSLEN`. Note that when the LSBs of `bus_rmask` and `bus_wmask` are cleared, `bus_addr` may be lower than the first actually accessed byte.
+The outputs `rvfi_bus_rmask` and `rvfi_bus_wmask` indicate which bytes starting with `rvfi_bus_addr` are accessed. This is used for both, masked writes as well as for outputting busses smaller than `BUSLEN`. Note that when the LSBs of `rvfi_bus_rmask` and `rvfi_bus_wmask` are cleared, `rvfi_bus_addr` may be lower than the first actually accessed byte.
 
-The outputs `bus_rdata` and `bus_wdata` contain the read and written data and are only valid for the bytes corresponding to the respective bits in `bus_rmask` and `bus_wmask`.
+The outputs `rvfi_bus_rdata` and `rvfi_bus_wdata` contain the read and written data and are only valid for the bytes corresponding to the respective bits in `rvfi_bus_rmask` and `rvfi_bus_wmask`.
 
 All accesses observed using RVFI_BUS are assumed to be in order, including acceses in the same cycle which are ordered by increasing RVFI_BUS channel index. This may be relaxed by future extensions.
 
 #### RVFI_BUS observers for standard interfaces
 
-The `bus` directory contains implementations RVFI_BUS observers for standard interfaces.
+The `bus` directory contains implementations RVFI_BUS observers and abstractions for standard interfaces.
 
 Note that the observers are passive and do not constrain any signals on their own. That means to test a core in isolation, the core's interface may have to be connected to an abstraction that provides the handshaking that the core expects to properly function without constraining the data or timing beyond that.
 
-Currently only a limited AXI4 listener is proivded, see the contained `TODO` comments for limitations.
+AXI4 observers and abstractions are provided in `bus/rvfi_bus_axi4.sv`, which also contains some notes about the timing when translating AXI4 into RVFI_BUS signals.
+
 
 RVFI TODOs and Requests for Comments
 ------------------------------------

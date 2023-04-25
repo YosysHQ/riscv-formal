@@ -287,10 +287,12 @@ module rvfi_bus_axi4_observer_write #(
         end
     end
 
+`ifdef RISCV_FORMAL_BUS
     initial begin
         BUSLEN_too_small: assert (AXI_DATA_WIDTH <= `RISCV_FORMAL_BUSLEN);
         XLEN_too_small: assert (AXI_ADDRESS_WIDTH <= `RISCV_FORMAL_XLEN);
     end
+`endif
 
     assign rvfi_bus_rdata = '0;
     assign rvfi_bus_wdata = out_wdata;
@@ -399,7 +401,7 @@ module rvfi_bus_axi4_observer_read #(
                 burst_counter <= 0;
                 burst_offset <= 0;
             end else begin
-                burst_counter <= burst_counter + 1;
+                burst_counter <= burst_counter + 1'b1;
                 burst_offset <= burst_offset + (1 << out_arsize);
             end
         end
@@ -475,10 +477,12 @@ module rvfi_bus_axi4_observer_read #(
         endcase
     end
 
+`ifdef RISCV_FORMAL_BUS
     initial begin
         BUSLEN_too_small: assert (AXI_DATA_WIDTH <= `RISCV_FORMAL_BUSLEN);
         XLEN_too_small: assert (AXI_ADDRESS_WIDTH <= `RISCV_FORMAL_XLEN);
     end
+`endif
 
     assign rvfi_bus_rdata = axi_rdata;
     assign rvfi_bus_wdata = '0;
@@ -727,7 +731,7 @@ module rvfi_bus_axi4_abstract_write #(
     `rvformal_rand_reg [AXI_ID_WIDTH-1:0]    rand_bid;
     `rvformal_rand_reg [1:0]                 rand_bresp;
     `rvformal_rand_reg [AXI_BUSER_WIDTH-1:0] rand_buser;
-    `rvformal_rand_reg [AXI_DATA_WIDTH-1:0]  rand_bvalid;
+    `rvformal_rand_reg                       rand_bvalid;
 
     logic reset_q;
 

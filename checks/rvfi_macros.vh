@@ -17,8 +17,14 @@
 `define RISCV_FORMAL_VALIDADDR(addr) 1
 `endif
 
+`ifndef RISCV_FORMAL_IOADDR
+`define RISCV_FORMAL_IOADDR(addr) 1
+`endif
+
 `define rvformal_addr_valid(a) (`RISCV_FORMAL_VALIDADDR(a))
+`define rvformal_addr_io(a) (`rvformal_addr_valid(a) && (`RISCV_FORMAL_IOADDR(a)))
 `define rvformal_addr_eq(a, b) ((`rvformal_addr_valid(a) == `rvformal_addr_valid(b)) && (!`rvformal_addr_valid(a) || (a == b)))
+`define rvformal_addr_eq_io(a, b) (`rvformal_addr_io(a) ? `rvformal_addr_io(b) : `rvformal_addr_eq(a, b))
 
 `ifdef RISCV_FORMAL_CSR_FFLAGS
 `define rvformal_csr_fflags_wires \
@@ -10383,23 +10389,41 @@ localparam [11:0] csr_uindex_mhpmcounter31h = 12'hC9F; \
 `endif
 `ifdef RISCV_FORMAL_MEM_FAULT
 `define rvformal_mem_fault_wires \
-  (* keep *) wire [`RISCV_FORMAL_NRET     - 1 : 0] rvfi_mem_fault;
+  (* keep *) wire [`RISCV_FORMAL_NRET                        - 1 : 0] rvfi_mem_fault      ; \
+  (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN/8 - 1 : 0] rvfi_mem_fault_rmask; \
+  (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN/8 - 1 : 0] rvfi_mem_fault_wmask;
 `define rvformal_mem_fault_outputs, \
-  output [`RISCV_FORMAL_NRET     - 1 : 0] rvfi_mem_fault
+  output [`RISCV_FORMAL_NRET                        - 1 : 0] rvfi_mem_fault      , \
+  output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN/8 - 1 : 0] rvfi_mem_fault_rmask, \
+  output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN/8 - 1 : 0] rvfi_mem_fault_wmask
 `define rvformal_mem_fault_channel_outputs, \
-  output [    0 : 0] rvfi_mem_fault
+  output [                       0 : 0] rvfi_mem_fault      , \
+  output [`RISCV_FORMAL_XLEN/8 - 1 : 0] rvfi_mem_fault_rmask, \
+  output [`RISCV_FORMAL_XLEN/8 - 1 : 0] rvfi_mem_fault_wmask
 `define rvformal_mem_fault_inputs, \
-  input [`RISCV_FORMAL_NRET     - 1 : 0] rvfi_mem_fault
+  input [`RISCV_FORMAL_NRET                        - 1 : 0] rvfi_mem_fault      , \
+  input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN/8 - 1 : 0] rvfi_mem_fault_rmask, \
+  input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN/8 - 1 : 0] rvfi_mem_fault_wmask
 `define rvformal_mem_fault_channel_inputs, \
-  input [    0 : 0] rvfi_mem_fault
+  input [                       0 : 0] rvfi_mem_fault      , \
+  input [`RISCV_FORMAL_XLEN/8 - 1 : 0] rvfi_mem_fault_rmask, \
+  input [`RISCV_FORMAL_XLEN/8 - 1 : 0] rvfi_mem_fault_wmask
 `define rvformal_mem_fault_conn, \
-  .rvfi_mem_fault (rvfi_mem_fault)
+  .rvfi_mem_fault       (rvfi_mem_fault      ), \
+  .rvfi_mem_fault_rmask (rvfi_mem_fault_rmask), \
+  .rvfi_mem_fault_wmask (rvfi_mem_fault_wmask)
 `define rvformal_mem_fault_channel_conn(_idx), \
-  .rvfi_mem_fault (rvfi_mem_fault [ _idx      +: 1])
+  .rvfi_mem_fault       (rvfi_mem_fault       [ _idx                         +:                  1  ]), \
+  .rvfi_mem_fault_rmask (rvfi_mem_fault_rmask [(_idx)*(`RISCV_FORMAL_XLEN/8) +: `RISCV_FORMAL_XLEN/8]), \
+  .rvfi_mem_fault_wmask (rvfi_mem_fault_wmask [(_idx)*(`RISCV_FORMAL_XLEN/8) +: `RISCV_FORMAL_XLEN/8])
 `define rvformal_mem_fault_channel(_idx) \
-  wire [    0 : 0] mem_fault = rvfi_mem_fault [ _idx      +: 1];
+  wire [                       0 : 0] mem_fault       = rvfi_mem_fault       [ _idx                         +:                  1  ]; \
+  wire [`RISCV_FORMAL_XLEN/8 - 1 : 0] mem_fault_rmask = rvfi_mem_fault_rmask [(_idx)*(`RISCV_FORMAL_XLEN/8) +: `RISCV_FORMAL_XLEN/8]; \
+  wire [`RISCV_FORMAL_XLEN/8 - 1 : 0] mem_fault_wmask = rvfi_mem_fault_wmask [(_idx)*(`RISCV_FORMAL_XLEN/8) +: `RISCV_FORMAL_XLEN/8];
 `define rvformal_mem_fault_signals \
-  `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, 1, mem_fault)
+  `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET,                  1  , mem_fault      ) \
+  `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN/8, mem_fault_rmask) \
+  `RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN/8, mem_fault_wmask)
 `else
 `define rvformal_mem_fault_wires
 `define rvformal_mem_fault_outputs
