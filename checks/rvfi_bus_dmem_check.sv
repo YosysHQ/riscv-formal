@@ -81,10 +81,7 @@ module rvfi_bus_dmem_check (
 			for (channel_idx = 0; channel_idx < `RISCV_FORMAL_NRET; channel_idx=channel_idx+1) begin
 				if (rvfi_valid[channel_idx] && rvfi_mem_addr[channel_idx*`RISCV_FORMAL_XLEN +: `RISCV_FORMAL_XLEN] == dmem_addr && `rvformal_addr_valid(dmem_addr)) begin
 					for (i = 0; i < `RISCV_FORMAL_XLEN/8; i = i+1) begin
-						if (
-`ifdef RISCV_FORMAL_CHANNEL_IDX
-							i == `RISCV_FORMAL_CHANNEL_IDX &&
-`endif
+						if (channel_idx == `RISCV_FORMAL_CHANNEL_IDX &&
 							check && rvfi_mem_rmask[channel_idx*`RISCV_FORMAL_XLEN/8 + i]
 						) begin
 							cover (1);
