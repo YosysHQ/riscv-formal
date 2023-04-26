@@ -152,7 +152,7 @@ def add_csr(csr_str):
 
 def mask_bits(test: str, bits: "list[int]", mask_len: int, invert=False):
     mask = reduce(lambda x, y: x | 1<<y, bits, 0)
-    fstring = f"{test}_mask={'~' if invert else ''}{{:0{mask_len}b}}"
+    fstring = f"{test}_mask={'~' if invert else ''}{mask_len}'b{{:0{mask_len}b}}"
     return fstring.format(mask)
 
 if csr_spec == "1.12":
