@@ -18,7 +18,7 @@ M-mode CSRs
 
 #### mvendorid, marchid, mimpid, mhartid, mconfigptr
 
-Nothing special for these CSRs.
+These CSRs are mandatory and expected to be constant, but may be all 0.
 
 ### Machine Trap Setup
 
@@ -26,10 +26,12 @@ Nothing special for these CSRs.
 
 Mandatory. (Reminder: RV64 processors in RV32 mode are expected to output the
 RV64 format.)
+May be all 0, reserved bits must be 0 regardless of writes.
 
 #### misa
 
-Can be read-only 0, but existence is mandatory.
+Can be read-only 0, but existence is mandatory.  Reserved bits must be 0
+regardless of writes.
 
 #### medeleg, mideleg
 

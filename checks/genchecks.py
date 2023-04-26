@@ -15,6 +15,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import os, sys, shutil, re
+from functools import reduce
 
 nret = 1
 isa = "rv32i"
@@ -127,6 +128,12 @@ if "options" in config:
             print(line)
             assert 0
 
+if "64" in isa:
+    xlen = 64
+
+if "c" in isa:
+    compr = True
+
 def add_csr_tests(name, test_str):
     # use regex to split by spaces, unless those spaces are inside quotation marks
     # e.g. const="32'h dead_beef" is one match not two
@@ -143,6 +150,11 @@ def add_csr(csr_str):
     csrs.add(name)
     return name
 
+def mask_bits(test: str, bits: "list[int]", mask_len: int, invert=False):
+    mask = reduce(lambda x, y: x | 1<<y, bits, 0)
+    fstring = f"{test}_mask={'~' if invert else ''}{{:0{mask_len}b}}"
+    return fstring.format(mask)
+
 if csr_spec == "1.12":
     spec_csrs = {
         "mvendorid"     : ["const"],
@@ -150,8 +162,13 @@ if csr_spec == "1.12":
         "mimpid"        : ["const"],
         "mhartid"       : ["const"],
         "mconfigptr"    : ["const"],
-        "mstatus"       : None,
-        "misa"          : None,
+        # All reserved bits should be 0
+        "mstatus"       : [mask_bits("zero", 
+                                     [0, 2, 4, *range(23, 31)] + ([31, *range(38, 63)] if xlen==64 else []), 
+                                     xlen)],
+        "misa"          : [mask_bits("zero", 
+                                     [6, 10, 11, 14, 17, 19, 22, 24, 25, *range(26, xlen-2)], 
+                                     xlen)],
         "mie"           : None,
         "mtvec"         : None,
         "mscratch"      : ["any"],
@@ -169,7 +186,7 @@ if csr_spec == "1.12":
         "medeleg"       : ("s",  "302", None),
         "mideleg"       : ("s",  "303", None),
         "mcounteren"    : ("u",  "306", None),
-        "mstatush"      : ("32", "310", None),
+        "mstatush"      : ("32", "310", [mask_bits("zero", [4, 5], xlen, invert=True)]),
         "mtinst"        : ("h",  "34A", None),
         "mtval2"        : ("h",  "34B", None),
         "menvcfg"       : ("u",  "30A", None),
@@ -211,12 +228,6 @@ if "illegal_csrs" in config:
 
         assert len(line) == 3
         illegal_csrs.add(line)
-
-if "64" in isa:
-    xlen = 64
-
-if "c" in isa:
-    compr = True
 
 if "groups" in config:
     groups += config["groups"].split()

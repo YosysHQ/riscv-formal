@@ -399,7 +399,9 @@ all CSRs to match the specification recommendations/requirements.  This option w
 CSRs to be tested under `csrw` as well as generating corresponding `csrc` tests where relevant.  For
 those CSRs which should only exist in certain conditions, e.g. if U mode is available, then those
 CSRs are included if the `isa` option includes them, otherwise the addresses are checked as being an
-expected illegal access exception.  Optional CSRs are not automatically tested and will need to be specified as described above.
+expected illegal access exception.  Optional CSRs are not automatically tested and will need to be
+specified as described above.  CSRs which are defined with certain bits being reserved for future
+use (either WPRI or WARL) are tested as being constant zero, masking for just the reserved bits.
 
 At present the only supported value for `csr_spec` is `1.12`, corresponding to version 1.12 of the
 Machine ISA, as defined in the 20211203 Priveleged Architecture document.
