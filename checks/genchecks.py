@@ -816,7 +816,7 @@ def checks_key(check):
     if "sort" in config:
         for index, line in enumerate(config["sort"].split("\n")):
             if re.fullmatch(line.strip(), check):
-                return "f{index:04d}-check"
+                return f"{index:04d}-{check}"
     if check.startswith("insn_"):
         return f"9999-{check}"
     return f"9998-{check}"
