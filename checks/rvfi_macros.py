@@ -280,6 +280,7 @@ print("`endif")
 print("")
 print("`define rvformal_addr_valid(a) (`RISCV_FORMAL_VALIDADDR(a))")
 print("`define rvformal_addr_eq(a, b) ((`rvformal_addr_valid(a) == `rvformal_addr_valid(b)) && (!`rvformal_addr_valid(a) || (a == b)))")
+print("")
 
 csr_groups = []
 

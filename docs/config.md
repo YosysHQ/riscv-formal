@@ -50,6 +50,12 @@ RISCV_FORMAL_VALIDADDR(addr)
 Set this to an expression of `addr` that evaluates to 1 when the given address is a valid physical
 address for the processor under test.  If not defined this expression will always evaluate to true.
 
+RISCV_FORMAL_VALIDHPMEVENT(event)
+---------------------------------
+
+Set this to an expression of `event` that evaluates to 1 when the given event is a valid assignment
+for a hpmevent CSR.  If not defined this expression will always evaluate to true.
+
 RISCV_FORMAL_WAITINSN(insn)
 ---------------------------
 

@@ -34,5 +34,31 @@ Table of contents
 - [Examples of bugs found with riscv-formal](docs/examplebugs.md)
 - [References and related work](docs/references.md)
 
-See also [this presentation slides](http://bygone.clairexen.net/papers/2017/riscv-formal/) for an introduction to riscv-formal.
+Configuring a new RISC-V processor
+----------------------------------
 
+1. Create a `riscv-formal/cores/<core-name>/` directory
+2. Write a wrapper module that instantiates the core under test and abstracts models of necessary
+   peripherals (usually just memory)
+   - Use the [RVFI helper macros](docs/config.md#rvfi_wires-rvfi_outputs-rvfi_inputs-rvfi_conn)
+     `RVFI_OUTPUTS` and `RVFI_CONN` for quickly defining wrapper connections
+   - See [picorv32/wrapper.sv](cores/picorv32/wrapper.sv) for a simple example wrapper
+3. Write a `checks.cfg` config file for the new core
+   - See [nerv/checks.cfg](cores/nerv/checks.cfg) for an example utilising most of the checks
+   - Refer to [The riscv-formal Verification Procedure](docs/procedure.md) for a complete guide on
+     available checks, and a more detailed view of using `genchecks.py`
+4. Generate checks with `python3 ../../checks/genchecks.py` from the `<core-name>` directory
+   - Checks are generated in `riscv-formal/cores/<core-name>/checks`
+5. Run checks with `make -C checks j$(nproc)`
+
+### Notes
+
+- The [quickstart guide](docs/quickstart.md) goes through the process of running riscv-formal with
+  some of the included cores.  It is recommended to follow this guide before adding a new core.
+- See [picorv32/Makefile](cores/picorv32/Makefile) for an example makefile to manage generation and
+  execution of checks.
+- Out of tree generation with `genchecks.py` is not currently supported.
+- Refer to [docs/config.md](docs/config.md) and [docs/procedure.md](docs/procedure.md) for a
+  breakdown of how to use riscv-formal checks without using `genchecks.py`.
+- The [cover check](docs/procedure.md#cover) can be used to help determine the depth needed for the
+  core to reach certain states as needed for other checks.

@@ -18,7 +18,7 @@ module rvfi_wrapper (
 	(* keep *) rand reg  [31:0] dbus_rdt;
 	(* keep *) rand reg         dbus_ack;
 
-	serv_top uut (
+	serv_rf_top uut (
 		.clk(clock),
 		.i_rst(reset),
 		.i_timer_irq(1'b0),

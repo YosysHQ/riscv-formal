@@ -1,0 +1,6 @@
+/testbench.vcd
+/firmware.elf
+/firmware.hex
+/testbench
+/*.log
+/design.*

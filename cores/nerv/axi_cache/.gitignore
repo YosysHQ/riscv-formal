@@ -1,0 +1,8 @@
+/SVA-AXI4-FVIP
+/checks_axi
+/checks_internal
+*.vcd
+*.hex
+*.elf
+testbench_internal
+testbench_axi

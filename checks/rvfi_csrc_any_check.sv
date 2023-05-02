@@ -33,6 +33,14 @@ module rvfi_csrc_any_check (
 
 	wire csr_insn_valid = rvfi.valid && (rvfi.insn[6:0] == 7'b 1110011) && (rvfi.insn[13:12] != 0) && ((rvfi.insn >> 16 >> 16) == 0);
 	wire [11:0] csr_insn_addr = rvfi.insn[31:20];
+	wire csr_insn_under_test = (csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)
+		`ifdef RISCV_FORMAL_SMODE
+			|| csr_insn_addr == `csr_sindex(`RISCV_FORMAL_CSRC_NAME)
+		`endif
+		`ifdef RISCV_FORMAL_UMODE
+			|| csr_insn_addr == `csr_uindex(`RISCV_FORMAL_CSRC_NAME)
+		`endif
+	);
 
 	wire [`RISCV_FORMAL_XLEN-1:0] csr_insn_rmask = `csrget(`RISCV_FORMAL_CSRC_NAME, rmask);
 	wire [`RISCV_FORMAL_XLEN-1:0] csr_insn_wmask = `csrget(`RISCV_FORMAL_CSRC_NAME, wmask);
@@ -69,7 +77,7 @@ module rvfi_csrc_any_check (
 				`ifdef RISCV_FORMAL_CSRC_MASK
 					assume ((rsval_shadow & `RISCV_FORMAL_CSRC_MASK) == rsval_shadow);
 				`endif
-				if (csr_written && csr_read_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+				if (csr_written && csr_read_valid && csr_insn_under_test) begin
 					case (csr_mode_shadow)
 						2'b 00 /* None */,
 						2'b 01 /* RW   */: begin
@@ -82,7 +90,7 @@ module rvfi_csrc_any_check (
 					endcase
 				end
 			end else begin
-				if (csr_write_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_NAME)) begin
+				if (csr_write_valid && csr_insn_under_test) begin
 					rsval_shadow = csr_rsval;
 					wdata_shadow = csr_insn_wdata;
 					csr_written = 1;
