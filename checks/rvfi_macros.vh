@@ -19,6 +19,12 @@
 
 `define rvformal_addr_valid(a) (`RISCV_FORMAL_VALIDADDR(a))
 `define rvformal_addr_eq(a, b) ((`rvformal_addr_valid(a) == `rvformal_addr_valid(b)) && (!`rvformal_addr_valid(a) || (a == b)))
+
+`ifndef RISCV_FORMAL_VALIDHPMEVENT
+`define RISCV_FORMAL_VALIDHPMEVENT(event) 1
+`endif
+`define rvformal_event_valid(e) (`RISCV_FORMAL_VALIDHPMEVENT(e))
+
 `ifdef RISCV_FORMAL_CSR_FFLAGS
 `define rvformal_csr_fflags_wires \
   (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_fflags_rmask; \
