@@ -551,15 +551,6 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
     if csr_mode:
         csr_name = check
         if csr_test is not None:
-            hpm_idx = csr_test.find("_hpm")
-            if hpm_idx >= 0:
-                try:
-                    hpm_addr = str(csr_test[hpm_idx:]).split('=', maxsplit=1)[1].strip('"')
-                    hpm_event_csr = f"mhpmevent{hpm_addr}"
-                except IndexError: # no value provided
-                    print(csr_test)
-                    assert 0
-                csr_test = csr_test[:hpm_idx]
             # Check for provided mask
             mask_idx = csr_test.find("_mask")
             if mask_idx >= 0:
@@ -711,10 +702,6 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
             try:
                 print(f"`define RISCV_FORMAL_CSRC_CONSTVAL {constval}", file=sby_file)
             except UnboundLocalError: # no constval
-                pass
-            try:
-                print(f"`define RISCV_FORMAL_CSRC_HPMEVENT {hpm_event_csr}", file=sby_file)
-            except UnboundLocalError: # no hpm_event_csr
                 pass
             try:
                 print(f"`define RISCV_FORMAL_CSRC_MASK {csr_mask}", file=sby_file)

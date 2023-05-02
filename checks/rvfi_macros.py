@@ -281,11 +281,6 @@ print("")
 print("`define rvformal_addr_valid(a) (`RISCV_FORMAL_VALIDADDR(a))")
 print("`define rvformal_addr_eq(a, b) ((`rvformal_addr_valid(a) == `rvformal_addr_valid(b)) && (!`rvformal_addr_valid(a) || (a == b)))")
 print("")
-print("`ifndef RISCV_FORMAL_VALIDHPMEVENT")
-print("`define RISCV_FORMAL_VALIDEVENT(event) 1")
-print("`endif")
-print("`define rvformal_event_valid(e) (`RISCV_FORMAL_VALIDHPMEVENT(e))")
-print("")
 
 csr_groups = []
 

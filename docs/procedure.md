@@ -307,10 +307,7 @@ read/write of the csr.
 
 The `csrc_upcnt` check is similar to the CSR increments check but with more constraints and better
 support for hardware performance monitors.  First, no writes of the csr under test are allowed.
-Second, the test value *must* be greater than the previously read value.  And finally, if
-`RISCV_FORMAL_CSRC_HPMEVENT <csrname>` has been defined then that CSR will be written with a
-non-zero value prior to testing.  This is intended to be used with the hpmevent CSRs where
-`RISCV_FORMAL_CSRC_NAME` is defined as the corresponding hpmcounter.
+Second, the test value *must* be greater than the previously read value.
 
 #### CSR read-constant
 
@@ -351,17 +348,11 @@ as `32'h 0`.
 
 Each named CSR must be connected as described in the [RVFI specification](rvfi.md).
 
-Any consistency check can be appended with `_hpm=` and the corresponding hpmevent CSR number used to
-control the listed CSR.  This value will be used to assign `RISCV_FORMAL_CSRC_HPMEVENT`.  For
-example, `mhpmcounter3 upcnt_hpm=3` declares that the `mhpmcounter3` is controlled by `mhpmevent3`
-and should be tested with the `csrc_upcnt_check`.  The CSR up-counter check is the only
-check to utilise the hpmevent macro at this time.
-
-Consistency checks can also be appended with `_mask=` with a verilog expression which will be
-applied to the CSR as a bit mask before testing the return value.  Note that `_mask` must be defined
-*after* any other value assignment for the check, but *before* `_hpm`.  For example, the statement
-`misa const=0_mask="32'h 0aaa_ffff"` masks the `misa` CSR and then checks for a constant value of 0.
-A mask value is currently only supported in the `const`, `zero`, and `any` checks.
+Consistency checks can be appended with `_mask=` with a verilog expression which will be applied to
+the CSR as a bit mask before testing the return value.  Note that `_mask` must be defined *after*
+any other value assignment for the check.  For example, the statement `misa const=0_mask="32'h
+0aaa_ffff"` masks the `misa` CSR and then checks for a constant value of 0. A mask value is
+currently only supported in the `const`, `zero`, and `any` checks.
 
 `const` is currently the only other test to support value assignment.  If no value is provided, a
 value of `rdata_shadow` will be assigned such that any value is accepted provided it is constant.

@@ -70,9 +70,6 @@ module rvfi_csrc_upcnt_check (
 			assume (!(csr_write_valid && csr_insn_under_test));
 			if (check) begin
 				assume(csr_read_shadowed);
-				`ifdef RISCV_FORMAL_CSRC_HPMEVENT
-					assume (csr_event_written);
-				`endif
 				if (csr_read_valid && csr_insn_under_test) begin
 					assert(csr_insn_rdata > rdata_shadow);
 				end
@@ -82,15 +79,6 @@ module rvfi_csrc_upcnt_check (
 					rdata_shadow = csr_insn_rdata;
 					csr_read_shadowed = 1;
 				end
-				`ifdef RISCV_FORMAL_CSRC_HPMEVENT
-				if (csr_write_valid && csr_insn_addr == `csr_mindex(`RISCV_FORMAL_CSRC_HPMEVENT)) begin
-					// write once, write valid
-					assume(!csr_read_shadowed);
-					assume(!csr_event_written);
-					assume(`rvformal_event_valid(`csrget(`RISCV_FORMAL_CSRC_HPMEVENT, wdata)));
-					csr_event_written = 1;
-				end
-				`endif //RISCV_FORMAL_CSRC_HPMEVENT
 			end
 		end
 	end
