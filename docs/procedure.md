@@ -301,13 +301,15 @@ as written.
 #### CSR increments
 
 The `csrc_inc` check tests whether the value in a CSR is always greater than or equal to a previous
-read/write of the csr.  
+read/write of the csr.  By constraining the most significant bit to be 0, this check can verify that
+the value of a CSR can never decrease except by writing to it.  This is particularly useful for
+hardware performance monitors.
 
 #### CSR up-counter
 
-The `csrc_upcnt` check is similar to the CSR increments check but with more constraints and better
-support for hardware performance monitors.  First, no writes of the csr under test are allowed.
-Second, the test value *must* be greater than the previously read value.
+The `csrc_upcnt` check is similar to the CSR increments check but with more constraints.  First, no
+writes of the csr under test are allowed. Second, the test value *must* be greater than the
+previously read value.  Without fairness guarantees this has limited use, but can verify some hpm functions, especially `mcycle` and `minstret`.
 
 #### CSR read-constant
 
