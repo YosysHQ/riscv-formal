@@ -567,6 +567,16 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
                     constval = "rdata_shadow"
                 check = f"{pf}csrc_const_{csr_name}"
                 check_name = f"csrc_const"
+            elif csr_test.startswith("hpm"):
+                try:
+                    hpmevent = str(csr_test).split('=', maxsplit=1)[1].strip('"')
+                except IndexError: # no value provided
+                    pass
+                hpmcounter = str(csr_name).replace("event", "counter")
+                if hpmcounter not in csrs:
+                    csrs.add(hpmcounter)
+                check = f"{pf}csrc_hpm_{csr_name}"
+                check_name = f"csrc_hpm"
             else:
                 check = f"{pf}csrc_{csr_test}_{csr_name}"
                 check_name =f"csrc_{csr_test}"
@@ -617,7 +627,7 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
     hargs["checkch"] = check
 
     hargs["xmode"] = hargs["mode"]
-    if check == "cover": hargs["xmode"] = "cover"
+    if check == "cover" or "csrc_hpm" in check: hargs["xmode"] = "cover"
 
     if test_disabled(check): return
     consistency_checks.add(check)
@@ -699,14 +709,15 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
             print(f"`define RISCV_FORMAL_CSR_{csr.upper()}", file=sby_file)
 
         if csr_mode:
-            try:
+            localdict = locals()
+            if "constval" in localdict:
                 print(f"`define RISCV_FORMAL_CSRC_CONSTVAL {constval}", file=sby_file)
-            except UnboundLocalError: # no constval
-                pass
-            try:
+            if "hpmevent" in localdict:
+                print(f"`define RISCV_FORMAL_CSRC_HPMEVENT {hpmevent}", file=sby_file)
+            if "hpmcounter" in localdict:
+                print(f"`define RISCV_FORMAL_CSRC_HPMCOUNTER {hpmcounter}", file=sby_file)
+            if "csr_mask" in localdict:
                 print(f"`define RISCV_FORMAL_CSRC_MASK {csr_mask}", file=sby_file)
-            except UnboundLocalError: # no csr_mask
-                pass
             print(f"`define RISCV_FORMAL_CSRC_NAME {csr_name}", file=sby_file)
 
         if custom_csrs:
