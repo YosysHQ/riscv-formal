@@ -38,7 +38,7 @@ wire [ 3:0] dmem_wstrb;
 wire [31:0] dmem_wdata;
 reg  [31:0] dmem_rdata;
 
-reg  [31:0] irq = 'b0;
+reg  [31:0] irq; initial irq = 0;
 
 always #5 clock = clock === 1'b0;
 always @(posedge clock) reset <= 0;

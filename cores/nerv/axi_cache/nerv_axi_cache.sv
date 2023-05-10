@@ -459,6 +459,7 @@ module nerv_axi_cache_io #(
     logic [DATA_WIDTH-1:0] stable_wdata_q;
     logic stable_valid, stable_valid_q;
     logic stalled_q;
+    logic reset_q;
 
     always_ff @(posedge clock) begin
         stable_addr_q <= stable_addr;
@@ -466,6 +467,7 @@ module nerv_axi_cache_io #(
         stable_wdata_q <= stable_wdata;
         stable_valid_q <= stable_valid;
         stalled_q <= stalled;
+        reset_q <= reset;
     end
 
     always_comb begin
@@ -545,7 +547,7 @@ module nerv_axi_cache_io #(
         end
 
 
-        if (reset) begin
+        if (reset || reset_q) begin
             req_uw_valid = 0;
             req_ur_valid = 0;
         end
