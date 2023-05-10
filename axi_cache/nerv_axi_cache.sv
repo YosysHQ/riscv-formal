@@ -91,17 +91,23 @@ module nerv_axi_cache #(
     input wire stalled,
     output var stall,
 
+    // NERV's instruction memory interface
     input wire [ADDRESS_WIDTH-1:0]   imem_addr,
     output var [INSN_WIDTH-1:0]      imem_data,
     output var                       imem_fault,
 
-    // the other is data memory
+    // NERV's data memory interface
     input wire                       dmem_valid,
     input wire [ADDRESS_WIDTH-1:0]   dmem_addr,
     input wire [DATA_WIDTH/8-1:0]    dmem_wstrb,
     input wire [DATA_WIDTH-1:0]      dmem_wdata,
     output var [DATA_WIDTH-1:0]      dmem_rdata,
     output var                       dmem_fault,
+
+    // Bypass the data cache for this access.
+    input wire                       dmem_io,
+    // This can also be wired up as a condition on dmem_addr to implement fixed
+    // uncached IO memory regions.
 
     // Write Address Channel (AW)
     output var [AXI_ID_WIDTH-1:0]       axi_awid,
@@ -176,9 +182,41 @@ module nerv_axi_cache #(
     logic                       dmem_res_w_fault;
     logic                       dmem_res_w_valid;
 
-    logic icache_stall, dcache_stall;
+    logic [ADDRESS_WIDTH-1:0]   dmem_req_ur_addr;
+    logic                       dmem_req_ur_valid;
 
-    assign stall = icache_stall || dcache_stall;
+    logic [DATA_WIDTH-1:0]      dmem_res_ur_data;
+    logic                       dmem_res_ur_fault;
+    logic                       dmem_res_ur_valid;
+
+    logic [ADDRESS_WIDTH-1:0]   dmem_req_uw_addr;
+    logic [DATA_WIDTH-1:0]      dmem_req_uw_data;
+    logic [DATA_WIDTH/8-1:0]    dmem_req_uw_strb;
+    logic                       dmem_req_uw_valid;
+
+    logic                       dmem_res_uw_fault;
+    logic                       dmem_res_uw_valid;
+
+    logic icache_stall, dcache_stall, io_stall;
+
+    assign stall = icache_stall || dcache_stall || io_stall;
+
+    logic [DATA_WIDTH-1:0]      dmem_rdata_cache;
+    logic                       dmem_fault_cache;
+
+    logic [DATA_WIDTH-1:0]      dmem_rdata_io;
+    logic                       dmem_fault_io;
+
+    logic last_dmem_io;
+
+    always @(posedge clock) begin
+        if (!stalled && dmem_valid) begin
+            last_dmem_io <= dmem_io;
+        end
+    end
+
+    assign dmem_rdata = last_dmem_io ? dmem_rdata_io : dmem_rdata_cache;
+    assign dmem_fault = last_dmem_io ? dmem_fault_io : dmem_fault_cache;
 
     nerv_axi_cache_axi #(
         .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -214,6 +252,21 @@ module nerv_axi_cache #(
 
         .dmem_res_w_fault(dmem_res_w_fault),
         .dmem_res_w_valid(dmem_res_w_valid),
+
+        .dmem_req_ur_addr(dmem_req_ur_addr),
+        .dmem_req_ur_valid(dmem_req_ur_valid),
+
+        .dmem_res_ur_data(dmem_res_ur_data),
+        .dmem_res_ur_fault(dmem_res_ur_fault),
+        .dmem_res_ur_valid(dmem_res_ur_valid),
+
+        .dmem_req_uw_addr(dmem_req_uw_addr),
+        .dmem_req_uw_data(dmem_req_uw_data),
+        .dmem_req_uw_strb(dmem_req_uw_strb),
+        .dmem_req_uw_valid(dmem_req_uw_valid),
+
+        .dmem_res_uw_fault(dmem_res_uw_fault),
+        .dmem_res_uw_valid(dmem_res_uw_valid),
 
         // Write Address Channel (AW)
         .axi_awid(axi_awid),
@@ -303,12 +356,12 @@ module nerv_axi_cache #(
         .stalled(stalled),
         .stall(dcache_stall),
 
-        .dmem_valid(dmem_valid),
+        .dmem_valid(dmem_valid && !dmem_io),
         .dmem_addr(dmem_addr),
         .dmem_wstrb(dmem_wstrb),
         .dmem_wdata(dmem_wdata),
-        .dmem_rdata(dmem_rdata),
-        .dmem_fault(dmem_fault),
+        .dmem_rdata(dmem_rdata_cache),
+        .dmem_fault(dmem_fault_cache),
 
         .req_r_addr(dmem_req_r_addr),
         .req_r_valid(dmem_req_r_valid),
@@ -324,6 +377,179 @@ module nerv_axi_cache #(
         .res_w_fault(dmem_res_w_fault),
         .res_w_valid(dmem_res_w_valid)
     );
+
+    nerv_axi_cache_io #(
+        .ADDRESS_WIDTH(ADDRESS_WIDTH),
+        .DATA_SIZE(DATA_SIZE)
+    ) io (
+        .clock(clock),
+        .reset(reset),
+
+        .stalled(stalled),
+        .stall(io_stall),
+
+        .dmem_valid(dmem_valid && dmem_io),
+        .dmem_addr(dmem_addr),
+        .dmem_wstrb(dmem_wstrb),
+        .dmem_wdata(dmem_wdata),
+        .dmem_rdata(dmem_rdata_io),
+        .dmem_fault(dmem_fault_io),
+
+        .req_ur_addr(dmem_req_ur_addr),
+        .req_ur_valid(dmem_req_ur_valid),
+
+        .res_ur_data(dmem_res_ur_data),
+        .res_ur_fault(dmem_res_ur_fault),
+        .res_ur_valid(dmem_res_ur_valid),
+
+        .req_uw_addr(dmem_req_uw_addr),
+        .req_uw_data(dmem_req_uw_data),
+        .req_uw_strb(dmem_req_uw_strb),
+        .req_uw_valid(dmem_req_uw_valid),
+
+        .res_uw_fault(dmem_res_uw_fault),
+        .res_uw_valid(dmem_res_uw_valid)
+    );
+
+
+
+endmodule
+
+module nerv_axi_cache_io #(
+    parameter ADDRESS_WIDTH = 32,
+    parameter DATA_SIZE = 2,
+
+    localparam DATA_WIDTH = 8 << DATA_SIZE
+) (
+    input wire                       clock,
+    input wire                       reset,
+
+    input wire                       stalled,
+    output var                       stall,
+
+    input wire                       dmem_valid,
+    input wire [ADDRESS_WIDTH-1:0]   dmem_addr,
+    input wire [DATA_WIDTH/8-1:0]    dmem_wstrb,
+    input wire [DATA_WIDTH-1:0]      dmem_wdata,
+    output var [DATA_WIDTH-1:0]      dmem_rdata,
+    output var                       dmem_fault,
+
+    output var [ADDRESS_WIDTH-1:0]   req_ur_addr,
+    output var                       req_ur_valid,
+
+    input wire [DATA_WIDTH-1:0]      res_ur_data,
+    input wire                       res_ur_fault,
+    input wire                       res_ur_valid,
+
+    output var [ADDRESS_WIDTH-1:0]   req_uw_addr,
+    output var [DATA_WIDTH-1:0]      req_uw_data,
+    output var [DATA_WIDTH/8-1:0]    req_uw_strb,
+    output var                       req_uw_valid,
+
+    input wire                       res_uw_fault,
+    input wire                       res_uw_valid
+);
+    typedef logic [ADDRESS_WIDTH-1:0] addr_t;
+
+    // cache last dmem interface values while the core is stalled
+    addr_t stable_addr, stable_addr_q;
+    logic [DATA_WIDTH/8-1:0] stable_wstrb;
+    logic [DATA_WIDTH/8-1:0] stable_wstrb_q;
+    logic [DATA_WIDTH-1:0] stable_wdata;
+    logic [DATA_WIDTH-1:0] stable_wdata_q;
+    logic stable_valid, stable_valid_q;
+    logic stalled_q;
+
+    always_ff @(posedge clock) begin
+        stable_addr_q <= stable_addr;
+        stable_wstrb_q <= stable_wstrb;
+        stable_wdata_q <= stable_wdata;
+        stable_valid_q <= stable_valid;
+        stalled_q <= stalled;
+    end
+
+    always_comb begin
+        stable_addr = stable_addr_q;
+        stable_wstrb = stable_wstrb_q;
+        stable_wdata = stable_wdata_q;
+        stable_valid = stable_valid_q;
+        if (!stalled && dmem_valid) begin
+            stable_addr = dmem_addr;
+            stable_wdata = dmem_wdata;
+            stable_wstrb = dmem_wstrb;
+        end
+        if (!stalled) begin
+            stable_valid = dmem_valid;
+        end
+    end
+
+    logic [DATA_WIDTH-1:0] dmem_rdata_q;
+    logic dmem_fault_q;
+
+    always_ff @(posedge clock) begin
+        dmem_rdata_q <= dmem_rdata;
+        dmem_fault_q <= dmem_fault;
+    end
+
+    always_comb begin
+        dmem_rdata = dmem_rdata_q;
+        dmem_fault = dmem_fault_q;
+        if (res_ur_valid) begin
+            dmem_rdata = res_ur_data;
+            dmem_fault = res_ur_fault;
+        end
+        if (res_uw_valid) begin
+            dmem_fault = res_uw_fault;
+        end
+    end
+
+    logic req_uw_valid_q;
+    logic req_ur_valid_q;
+    logic res_uw_valid_q;
+    logic res_ur_valid_q;
+
+    assign stall = req_ur_valid_q || req_uw_valid_q;
+
+    always_ff @(posedge clock) begin
+        req_uw_valid_q <= req_uw_valid;
+        req_ur_valid_q <= req_ur_valid;
+        res_uw_valid_q <= res_uw_valid;
+        res_ur_valid_q <= res_ur_valid;
+    end
+
+    assign req_ur_addr = stable_addr;
+
+    assign req_uw_addr = stable_addr;
+    assign req_uw_data = stable_wdata;
+    assign req_uw_strb = stable_wstrb;
+
+    always_comb begin
+        req_uw_valid = req_uw_valid_q;
+        req_ur_valid = req_ur_valid_q;
+
+        if (res_ur_valid_q) begin
+            req_ur_valid = 0;
+        end
+
+        if (res_uw_valid_q) begin
+            req_uw_valid = 0;
+        end
+
+        if (!stalled && dmem_valid && !dmem_wstrb) begin
+            req_ur_valid = 1;
+        end
+
+
+        if (!stalled && dmem_valid && dmem_wstrb) begin
+            req_uw_valid = 1;
+        end
+
+
+        if (reset) begin
+            req_uw_valid = 0;
+            req_ur_valid = 0;
+        end
+    end
 
 endmodule
 
@@ -346,6 +572,7 @@ module nerv_axi_cache_axi #(
 
     parameter AXI_IMEM_ID = 0,
     parameter AXI_DMEM_ID = 1,
+    parameter AXI_IO_ID = AXI_DMEM_ID,
 
     localparam INSN_WIDTH = 8 << INSN_SIZE,
     localparam DATA_WIDTH = 8 << DATA_SIZE,
@@ -369,7 +596,6 @@ module nerv_axi_cache_axi #(
     output var                       imem_res_fault,
     output var                       imem_res_valid,
 
-
     input wire [ADDRESS_WIDTH-1:0]   dmem_req_r_addr,
     input wire                       dmem_req_r_valid,
 
@@ -383,6 +609,21 @@ module nerv_axi_cache_axi #(
 
     output var                       dmem_res_w_fault,
     output var                       dmem_res_w_valid,
+
+    input wire [ADDRESS_WIDTH-1:0]   dmem_req_ur_addr,
+    input wire                       dmem_req_ur_valid,
+
+    output var [DATA_WIDTH-1:0]      dmem_res_ur_data,
+    output var                       dmem_res_ur_fault,
+    output var                       dmem_res_ur_valid,
+
+    input wire [ADDRESS_WIDTH-1:0]   dmem_req_uw_addr,
+    input wire [DATA_WIDTH-1:0]      dmem_req_uw_data,
+    input wire [DATA_WIDTH/8-1:0]    dmem_req_uw_strb,
+    input wire                       dmem_req_uw_valid,
+
+    output var                       dmem_res_uw_fault,
+    output var                       dmem_res_uw_valid,
 
     // Write Address Channel (AW)
     output var [AXI_ID_WIDTH-1:0]       axi_awid,
@@ -440,7 +681,8 @@ module nerv_axi_cache_axi #(
     typedef enum {
         R_IDLE,
         R_IFETCH,
-        R_DFETCH
+        R_DFETCH,
+        R_IOFETCH
     } read_state_t;
 
     read_state_t read_state, read_state_q;
@@ -452,12 +694,12 @@ module nerv_axi_cache_axi #(
     assign axi_aruser = 0; // not used
 
     assign axi_arsize = $clog2(AXI_DATA_WIDTH / 8); // always use full bus width
-    assign axi_arlen = (LINE_WIDTH / AXI_DATA_WIDTH) - 1; // always transfer complete lines
     assign axi_arburst = 2'b01; // always incr
 
     assign axi_rready = 1; // always ready
 
     logic axi_arready_q, axi_arvalid_q;
+    logic [7:0] axi_arlen_q;
     logic [2:0] axi_arprot_q;
     logic [AXI_ID_WIDTH-1:0] axi_arid_q;
     logic [AXI_ADDRESS_WIDTH-1:0] axi_araddr_q;
@@ -472,6 +714,7 @@ module nerv_axi_cache_axi #(
         axi_arready_q <= axi_arready;
 
         axi_arvalid_q <= axi_arvalid;
+        axi_arlen_q <= axi_arlen;
         axi_arprot_q <= axi_arprot;
         axi_arid_q <= axi_arid;
         axi_araddr_q <= axi_araddr;
@@ -486,17 +729,21 @@ module nerv_axi_cache_axi #(
 
     assign imem_res_fault = read_fault;
     assign dmem_res_r_fault = read_fault;
+    assign dmem_res_ur_fault = read_fault;
 
     assign imem_res_valid = (read_state_q == R_IFETCH && read_valid);
     assign dmem_res_r_valid = (read_state_q == R_DFETCH && read_valid);
+    assign dmem_res_ur_valid = (read_state_q == R_IOFETCH && read_valid);
 
     assign imem_res_data = read_data;
     assign dmem_res_r_data = read_data;
+    assign dmem_res_ur_data = read_data[LINE_WIDTH - 1:LINE_WIDTH - DATA_WIDTH];
 
     always_comb begin
         logic local_read_valid;
 
         axi_arvalid = axi_arvalid_q;
+        axi_arlen = axi_arlen_q;
         axi_arprot = axi_arprot_q;
         axi_arid = axi_arid_q;
         axi_araddr = axi_araddr_q;
@@ -514,7 +761,7 @@ module nerv_axi_cache_axi #(
         end
 
         case (read_state)
-        R_IFETCH, R_DFETCH:
+        R_IFETCH, R_DFETCH, R_IOFETCH:
             if (axi_rvalid && axi_rready) begin
                 read_data = {axi_rdata, read_data[LINE_WIDTH - 1:AXI_DATA_WIDTH]};
                 if (axi_rresp[1]) begin
@@ -527,18 +774,27 @@ module nerv_axi_cache_axi #(
                 end
             end
         default:
-            if (!axi_arvalid && !reset_q && (imem_req_valid || dmem_req_r_valid)) begin
+            if (!axi_arvalid && !reset_q && (imem_req_valid || dmem_req_r_valid || dmem_req_ur_valid)) begin
                 axi_arvalid = 1;
+                // TODO also set axi_arcache
                 if (imem_req_valid) begin
                     axi_arid = AXI_IMEM_ID;
                     axi_arprot = 3'b111; // insn, non-secure, priviliged
                     axi_araddr = imem_req_addr;
+                    axi_arlen = (LINE_WIDTH / AXI_DATA_WIDTH) - 1;
                     read_state = R_IFETCH;
-                end else begin
+                end else if (dmem_req_r_valid) begin
                     axi_arid = AXI_DMEM_ID;
                     axi_arprot = 3'b011; // data, non-secure, priviliged
                     axi_araddr = dmem_req_r_addr;
+                    axi_arlen = (LINE_WIDTH / AXI_DATA_WIDTH) - 1;
                     read_state = R_DFETCH;
+                end else begin
+                    axi_arid = AXI_IO_ID;
+                    axi_arprot = 3'b011; // data, non-secure, priviliged
+                    axi_araddr = dmem_req_ur_addr;
+                    axi_arlen = 0;
+                    read_state = R_IOFETCH;
                 end
             end
         endcase
@@ -555,7 +811,8 @@ module nerv_axi_cache_axi #(
 
     typedef enum {
         W_IDLE,
-        W_DSTORE
+        W_DSTORE,
+        W_IOSTORE
     } write_state_t;
 
     write_state_t write_state, write_state_q;
@@ -566,25 +823,24 @@ module nerv_axi_cache_axi #(
     assign axi_awqos = 0; // not used
     assign axi_awuser = 0; // not used
 
-
     assign axi_awsize = $clog2(AXI_DATA_WIDTH / 8); // always use full bus width
-    assign axi_awlen = (LINE_WIDTH / AXI_DATA_WIDTH) - 1; // always transfer complete lines
     assign axi_awburst = 2'b01; // always incr
-
-    assign axi_wstrb = {AXI_STRB_WIDTH{1'b1}}; // always transfer complete lines
     assign axi_wuser = 0; // not used
-
     assign axi_bready = 1; // always ready
 
     logic axi_awready_q, axi_awvalid_q;
+    logic [7:0] axi_awlen_q;
     logic [2:0] axi_awprot_q;
     logic [AXI_ID_WIDTH-1:0] axi_awid_q;
     logic [AXI_ADDRESS_WIDTH-1:0] axi_awaddr_q;
 
     logic [$clog2(LINE_WIDTH / AXI_DATA_WIDTH):0] wvalid_counter, wvalid_counter_q;
     logic axi_wready_q;
+    logic [AXI_STRB_WIDTH-1:0] axi_wstrb_q;
 
     logic [LINE_WIDTH-1:0] wdata_shiftreg, wdata_shiftreg_q;
+
+    logic axi_bvalid_q;
 
     assign axi_wvalid = wvalid_counter != 0;
     assign axi_wlast = wvalid_counter == 1;
@@ -595,11 +851,15 @@ module nerv_axi_cache_axi #(
         axi_awready_q <= axi_awready;
 
         axi_awvalid_q <= axi_awvalid;
+        axi_awlen_q <= axi_awlen;
         axi_awprot_q <= axi_awprot;
         axi_awid_q <= axi_awid;
         axi_awaddr_q <= axi_awaddr;
 
         axi_wready_q <= axi_wready;
+        axi_wstrb_q <= axi_wstrb;
+
+        axi_bvalid_q <= axi_bvalid;
 
         wvalid_counter_q <= wvalid_counter;
         wdata_shiftreg_q <= wdata_shiftreg;
@@ -608,16 +868,22 @@ module nerv_axi_cache_axi #(
     end
 
     assign dmem_res_w_valid = write_state_q == W_DSTORE && axi_bready && axi_bvalid;
+    assign dmem_res_uw_valid = write_state_q == W_IOSTORE && axi_bready && axi_bvalid;
 
     // We ignore write responses / write faults for now as our cache will never
     // write something it hasn't successfully read before
     assign dmem_res_w_fault = 0;
 
+    assign dmem_res_uw_fault = axi_bresp[1]; // TODO double check
+
     always_comb begin
         axi_awvalid = axi_awvalid_q;
+        axi_awlen = axi_awlen_q;
         axi_awprot = axi_awprot_q;
         axi_awid = axi_awid_q;
         axi_awaddr = axi_awaddr_q;
+
+        axi_wstrb = axi_wstrb_q;
 
         wvalid_counter = wvalid_counter_q;
         wdata_shiftreg = wdata_shiftreg_q;
@@ -631,19 +897,34 @@ module nerv_axi_cache_axi #(
         if (axi_wready_q && (wvalid_counter_q != 0)) begin
             wvalid_counter -= 1;
             wdata_shiftreg = {{AXI_DATA_WIDTH{1'b0}}, wdata_shiftreg[LINE_WIDTH-1:AXI_DATA_WIDTH]};
-            if (wvalid_counter == 0) begin
-                write_state = W_IDLE;
-            end
+
         end
 
-        if (write_state == W_IDLE && !axi_awvalid && wvalid_counter == 0 && dmem_req_w_valid) begin
+        if (axi_bvalid_q) begin
+            write_state = W_IDLE;
+        end
+
+        if (write_state == W_IDLE && !axi_awvalid && wvalid_counter == 0 && (dmem_req_w_valid || dmem_req_uw_valid)) begin
             axi_awvalid = 1;
-            wvalid_counter = LINE_WIDTH / AXI_DATA_WIDTH;
-            axi_awid = AXI_DMEM_ID;
-            axi_awprot = 3'b011; // data, non-secure, priviliged
-            axi_awaddr = dmem_req_w_addr;
-            wdata_shiftreg = dmem_req_w_data;
-            write_state = W_DSTORE;
+            if (dmem_req_w_valid) begin
+                wvalid_counter = LINE_WIDTH / AXI_DATA_WIDTH;
+                axi_awlen = wvalid_counter - 1;
+                axi_awid = AXI_DMEM_ID;
+                axi_awprot = 3'b011; // data, non-secure, priviliged
+                axi_awaddr = dmem_req_w_addr;
+                wdata_shiftreg = dmem_req_w_data;
+                axi_wstrb = '1;
+                write_state = W_DSTORE;
+            end else begin
+                wvalid_counter = 1;
+                axi_awlen = wvalid_counter - 1;
+                axi_awid = AXI_IO_ID;
+                axi_awprot = 3'b011; // data, non-secure, priviliged
+                axi_awaddr = dmem_req_uw_addr;
+                wdata_shiftreg = dmem_req_uw_data;
+                axi_wstrb = dmem_req_uw_strb;
+                write_state = W_IOSTORE;
+            end
         end
 
         if (reset) begin

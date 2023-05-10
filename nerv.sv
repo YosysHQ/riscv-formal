@@ -359,6 +359,8 @@ module nerv #(
 
 `ifdef NERV_FAULT
 	output reg        rvfi_mem_fault,
+	output reg [ 3:0] rvfi_mem_fault_rmask,
+	output reg [ 3:0] rvfi_mem_fault_wmask,
 `endif
 `endif
 
@@ -1163,6 +1165,8 @@ module nerv #(
 			end
 `ifdef NERV_FAULT
 			rvfi_mem_fault <= imem_fault;
+			rvfi_mem_fault_rmask <= 0;
+			rvfi_mem_fault_wmask <= 0;
 `endif
 		end
 
@@ -1173,6 +1177,11 @@ module nerv #(
 			rvfi_mem_fault <= 1;
 			rvfi_rd_addr <= 0;
 			rvfi_rd_wdata <= 0;
+
+			rvfi_mem_fault_rmask <= rvfi_mem_rmask;
+			rvfi_mem_fault_wmask <= rvfi_mem_wmask;
+
+			rvfi_mem_rmask <= 0;
 			rvfi_mem_wmask <= 0;
 		end
 `endif

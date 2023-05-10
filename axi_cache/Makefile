@@ -18,8 +18,9 @@
 
 TOOLCHAIN_PREFIX?=riscv64-unknown-elf-
 
-TESTBENCH_DEFINES?=-D NERV_DBGREGS
+TESTBENCH_DEFINES?=-D NERV_DBGREGS -D NERV_CSR
 TESTBENCH_ARGS?=+vcd
+CHECKS?=
 
 CLONE?=0
 
@@ -65,11 +66,11 @@ endif
 
 checks_internal:
 	cd .. && python3 ../../checks/genchecks.py axi_cache/checks_internal
-	$(MAKE) -C checks_internal
+	$(MAKE) -C checks_internal $(CHECKS)
 
 checks_axi:
 	cd .. && python3 ../../checks/genchecks.py axi_cache/checks_axi
-	$(MAKE) -C checks_axi
+	$(MAKE) -C checks_axi $(CHECKS)
 
 all: test_internal test_axi verify_axi verify_axi_cover checks_internal checks_axi
 

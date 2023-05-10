@@ -39,7 +39,7 @@ module testbench (
 	wire [31:0] check_imem_addr;
 	wire [15:0] check_imem_data;
 
-    rvfi_imem_check checker_inst (
+	rvfi_imem_check checker_inst (
 		.clock(clock),
 		.reset(reset),
 		.enable(1'b1),
@@ -48,11 +48,11 @@ module testbench (
 		`RVFI_CONN
 	);
 
-    reg [31:0] imem_addr_q;
+	reg [31:0] imem_addr_q;
 
-    always @(posedge clock) begin
-        imem_addr_q <= imem_addr;
-    end
+	always @(posedge clock) begin
+		imem_addr_q <= imem_addr;
+	end
 
 	always @* begin
 		if (!reset && !stall) begin
