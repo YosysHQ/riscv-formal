@@ -29,7 +29,7 @@ void delay(uint32_t count)
 int main()
 {
 	volatile uint32_t *leds = (void*)0x01000000;
-    *leds = 0;
+	*leds = 0;
 	uint32_t cnt = 0;
 	while(1)
 	{

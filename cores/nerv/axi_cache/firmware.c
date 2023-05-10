@@ -60,19 +60,19 @@ int main()
 	char sieve[SIEVE_SIZE];
 
 	puts("Some Primes:\n");
-    for (unsigned i = 2; i < SIEVE_SIZE; i++)
+	for (unsigned i = 2; i < SIEVE_SIZE; i++)
 		sieve[i] = 1;
 
-    for (unsigned p = 2, p2 = 4; p < SIEVE_SIZE; p += 1, p2 += (p << 1) - 1) {
-        if (sieve[p]) {
+	for (unsigned p = 2, p2 = 4; p < SIEVE_SIZE; p += 1, p2 += (p << 1) - 1) {
+		if (sieve[p]) {
 			print_num(p);
 			if (p2 < SIEVE_SIZE) {
 				for (unsigned i = p2; i < SIEVE_SIZE; i += p) {
 					sieve[i] = 0;
 				}
 			}
-        }
-    }
+		}
+	}
 
 	do_exit();
 	return 0;
