@@ -348,13 +348,28 @@ as written.
 #### CSR increments
 
 The `csrc_inc` check tests whether the value in a CSR is always greater than or equal to a previous
-read/write of the csr.  
+read/write of the csr.  By constraining the most significant bit to be 0, this check can verify that
+the value of a CSR can never decrease except by writing to it.  This is particularly useful for
+hardware performance monitors.
 
 #### CSR up-counter
 
-The `csrc_upcnt` check is similar to the CSR increments check but with more constraints and better
-support for hardware performance monitors.  First, no writes of the csr under test are allowed.
-Second, the test value *must* be greater than the previously read value.
+The `csrc_upcnt` check is similar to the CSR increments check but with more constraints.  First, no
+writes of the csr under test are allowed. Second, the test value *must* be greater than the
+previously read value.  Without fairness guarantees this has limited use, but can verify some hpm functions, especially `mcycle` and `minstret`.
+
+#### CSR hpm event cover check
+
+Unlike most of the other checks, `csrc_hpm` is a cover check.  Similarly to the CSR up-counter
+check, the value of a hpm counter CSR is compared with a previously stored value and must increase.
+However, because this is a cover check this tests that the CSR *can* increase, not that it *must*
+increase.  Used in conjunction with a `csrc_inc` test of the corresponding hpm counter CSR, this can
+verify that the hpm is able to increase and unable to decrease.
+
+This check must be performed on a hpm event CSR, with `RISCV_FORMAL_CSRC_NAME mhpmevent#` and
+`RISCV_FORMAL_CSRC_HPMCOUNTER mhpmcounter#`.  The event must be defined by
+`RISCV_FORMAL_CSRC_HPMEVENT <value>`.  Note that both `RISCV_FORMAL_CSR_MHPMCOUNTER#` and
+`RISCV_FORMAL_CSR_MHPMEVENT#` must be defined and the corresponding rvfi signals connected.
 
 #### CSR read-constant
 
@@ -401,8 +416,10 @@ any other value assignment for the check.  For example, the statement `misa cons
 0aaa_ffff"` masks the `misa` CSR and then checks for a constant value of 0. A mask value is
 currently only supported in the `const`, `zero`, and `any` checks.
 
-`const` is currently the only other test to support value assignment.  If no value is provided, a
+`const` supports value assignment, while `hpm` requires it.  If no value is provided for `const`, a
 value of `rdata_shadow` will be assigned such that any value is accepted provided it is constant.
+In the case of `hpm` the value is assigned to the hpmevent register prior to testing if the
+hpmcounter register is able to increase.
 
 #### `[custom_csrs]`
 
