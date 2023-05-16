@@ -44,7 +44,7 @@ module rvfi_bus_util_fifo_stage #(
 			buffer_valid <= 0;
 		end else begin
 			if (in_txn != out_txn)
-				buffer_valid = in_txn;
+				buffer_valid <= in_txn;
 		end
 		if (in_txn)
 			buffered <= in_data;
@@ -86,11 +86,11 @@ module rvfi_bus_util_fifo #(
 		);
 	end endgenerate
 
-    assign stage_valid[0] = in_valid;
-    assign stage_data[0] = in_data;
-    assign in_ready = stage_ready[0];
+	assign stage_valid[0] = in_valid;
+	assign stage_data[0] = in_data;
+	assign in_ready = stage_ready[0];
 
-    assign out_valid = stage_valid[DEPTH];
-    assign stage_ready[DEPTH] = out_ready;
+	assign out_valid = stage_valid[DEPTH];
+	assign stage_ready[DEPTH] = out_ready;
 	assign out_data = stage_data[DEPTH];
 endmodule

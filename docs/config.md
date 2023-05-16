@@ -56,6 +56,12 @@ RISCV_FORMAL_VALIDHPMEVENT(event)
 Set this to an expression of `event` that evaluates to 1 when the given event is a valid assignment
 for a hpmevent CSR.  If not defined this expression will always evaluate to true.
 
+RISCV_FORMAL_IOADDR(addr)
+-------------------------
+
+Set this to an expression of `addr` that evaluates to 1 when the given address belongs to an i/o
+memory region.  If not defined this expression will always evaluate to true.
+
 RISCV_FORMAL_WAITINSN(insn)
 ---------------------------
 
@@ -84,7 +90,7 @@ RISCV_FORMAL
 
 This macro is set whenever riscv-formal is used.  It is actually never used by any of the
 riscv-formal Verilog files, but can be used by cores under test to enable or disable generation of
-the RVFI ports.  
+the RVFI ports.
 
 RISCV_FORMAL_NRET
 -----------------
@@ -181,7 +187,7 @@ details on how this name is used.
 RISCV_FORMAL_CSRW_NAME
 ----------------------
 
-This macro defines the name of the CSR under test during `csrw` checks.  
+This macro defines the name of the CSR under test during `csrw` checks.
 
 RISCV_FORMAL_CSRWH
 ------------------

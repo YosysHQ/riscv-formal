@@ -59,27 +59,20 @@ module rvfi_bus_imem_check (
 			end
 
 			if (check) begin
-`ifdef RISCV_FORMAL_CHANNEL_IDX
-				channel_idx = `RISCV_FORMAL_CHANNEL_IDX;
-				if (1) begin
-`else
-				for (channel_idx = 0; channel_idx < `RISCV_FORMAL_NRET; channel_idx=channel_idx+1) begin
-`endif
-					if (rvfi_valid[channel_idx]) begin
-						pc = rvfi_pc_rdata[channel_idx*`RISCV_FORMAL_XLEN +: `RISCV_FORMAL_XLEN];
-						insn = rvfi_insn[channel_idx*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
+				if (rvfi_valid[`RISCV_FORMAL_CHANNEL_IDX]) begin
+					pc = rvfi_pc_rdata[`RISCV_FORMAL_CHANNEL_IDX*`RISCV_FORMAL_XLEN +: `RISCV_FORMAL_XLEN];
+					insn = rvfi_insn[`RISCV_FORMAL_CHANNEL_IDX*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
 
-						if (`rvformal_addr_valid(pc) && pc == imem_addr) begin
-							cover (1);
-							assert (insn[15:0] == imem_data);
-						end;
+					if (`rvformal_addr_valid(pc) && pc == imem_addr) begin
+						cover (1);
+						assert (insn[15:0] == imem_data);
+					end;
 
-						if (insn[1:0] == 2'b11 && `rvformal_addr_valid(pc+2) && pc+2 == imem_addr) begin
-							cover (1);
-							assert (insn[31:16] == imem_data);
-						end;
+					if (insn[1:0] == 2'b11 && `rvformal_addr_valid(pc+2) && pc+2 == imem_addr) begin
+						cover (1);
+						assert (insn[31:16] == imem_data);
+					end;
 
-					end
 				end
 			end
 		end

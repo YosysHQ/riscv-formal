@@ -40,7 +40,7 @@ wire [31:0] dmem_wdata;
 reg  [31:0] dmem_rdata;
 wire        dmem_fault;
 
-reg  [31:0] irq = 'b0;
+reg  [31:0] irq; initial irq = 0;
 
 always #5 clock = clock === 1'b0;
 always @(posedge clock) reset <= 0;
@@ -262,6 +262,8 @@ nerv_axi_cache cache (
 	.dmem_wdata(dmem_wdata),
 	.dmem_rdata(dmem_rdata),
 	.dmem_fault(dmem_fault),
+
+	.dmem_io(1'b1),
 
 	// Write Address Channel (AW)
 	.axi_awid(axi_awid),

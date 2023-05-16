@@ -177,8 +177,19 @@ Expects two values: first is the number of cycles to reset for; second is the ex
 
 ### Causality
 
-The core may retire instructions out-of-order as long as causality is preserved. (This means a register write must be retired before the register reads that depend on it.) This check tests if the
-instruction stream is causal with respect to registers.
+There are three causality checks: `causal`, `causal_mem` and `causal_io`.
+
+The core may retire instructions out-of-order as long as causality is preserved. (This means a write must be retired before the reads that depend on it.)
+
+The `causal` check tests if the instruction stream is causal with respect to registers.
+The `causal_mem` check tests if the instruction stream is causal with respect to memory.
+The `causal_io` check tests if the instruction stream is causal with respect to i/o memory, where every i/o memory access is assumed to depend on all earlier i/o memory accesses.
+
+Which areas of the adress space are considered to be i/o memory can be configured using the RISCV_FORMAL_IOADDR(addr) macro.
+
+#### `[depth]` section
+
+Expects two values: first is the number of cycles to reset for; second is the execution depth.
 
 #### `[depth]` section
 
@@ -203,6 +214,15 @@ This check makes sure that no two instructions with the same `rvfi_order` are re
 
 Expects three values: first is the number of cycles to reset for; second is the trigger depth; and
 third is the execution depth.
+
+### Faults
+
+This check makes sure that dynamically occuring memory faults are handled. It requires defining `RISCV_FORMAL_MEM_FAULT` and the `rvfi_mem_fault`, `rvfi_mem_fault_rmask` and `rvfi_mem_fault_wmask` signals.
+When the `mcause` CSR is exposed via RVFI, this will also check that it is correctly updated on a memory fault.
+
+#### `[depth]` section
+
+Expects two values: first is the number of cycles to reset for; second is the execution depth.
 
 ### Cover
 
@@ -239,8 +259,7 @@ When the granularity of access faults as observed from the core is coarser than 
 The `bus_imem_fault` check adds a memory abstraction that has a single always faulting word of memory (at an unconstrained address). The check makes sure that executing from this address causes an "instruction access fault" trap.
 
 The RVFI signalling for the instruction with a faulting fetch requires an all-zero `rvfi_insn` value with `rvfi_trap` set.
-When `RISCV_FORMAL_MEM_FAULT` is defined, `rvfi_mem_fault` must also be set.
-This check also verifies that the faulting instruction updates the `mcause` csr, when that csr is implemented and specified in the configuration file.
+When `RISCV_FORMAL_MEM_FAULT` is defined the associated signals must also be set correctly.
 
 ### Data Bus Memcheck
 
@@ -253,8 +272,36 @@ When the granularity of access faults as observed from the core is coarser than 
 The `bus_dmem_fault` check adds a memory abstraction that has a single always faulting word of memory (at an unconstrained address). The check makes sure that reading from or writing to this address causes a "load access fault" or "store/AMO access fault" trap respectively.
 
 The RVFI signalling for an instruction causing either fault has `rvfi_trap` and does not include a register update or memory write, even if the instruction would have performed one if the memory access didn't fault.
-When `RISCV_FORMAL_MEM_FAULT` is defined, `rvfi_mem_fault` must also be set.
-This check also verifies that the faulting instruction updates the `mcause` csr, when that csr is implemented and specified in the configuration file.
+When `RISCV_FORMAL_MEM_FAULT` is defined the associated signals must also be set correctly.
+
+### Data Bus I/O Checks
+
+These checks can provide stronger guarantees on data bus accesses that are not required to hold in general, but should often hold for i/o memory regions.
+Depending on the use-case only a subset may be applicable or some checks may only be applicable for certain areas of the address space.
+The memory addresses for which these checks are run can be configured using the `RISCV_FORMAL_IOADDR(addr)` macro.
+
+#### Data Bus I/O Reads
+
+The `bus_dmem_io_read` check makes sure that every retired non-faulting i/o memory read access appears as an individual read on the bus. The whole read has to appear on its own in a single RVFI_BUS cycle.
+A read is allowed to also read adjacent bytes within the same RVFI_BUS cycle.
+
+#### Data Bus I/O Read Faults
+
+The `bus_dmem_io_read_fault` check makes sure that every retired faulting i/o memory read access appears as an individual faulting read on the bus.
+
+#### Data Bus I/O Writes
+
+The `bus_dmem_io_write` check makes sure that every retired non-faulting i/o memory write access appears as an individual write on the bus. The whole write has to appear on its own in a single RVFI_BUS cycle and may not write any additional adjacent bytes.
+
+#### Data Bus I/O Read Faults
+
+The `bus_dmem_io_read_fault` check makes sure that every retired faulting i/o memory write access appears as an individual faulting write on the bus.
+
+#### Data Bus I/O Ordering
+
+The `bus_dmem_io_order` check makes sure that all i/o memory accesses appear in-order on the bus.
+This is done by checking that every pair of adjacent i/o memory accesses (as observed via RVFI) corresponds to adjacent i/o memory accesses on the bus.
+Non-i/o accesses are ignored by this check, so they can be arbitrarily reordered relative to i/o accesses and relative to each other.
 
 CSR Checks
 ----------

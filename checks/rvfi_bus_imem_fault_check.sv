@@ -1,4 +1,4 @@
-// external bus: check instruction memory reads
+// external bus: check faulting instruction memory reads
 //
 // Copyright (C) 2017  Claire Xenia Wolf <claire@yosyshq.com>
 // Copyright (C) 2023  Jannis Harder <jix@yosyshq.com> <me@jix.one>
@@ -28,11 +28,6 @@ module rvfi_bus_imem_fault_check (
 	reg [`RISCV_FORMAL_BUSLEN/8 - 1:0] bus_rmask;
 	reg [`RISCV_FORMAL_BUSLEN   - 1:0] bus_rdata;
 
-`ifdef RISCV_FORMAL_CSR_MCAUSE
-	reg [`RISCV_FORMAL_XLEN-1:0] csr_mcause_wmask;
-	reg [`RISCV_FORMAL_XLEN-1:0] csr_mcause_wdata;
-`endif
-
 	integer channel_idx, i, j;
 
 	always @(posedge clock) begin
@@ -49,51 +44,32 @@ module rvfi_bus_imem_fault_check (
 							assume (rvfi_bus_fault[channel_idx]);
 						end
 					end
+					cover (rvfi_bus_fault[channel_idx]);
 				end
 			end
 
 			if (check) begin
-`ifdef RISCV_FORMAL_CHANNEL_IDX
-				channel_idx = `RISCV_FORMAL_CHANNEL_IDX;
-				if (1) begin
-`else
-				for (channel_idx = 0; channel_idx < `RISCV_FORMAL_NRET; channel_idx=channel_idx+1) begin
-`endif
-					if (rvfi_valid[channel_idx]) begin
-						pc = rvfi_pc_rdata[channel_idx*`RISCV_FORMAL_XLEN +: `RISCV_FORMAL_XLEN];
-						insn = rvfi_insn[channel_idx*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
-`ifdef RISCV_FORMAL_CSR_MCAUSE
-						csr_mcause_wmask = rvfi_csr_mcause_wmask[channel_idx*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
-						csr_mcause_wdata = rvfi_csr_mcause_wdata[channel_idx*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
-`endif
+				if (rvfi_valid[`RISCV_FORMAL_CHANNEL_IDX]) begin
+					pc = rvfi_pc_rdata[`RISCV_FORMAL_CHANNEL_IDX*`RISCV_FORMAL_XLEN +: `RISCV_FORMAL_XLEN];
+					insn = rvfi_insn[`RISCV_FORMAL_CHANNEL_IDX*`RISCV_FORMAL_ILEN +: `RISCV_FORMAL_ILEN];
 
-						if (`rvformal_addr_valid(pc) && pc == imem_addr) begin
-							cover (1);
-							assert (rvfi_trap[channel_idx]);
-							assert (insn == 0);
+					if (`rvformal_addr_valid(pc) && pc == imem_addr) begin
+						cover (1);
+						assert (rvfi_trap[`RISCV_FORMAL_CHANNEL_IDX]);
+						assert (insn == 0);
 `ifdef RISCV_FORMAL_MEM_FAULT
-							assert (rvfi_mem_fault[channel_idx]);
+						assert (rvfi_mem_fault[`RISCV_FORMAL_CHANNEL_IDX]);
 `endif
-`ifdef RISCV_FORMAL_CSR_MCAUSE
-							assert (&csr_mcause_wmask);
-							assert (csr_mcause_wdata == 1);
-`endif
-						end;
+					end;
 
-						if (insn[1:0] == 2'b11 && `rvformal_addr_valid(pc+2) && pc+2 == imem_addr) begin
-							cover (1);
-							assert (rvfi_trap[channel_idx]);
-							assert (insn == 0);
+					if (`rvformal_addr_valid(pc+2) && pc+2 == imem_addr) begin
+						cover (1);
+						assert (rvfi_trap[`RISCV_FORMAL_CHANNEL_IDX]);
+						assert (insn == 0);
 `ifdef RISCV_FORMAL_MEM_FAULT
-							assert (rvfi_mem_fault[channel_idx]);
+						assert (rvfi_mem_fault[`RISCV_FORMAL_CHANNEL_IDX]);
 `endif
-`ifdef RISCV_FORMAL_CSR_MCAUSE
-							assert (&csr_mcause_wmask);
-							assert (csr_mcause_wdata == 1);
-`endif
-						end;
-
-					end
+					end;
 				end
 			end
 		end

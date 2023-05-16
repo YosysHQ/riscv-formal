@@ -43,6 +43,8 @@ module rvfi_insn_check (
 		(* keep *) wire [`RISCV_FORMAL_XLEN   - 1 : 0] mem_wdata = rvfi_mem_wdata[channel_idx*`RISCV_FORMAL_XLEN   +: `RISCV_FORMAL_XLEN];
 `ifdef RISCV_FORMAL_MEM_FAULT
 		(* keep *) wire                                mem_fault = rvfi_mem_fault[channel_idx];
+		(* keep *) wire [`RISCV_FORMAL_XLEN/8 - 1 : 0] mem_fault_rmask = rvfi_mem_fault_rmask[channel_idx*`RISCV_FORMAL_XLEN/8 +: `RISCV_FORMAL_XLEN/8];
+		(* keep *) wire [`RISCV_FORMAL_XLEN/8 - 1 : 0] mem_fault_wmask = rvfi_mem_fault_wmask[channel_idx*`RISCV_FORMAL_XLEN/8 +: `RISCV_FORMAL_XLEN/8];
 `endif
 
 `ifdef RISCV_FORMAL_CSR_MISA
@@ -143,6 +145,16 @@ module rvfi_insn_check (
 					assert(rd_addr == 0);
 					assert(rd_wdata == 0);
 					assert(mem_wmask == 0);
+`ifdef RISCV_FORMAL_MEM_FAULT
+					if (mem_fault) begin
+						assert(mem_rmask == 0);
+						assert(spec_mem_wmask || spec_mem_rmask);
+						assert(`rvformal_addr_eq(spec_mem_addr, mem_addr));
+
+						assert(mem_fault_wmask == spec_mem_wmask);
+						assert((mem_fault_rmask & spec_mem_rmask) == spec_mem_rmask);
+					end
+`endif
 				end else begin
 `ifdef RISCV_FORMAL_CSR_MISA
 					assert((spec_csr_misa_rmask & csr_misa_rmask) == spec_csr_misa_rmask);

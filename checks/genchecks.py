@@ -109,7 +109,7 @@ if "options" in config:
 
         elif line[0] == "mode":
             assert len(line) == 2
-            assert(line[1] in ("bmc", "prove"))
+            assert(line[1] in ("bmc", "prove", "cover"))
             mode = line[1]
 
         elif line[0] == "buslen":
@@ -782,12 +782,20 @@ for grp in groups:
         check_cons(grp, "liveness", chanidx=i, start=0, trig=1, depth=2)
         check_cons(grp, "unique", chanidx=i, start=0, trig=1, depth=2)
         check_cons(grp, "causal", chanidx=i, start=0, depth=1)
+        check_cons(grp, "causal_mem", chanidx=i, start=0, depth=1)
+        check_cons(grp, "causal_io", chanidx=i, start=0, depth=1)
         check_cons(grp, "ill", chanidx=i, depth=0)
+        check_cons(grp, "fault", chanidx=i, depth=0)
 
         check_cons(grp, "bus_imem", chanidx=i, start=0, depth=1, bus_mode=True)
         check_cons(grp, "bus_imem_fault", chanidx=i, start=0, depth=1, bus_mode=True)
         check_cons(grp, "bus_dmem", chanidx=i, start=0, depth=1, bus_mode=True)
         check_cons(grp, "bus_dmem_fault", chanidx=i, start=0, depth=1, bus_mode=True)
+        check_cons(grp, "bus_dmem_io_read", chanidx=i, start=0, depth=1, bus_mode=True)
+        check_cons(grp, "bus_dmem_io_read_fault", chanidx=i, start=0, depth=1, bus_mode=True)
+        check_cons(grp, "bus_dmem_io_write", chanidx=i, start=0, depth=1, bus_mode=True)
+        check_cons(grp, "bus_dmem_io_write_fault", chanidx=i, start=0, depth=1, bus_mode=True)
+        check_cons(grp, "bus_dmem_io_order", chanidx=i, start=0, depth=1, bus_mode=True)
 
     check_cons(grp, "hang", start=0, depth=1)
     check_cons(grp, "cover", start=0, depth=1)
