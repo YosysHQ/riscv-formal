@@ -7,14 +7,65 @@ on:
     - cron: '30 1 * * *'
 
 jobs:
-  build:
+  test_oss:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: YosysHQ/setup-oss-cad-suite@v3
+      - name: Checkout RiscV-Formal
+        uses: actions/checkout@v4
+
+      - name: Install oss-cad-suite
+        uses: YosysHQ/setup-oss-cad-suite@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run checks
+        run: |
+          cd cores/nerv
+          make check -j$(nproc)
+          cd ../picorv32
+          wget -O picorv32.v https://raw.githubusercontent.com/YosysHQ/picorv32/master/picorv32.v
+          python3 ../../checks/genchecks.py
+          make -C checks -j$(nproc)
+
+  test_verific:
+    runs-on: [self-hosted, linux, x64]
+
+    steps:
+      - name: Checkout RiscV-Formal
+        uses: actions/checkout@v4
+
+      - name: Checkout Yosys
+        uses: actions/checkout@v4
+        with:
+          repository: 'YosysHQ/yosys'
+          path: 'yosys'
+
+      - name: Runtime environment
+        run: |
+          echo "procs=$(nproc)" >> $GITHUB_ENV
+
+      - name: Build Yosys
+        run: |
+          cd yosys
+          make config-clang
+          echo "ENABLE_VERIFIC := 1" >> Makefile.conf
+          echo "ENABLE_VERIFIC_EDIF := 1" >> Makefile.conf
+          echo "ENABLE_VERIFIC_LIBERTY := 1" >> Makefile.conf
+          echo "ENABLE_CCACHE := 1" >> Makefile.conf
+          make -j${{ env.procs }}
+          make install DESTDIR=${GITHUB_WORKSPACE}/.local PREFIX=
+
+      - name: Checkout SBY
+        uses: actions/checkout@v4
+        with:
+          repository: 'YosysHQ/sby'
+          path: 'sby'
+
+      - name: Build SBY
+        run: |
+          make -C sby install DESTDIR=${GITHUB_WORKSPACE}/.local PREFIX=
+
       - name: Run checks
         run: |
           cd cores/nerv
