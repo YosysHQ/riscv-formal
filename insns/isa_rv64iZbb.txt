@@ -1,5 +1,4 @@
 add
-add_uw
 addi
 addiw
 addw
@@ -47,15 +46,8 @@ sd
 sext_b
 sext_h
 sh
-sh1add
-sh1add_uw
-sh2add
-sh2add_uw
-sh3add
-sh3add_uw
 sll
 slli
-slli_uw
 slliw
 sllw
 slt

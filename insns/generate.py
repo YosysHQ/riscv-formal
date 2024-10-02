@@ -195,6 +195,18 @@ def format_i_shift(f):
     print("  wire [4:0] insn_rd     = rvfi_insn[11: 7];", file=f)
     print("  wire [6:0] insn_opcode = rvfi_insn[ 6: 0];", file=f)
 
+def format_b(f):
+    print("", file=f)
+    # TODO: figure out if there is an official name for this format
+    print("  // B-type instruction format", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
+    print("  wire [6:0] insn_funct7 = rvfi_insn[31:25];", file=f)
+    print("  wire [4:0] insn_funct5 = rvfi_insn[24:20];", file=f)
+    print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
+    print("  wire [2:0] insn_funct3 = rvfi_insn[14:12];", file=f)
+    print("  wire [4:0] insn_rd     = rvfi_insn[11: 7];", file=f)
+    print("  wire [6:0] insn_opcode = rvfi_insn[ 6: 0];", file=f)
+
 def format_s(f):
     print("", file=f)
     print("  // S-type instruction format", file=f)
@@ -1112,6 +1124,95 @@ def insn_c_mvadd(insn, funct4, add, misa=MISA_C):
 
         footer(f)
 
+def insn_count(insn, funct5, trailing=False, pop=False, wmode=False, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_b(f)
+        misa_check(f, misa)
+
+        if wmode:
+            result_width = "32"
+            result_range = "31:0"
+            opcode = "0011011"
+        else:
+            result_width = "`RISCV_FORMAL_XLEN"
+            result_range = "`RISCV_FORMAL_XLEN-1:0"
+            opcode = "0010011"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  integer i;", file=f)
+        print("  reg [%s] result;" % result_range, file=f)
+        print("  reg found;", file=f)
+
+        print("  always @(rvfi_rs1_rdata)", file=f)
+        print("  begin", file=f)
+        print("    result = 0;", file=f)
+        print("    found = 0;", file=f)
+        print(f"    for (i=0; i<{result_width}; i=i+1)", file=f)
+        print("    begin", file=f)
+        if pop: # count all ones
+            assert not trailing
+            print("      result = result + rvfi_rs1_rdata[i];", file=f)
+        elif trailing: # count trailing zeros
+            print("      if (rvfi_rs1_rdata[i] == 1'b1)", file=f)
+            print("        result = 0;", file=f)
+            print("      else", file=f)
+            print("        result = result + 1;", file=f)
+        else: # count leading zeros
+            print("      found = found | rvfi_rs1_rdata[i];", file=f)
+            print("      result = result + ~(rvfi_rs1_rdata[i] | found);", file=f)
+        print("    end", file=f)
+        print("  end", file=f)
+
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0110000 && insn_funct5 == 5'b %s && insn_funct3 == 3'b 001 && insn_opcode == 7'b %s" % (funct5, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        if wmode:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-32{result[31]}}, result} : 0")
+        else:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_ext(insn, funct5, signed=False, bmode=False, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_b(f)
+        misa_check(f, misa)
+
+        if bmode:
+            result_width = "8"
+            opcode = "0011011"
+        else: # hmode
+            result_width = "16"
+            opcode = "0010011"
+
+        if signed:
+            funct7 = "0110000"
+            funct3 = "001"
+            opcode = "0010011"
+            result_extension = f"result[{result_width}-1]"
+        else:
+            funct7 = "0000100"
+            funct3 = "100"
+            opcode = "{011, `RISCV_FORMAL_XLEN != 32, 011}"
+            result_extension = "0"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  wire [%s-1:0] result = rvfi_rs1_rdata[%s-1:0];" % (result_width, result_width), file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b %s && insn_funct5 == 5'b %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct7, funct5, funct3, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-%s{%s}}, result} : 0" % (result_width, result_extension))
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
 ## Base Integer ISA (I)
 
 current_isa = ["rv32i"]
@@ -1272,7 +1373,33 @@ insn_shimm("slli_uw",   "000010",  "001", "rvfi_rs1_rdata[31:0] << insn_shamt", 
 
 current_isa = ["rv32iZbb"]
 
+insn_alu("andn",    "0100000", "111", "rvfi_rs1_rdata & ~rvfi_rs2_rdata",   misa=MISA_B)
+insn_alu("orn",     "0100000", "110", "rvfi_rs1_rdata | ~rvfi_rs2_rdata",   misa=MISA_B)
+insn_alu("xnor",    "0100000", "100", "~(rvfi_rs1_rdata ^ rvfi_rs2_rdata)", misa=MISA_B)
+insn_count("clz",   "00000", misa=MISA_B)
+insn_count("ctz",   "00001", trailing=True, misa=MISA_B)
+insn_count("cpop",  "00010", pop=True, misa=MISA_B)
+insn_alu("max",     "0000101", "110", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", misa=MISA_B)
+insn_alu("maxu",    "0000101", "111", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", misa=MISA_B)
+insn_alu("min",     "0000101", "100", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
+insn_alu("minu",    "0000101", "101", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
+insn_ext("sext_b",  "00100", signed=True, bmode=True, misa=MISA_B)
+insn_ext("sext_h",  "00101", signed=True, misa=MISA_B)
+insn_ext("zext_h",  "00000", misa=MISA_B)
+insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
+insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
+insn_shimm("rori",  "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", misa=MISA_B)
+# insn_("orc_b",   "001010000111", "101", "", misa=MISA_B)
+# insn_("rev8",    "011010011000", "101", "", misa=MISA_B)
+
 current_isa = ["rv64iZbb"]
+
+insn_count("clzw",  "00000", wmode=True, misa=MISA_B)
+insn_count("ctzw",  "00001", trailing=True, wmode=True, misa=MISA_B)
+insn_count("cpopw", "00010", pop=True, wmode=True, misa=MISA_B)
+insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
+insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
+insn_shimm("roriw", "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (32 - shamt))", wmode=True, misa=MISA_B)
 
 ### Zbs: Single-bit instructions
 

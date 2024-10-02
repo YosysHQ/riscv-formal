@@ -2,6 +2,7 @@ add
 addi
 and
 andi
+andn
 auipc
 beq
 bge
@@ -9,6 +10,9 @@ bgeu
 blt
 bltu
 bne
+clz
+cpop
+ctz
 jal
 jalr
 lb
@@ -17,9 +21,19 @@ lh
 lhu
 lui
 lw
+max
+maxu
+min
+minu
 or
 ori
+orn
+rol
+ror
+rori
 sb
+sext_b
+sext_h
 sh
 sh1add
 sh2add
@@ -36,5 +50,7 @@ srl
 srli
 sub
 sw
+xnor
 xor
 xori
+zext_h
