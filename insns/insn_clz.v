@@ -57,12 +57,12 @@ module rvfi_insn_clz (
   end
   assign spec_valid = rvfi_valid && !insn_padding && insn_funct7 == 7'b 0110000 && insn_funct5 == 5'b 00000 && insn_funct3 == 3'b 001 && insn_opcode == 7'b 0010011;
   assign spec_rs1_addr = insn_rs1;
-  assign spec_rs2_addr = insn_rs2;
   assign spec_rd_addr = insn_rd;
   assign spec_rd_wdata = spec_rd_addr ? result : 0;
   assign spec_pc_wdata = rvfi_pc_rdata + 4;
 
   // default assignments
+  assign spec_rs2_addr = 0;
   assign spec_trap = !misa_ok;
   assign spec_mem_addr = 0;
   assign spec_mem_rmask = 0;

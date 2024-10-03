@@ -42,8 +42,8 @@ module rvfi_insn_rori (
 `endif
 
   // RORI instruction
-  wire [`RISCV_FORMAL_XLEN-1:0] result = (rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt));
-  assign spec_valid = rvfi_valid && !insn_padding && insn_funct6 == 6'b 0110000 && insn_funct3 == 3'b 101 && insn_opcode == 7'b 0010011 && (!insn_shamt[5] || `RISCV_FORMAL_XLEN == 64);
+  wire [`RISCV_FORMAL_XLEN-1:0] result = (rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt));
+  assign spec_valid = rvfi_valid && !insn_padding && insn_funct6 == 6'b 011000 && insn_funct3 == 3'b 101 && insn_opcode == 7'b 0010011 && (!insn_shamt[5] || `RISCV_FORMAL_XLEN == 64);
   assign spec_rs1_addr = insn_rs1;
   assign spec_rd_addr = insn_rd;
   assign spec_rd_wdata = spec_rd_addr ? result : 0;

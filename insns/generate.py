@@ -178,7 +178,7 @@ def format_rb(f):
     print("", file=f)
     print("  // R-type instruction format (bitwise variation)", file=f)
     print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
-    print("  wire [6:0] insn_funct7 = rvfi_insn[31:25];", file=f)
+    print("  wire [6:0] insn_funct6 = rvfi_insn[31:26];", file=f)
     print("  wire [5:0] insn_shamt  = rvfi_insn[25:20];", file=f)
     print("  wire [4:0] insn_rs2    = rvfi_insn[24:20];", file=f)
     print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
@@ -1179,7 +1179,6 @@ def insn_count(insn, funct5, trailing=False, pop=False, wmode=False, misa=MISA_B
 
         assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0110000 && insn_funct5 == 5'b %s && insn_funct3 == 3'b 001 && insn_opcode == 7'b %s" % (funct5, opcode))
         assign(f, "spec_rs1_addr", "insn_rs1")
-        assign(f, "spec_rs2_addr", "insn_rs2")
         assign(f, "spec_rd_addr", "insn_rd")
         if wmode:
             assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-32{result[31]}}, result} : 0")
@@ -1197,28 +1196,27 @@ def insn_ext(insn, funct5, signed=False, bmode=False, misa=MISA_B):
 
         if bmode:
             result_width = "8"
-            opcode = "0011011"
+            opcode = "7'b 0011011"
         else: # hmode
             result_width = "16"
-            opcode = "0010011"
+            opcode = "7'b 0010011"
 
         if signed:
             funct7 = "0110000"
             funct3 = "001"
-            opcode = "0010011"
+            opcode = "7'b 0010011"
             result_extension = f"result[{result_width}-1]"
         else:
             funct7 = "0000100"
             funct3 = "100"
-            opcode = "{011, `RISCV_FORMAL_XLEN != 32, 011}"
-            result_extension = "0"
+            opcode = "{3'b 011, `RISCV_FORMAL_XLEN != 32, 3'b 011}"
+            result_extension = "1'b 0"
 
         print("", file=f)
         print("  // %s instruction" % insn.upper(), file=f)
         print("  wire [%s-1:0] result = rvfi_rs1_rdata[%s-1:0];" % (result_width, result_width), file=f)
-        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b %s && insn_funct5 == 5'b %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct7, funct5, funct3, opcode))
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b %s && insn_funct5 == 5'b %s && insn_funct3 == 3'b %s && insn_opcode == %s" % (funct7, funct5, funct3, opcode))
         assign(f, "spec_rs1_addr", "insn_rs1")
-        assign(f, "spec_rs2_addr", "insn_rs2")
         assign(f, "spec_rd_addr", "insn_rd")
         assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-%s{%s}}, result} : 0" % (result_width, result_extension))
         assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
@@ -1234,10 +1232,10 @@ def insn_bit(insn, funct6, funct3, expr, imode=False, misa=MISA_B):
         if imode:
             opcode = "0010011"
             xtra_shamt_check = "(!insn_shamt[5] || `RISCV_FORMAL_XLEN == 64)"
-            index = "shamt & (`RISCV_FORMAL_XLEN - 1)"
+            index = "insn_shamt & (`RISCV_FORMAL_XLEN - 1)"
         else:
             opcode = "0110011"
-            xtra_shamt_check = "1"
+            xtra_shamt_check = "!insn_shamt[5]"
             index = "rvfi_rs2_rdata & (`RISCV_FORMAL_XLEN - 1)"
 
         print("", file=f)
@@ -1419,16 +1417,16 @@ insn_alu("xnor",    "0100000", "100", "~(rvfi_rs1_rdata ^ rvfi_rs2_rdata)", misa
 insn_count("clz",   "00000", misa=MISA_B)
 insn_count("ctz",   "00001", trailing=True, misa=MISA_B)
 insn_count("cpop",  "00010", pop=True, misa=MISA_B)
-insn_alu("max",     "0000101", "110", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", misa=MISA_B)
+insn_alu("max",     "0000101", "110", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs2_rdata : rvfi_rs1_rdata", misa=MISA_B)
 insn_alu("maxu",    "0000101", "111", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", misa=MISA_B)
-insn_alu("min",     "0000101", "100", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
+insn_alu("min",     "0000101", "100", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
 insn_alu("minu",    "0000101", "101", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
 insn_ext("sext_b",  "00100", signed=True, bmode=True, misa=MISA_B)
 insn_ext("sext_h",  "00101", signed=True, misa=MISA_B)
 insn_ext("zext_h",  "00000", misa=MISA_B)
 insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
 insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
-insn_shimm("rori",  "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", misa=MISA_B)
+insn_shimm("rori",  "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt))", misa=MISA_B)
 # insn_("orc_b",   "001010000111", "101", "", misa=MISA_B)
 # insn_("rev8",    "011010011000", "101", "", misa=MISA_B)
 
@@ -1439,20 +1437,20 @@ insn_count("ctzw",  "00001", trailing=True, wmode=True, misa=MISA_B)
 insn_count("cpopw", "00010", pop=True, wmode=True, misa=MISA_B)
 insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
 insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
-insn_shimm("roriw", "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (32 - shamt))", wmode=True, misa=MISA_B)
+insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (32 - insn_shamt))", wmode=True, misa=MISA_B)
 
 ### Zbs: Single-bit instructions
 
 current_isa = ["rv32iZbs"]
 
-insn_bit("bclr",    "0100100", "001", "rvfi_rs1_rdata & ~(1 << index)", misa=MISA_B)
-insn_bit("bclri",   "0100100", "001", "rvfi_rs1_rdata & ~(1 << index)", imode=True, misa=MISA_B)
-insn_bit("bext",    "0100100", "101", "(rvfi_rs1_rdata >> index) & 1",  misa=MISA_B)
-insn_bit("bexti",   "0100100", "101", "(rvfi_rs1_rdata >> index) & 1",  imode=True, misa=MISA_B)
-insn_bit("binv",    "0110100", "001", "rvfi_rs1_rdata ^ (1 << index)",  misa=MISA_B)
-insn_bit("binvi",   "0110100", "001", "rvfi_rs1_rdata ^ (1 << index)",  imode=True, misa=MISA_B)
-insn_bit("bset",    "0010100", "001", "rvfi_rs1_rdata | (1 << index)",  misa=MISA_B)
-insn_bit("bseti",   "0010100", "001", "rvfi_rs1_rdata | (1 << index)",  imode=True, misa=MISA_B)
+insn_bit("bclr",    "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", misa=MISA_B)
+insn_bit("bclri",   "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", imode=True, misa=MISA_B)
+insn_bit("bext",    "010010", "101", "(rvfi_rs1_rdata >> index) & 1",  misa=MISA_B)
+insn_bit("bexti",   "010010", "101", "(rvfi_rs1_rdata >> index) & 1",  imode=True, misa=MISA_B)
+insn_bit("binv",    "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  misa=MISA_B)
+insn_bit("binvi",   "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  imode=True, misa=MISA_B)
+insn_bit("bset",    "001010", "001", "rvfi_rs1_rdata | (1 << index)",  misa=MISA_B)
+insn_bit("bseti",   "001010", "001", "rvfi_rs1_rdata | (1 << index)",  imode=True, misa=MISA_B)
 
 ## Compressed Integer ISA (IC)
 

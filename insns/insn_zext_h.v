@@ -43,14 +43,14 @@ module rvfi_insn_zext_h (
 
   // ZEXT_H instruction
   wire [16-1:0] result = rvfi_rs1_rdata[16-1:0];
-  assign spec_valid = rvfi_valid && !insn_padding && insn_funct7 == 7'b 0000100 && insn_funct5 == 5'b 00000 && insn_funct3 == 3'b 100 && insn_opcode == 7'b {011, `RISCV_FORMAL_XLEN != 32, 011};
+  assign spec_valid = rvfi_valid && !insn_padding && insn_funct7 == 7'b 0000100 && insn_funct5 == 5'b 00000 && insn_funct3 == 3'b 100 && insn_opcode == {3'b 011, `RISCV_FORMAL_XLEN != 32, 3'b 011};
   assign spec_rs1_addr = insn_rs1;
-  assign spec_rs2_addr = insn_rs2;
   assign spec_rd_addr = insn_rd;
-  assign spec_rd_wdata = spec_rd_addr ? {{`RISCV_FORMAL_XLEN-16{0}}, result} : 0;
+  assign spec_rd_wdata = spec_rd_addr ? {{`RISCV_FORMAL_XLEN-16{1'b 0}}, result} : 0;
   assign spec_pc_wdata = rvfi_pc_rdata + 4;
 
   // default assignments
+  assign spec_rs2_addr = 0;
   assign spec_trap = !misa_ok;
   assign spec_mem_addr = 0;
   assign spec_mem_rmask = 0;
