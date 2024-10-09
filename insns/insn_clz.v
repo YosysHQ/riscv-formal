@@ -51,8 +51,10 @@ module rvfi_insn_clz (
     found = 0;
     for (i=0; i<`RISCV_FORMAL_XLEN; i=i+1)
     begin
-      found = found | rvfi_rs1_rdata[i];
-      result = result + ~(rvfi_rs1_rdata[i] | found);
+      if (rvfi_rs1_rdata[i] == 1'b1)
+        result = 0;
+      else
+        result = result + 1;
     end
   end
   assign spec_valid = rvfi_valid && !insn_padding && insn_funct7 == 7'b 0110000 && insn_funct5 == 5'b 00000 && insn_funct3 == 3'b 001 && insn_opcode == 7'b 0010011;

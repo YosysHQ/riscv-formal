@@ -1167,13 +1167,13 @@ def insn_count(insn, funct5, trailing=False, pop=False, wmode=False, misa=MISA_B
             assert not trailing
             print("      result = result + rvfi_rs1_rdata[i];", file=f)
         elif trailing: # count trailing zeros
+            print("      found = found | rvfi_rs1_rdata[i];", file=f)
+            print("      result = result + !(rvfi_rs1_rdata[i] | found);", file=f)
+        else: # count leading zeros
             print("      if (rvfi_rs1_rdata[i] == 1'b1)", file=f)
             print("        result = 0;", file=f)
             print("      else", file=f)
             print("        result = result + 1;", file=f)
-        else: # count leading zeros
-            print("      found = found | rvfi_rs1_rdata[i];", file=f)
-            print("      result = result + ~(rvfi_rs1_rdata[i] | found);", file=f)
         print("    end", file=f)
         print("  end", file=f)
 
