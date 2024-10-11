@@ -26,8 +26,10 @@ maxu
 min
 minu
 or
+orc_b
 ori
 orn
+rev8
 rol
 ror
 rori
