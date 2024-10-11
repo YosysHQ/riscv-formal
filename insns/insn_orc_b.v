@@ -43,7 +43,7 @@ module rvfi_insn_orc_b (
   // ORC_B instruction
   reg [`RISCV_FORMAL_XLEN-1:0] result;
   integer i;
-  localparam integer nbytes = $clog2(`RISCV_FORMAL_XLEN)-1;
+  localparam integer nbytes = `RISCV_FORMAL_XLEN / 8;
   always @(rvfi_rs1_rdata)
   begin
     result = 0;

@@ -43,7 +43,7 @@ module rvfi_insn_rorw (
 
   // RORW instruction
   wire [4:0] shamt = rvfi_rs2_rdata[4:0];
-  wire [31:0] result = (rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (32 - shamt));
+  wire [31:0] result = (rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt));
   assign spec_valid = rvfi_valid && !insn_padding && insn_funct7 == 7'b 0110000 && insn_funct3 == 3'b 101 && insn_opcode == 7'b 0111011;
   assign spec_rs1_addr = insn_rs1;
   assign spec_rs2_addr = insn_rs2;

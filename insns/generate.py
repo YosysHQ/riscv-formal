@@ -1273,7 +1273,7 @@ def insn_bytes(insn, funct12, funct3, expr, misa=MISA_B):
         print("  // %s instruction" % insn.upper(), file=f)
         print("  reg [`RISCV_FORMAL_XLEN-1:0] result;", file=f)
         print("  integer i;", file=f)
-        print("  localparam integer nbytes = $clog2(`RISCV_FORMAL_XLEN)-1;", file=f)
+        print("  localparam integer nbytes = `RISCV_FORMAL_XLEN / 8;", file=f)
         print("  always @(rvfi_rs1_rdata)", file=f)
         print("  begin", file=f)
         print("    result = 0;", file=f)
@@ -1282,7 +1282,7 @@ def insn_bytes(insn, funct12, funct3, expr, misa=MISA_B):
         print(f"      result[i*8+:8] = {expr};", file=f)
         print("    end", file=f)
         print("  end", file=f)
-        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct12 == 12'b %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct12, funct3, opcode))
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct12 == %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct12, funct3, opcode))
         assign(f, "spec_rs1_addr", "insn_rs1")
         assign(f, "spec_rd_addr", "insn_rd")
         assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
@@ -1465,17 +1465,17 @@ insn_ext("zext_h",  "00000", misa=MISA_B)
 insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
 insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
 insn_shimm("rori",  "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt))", misa=MISA_B)
-insn_bytes("orc_b", "001010000111", "101", "{8{|rvfi_rs1_rdata[i*8+:8]}}", misa=MISA_B)
-insn_bytes("rev8",  "011010011000", "101", "rvfi_rs1_rdata[((nbytes-i)*8)-1-:8]", misa=MISA_B)
+insn_bytes("orc_b", "12'b 001010000111", "101", "{8{|rvfi_rs1_rdata[i*8+:8]}}", misa=MISA_B)
+insn_bytes("rev8",  "{6'b 011010, `RISCV_FORMAL_XLEN == 64, 5'b 11000}", "101", "rvfi_rs1_rdata[((nbytes-i)*8)-1-:8]", misa=MISA_B)
 
 current_isa = ["rv64iZbb"]
 
 insn_count("clzw",  "00000", wmode=True, misa=MISA_B)
 insn_count("ctzw",  "00001", trailing=True, wmode=True, misa=MISA_B)
 insn_count("cpopw", "00010", pop=True, wmode=True, misa=MISA_B)
-insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
-insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
-insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (32 - insn_shamt))", wmode=True, misa=MISA_B)
+insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
+insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
+insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rvfi_rs1_rdata[31:0] << (32 - insn_shamt))", wmode=True, misa=MISA_B)
 
 ### Zbs: Single-bit instructions
 
