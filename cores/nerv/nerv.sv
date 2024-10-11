@@ -952,15 +952,17 @@ module nerv #(
 					// Zbb: Basic bit-manipulation
 					10'b 0110000_001: begin
 						casez (insn[24:20])
-							// 5'b 00000 /* CLZ    */: begin next_wr = 1; next_rd = 0; end
-							// 5'b 00001 /* CTZ    */: begin next_wr = 1; next_rd = 0; end
-							// 5'b 00010 /* CPOP   */: begin next_wr = 1; next_rd = 0; end
+							5'b 00000 /* CLZ    */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = rs1_value[i] ? 0 : next_rd + 1; end
+							5'b 00001 /* CTZ    */: begin next_wr = 1; next_rd = 0; for (int i=32; i>0; i=i-1) next_rd = rs1_value[i-1] ? 0 : next_rd + 1; end
+							5'b 00010 /* CPOP   */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = next_rd + rs1_value[i]; end
 							5'b 00100 /* SEXT.B */: begin next_wr = 1; next_rd = $signed(rs1_value[7:0]); end
 							5'b 00101 /* SEXT.H */: begin next_wr = 1; next_rd = $signed(rs1_value[15:0]); end
 							default: illinsn = 1;
 						endcase
 					end
-					10'b 0110000_101 /* RORI */: begin next_wr = 1; next_rd = rs1_value >> insn[24:20] | (rs1_value << (32 - insn[24:20])); end
+					10'b 0110000_101 /* RORI  */: begin next_wr = 1; next_rd = rs1_value >> insn[24:20] | (rs1_value << (32 - insn[24:20])); end
+					10'b 0010100_101 /* ORC.B */: begin next_wr = insn[24:20] == 5'b 00111; illinsn = !next_wr; next_rd = 0; for (int i=0; i<4; i=i+1) next_rd[i*8 +: 8] = {8{|rs1_value[i*8 +: 8]}}; end
+					10'b 0110100_101 /* REV8  */: begin next_wr = insn[24:20] == 5'b 11000; illinsn = !next_wr; next_rd = 0; for (int i=0; i<4; i=i+1) next_rd[i*8 +: 8] = rs1_value[(4-i)*8 - 1 -: 8]; end
 					// Zbs: Single-bit instructions
 					10'b 0100100_001 /* BCLRI */: begin next_wr = 1; next_rd = rs1_value & ~(1 << insn[24:20]); end
 					10'b 0100100_101 /* BEXTI */: begin next_wr = 1; next_rd = (rs1_value >> insn[24:20]) & 1; end
