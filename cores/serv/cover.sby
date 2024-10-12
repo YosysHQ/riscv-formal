@@ -23,6 +23,7 @@ read -sv defines.sv \
     serv_rf_if.v \
     serv_rf_ram.v \
     serv_rf_ram_if.v \
+    serv_debug.v \
     serv_state.v \
     serv_top.v \
     serv_rf_top.v
@@ -44,6 +45,7 @@ serv-src/rtl/serv_rf_if.v
 serv-src/rtl/serv_rf_ram.v
 serv-src/rtl/serv_rf_ram_if.v
 serv-src/rtl/serv_state.v
+serv-src/rtl/serv_debug.v
 serv-src/rtl/serv_top.v
 serv-src/rtl/serv_rf_top.v
 ../../checks/rvfi_macros.vh
