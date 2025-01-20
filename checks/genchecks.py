@@ -138,7 +138,7 @@ def add_csr_tests(name, test_str):
     # use regex to split by spaces, unless those spaces are inside quotation marks
     # e.g. const="32'h dead_beef" is one match not two
     #      const="32'h 0"_mask="32'h dead_beef" is also one match
-    tests = re.findall("((?:\S*?\"[^\"]*\")+|\S+)", test_str)
+    tests = re.findall(r"((?:\S*?\"[^\"]*\")+|\S+)", test_str)
     csr_tests[name] = tests
 
 def add_csr(csr_str):
