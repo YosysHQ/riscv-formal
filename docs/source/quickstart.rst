@@ -19,7 +19,7 @@ install instructions
 
 For additional python requirements:
 
-::
+.. code-block:: console
 
    python3 -m pip install Verilog_VCD
 
@@ -57,7 +57,7 @@ Exercise 1: Formally verify a core
 
 Formally verify that the NERV processor complies with the RISC-V ISA:
 
-::
+.. code-block:: console
 
    cd riscv-formal
    cd cores/nerv/
@@ -65,7 +65,7 @@ Formally verify that the NERV processor complies with the RISC-V ISA:
 
 Now make a random change to ``nerv.sv`` and re-run the tests:
 
-::
+.. code-block:: console
 
    make clean
    make -j$(nproc) check
@@ -80,13 +80,13 @@ instructions that caused the error.
 
 Let's say ``liveness_ch0`` is the check that failed:
 
-::
+.. code-block:: console
 
    python3 disasm.py checks/liveness_ch0/engine_0/trace.vcd
 
 Or you can simply use gtkwave to display the counter example trace:
 
-::
+.. code-block:: console
 
    gtkwave checks/liveness_ch0/engine_0/trace.vcd trace.gtkw
 
@@ -103,7 +103,7 @@ the rv32ic ISA (``-i rv32ic``), its RVFI port is one channel wide
 (``-c 1``), and it performs memory operations with word alignment
 (``-a``):
 
-::
+.. code-block:: console
 
    cd monitor
    python3 generate.py -i rv32ic -c 1 -a -p picorv32_rvfimon > picorv32_rvfimon.v
@@ -111,7 +111,7 @@ the rv32ic ISA (``-i rv32ic``), its RVFI port is one channel wide
 Next we need to clone the PicoRV32 git repository and copy the monitor
 core:
 
-::
+.. code-block:: console
 
    git clone https://github.com/YosysHQ/picorv32.git
    cp picorv32_rvfimon.v picorv32/rvfimon.v
@@ -119,7 +119,7 @@ core:
 
 And then run the test bench with RVFI monitor support:
 
-::
+.. code-block:: console
 
    make test_rvf
 

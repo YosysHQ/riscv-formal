@@ -21,7 +21,7 @@ signal, not a ``NRET``-bits signal.
 Instruction metadata
 ~~~~~~~~~~~~~~~~~~~~
 
-::
+.. code-block:: systemverilog
 
    output [NRET        - 1 : 0] rvfi_valid
    output [NRET *   64 - 1 : 0] rvfi_order
@@ -77,7 +77,7 @@ current privilege level, using the following encoding: 1=32, 2=64
 Integer register read/write
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-::
+.. code-block:: systemverilog
 
    output [NRET *    5 - 1 : 0] rvfi_rs1_addr
    output [NRET *    5 - 1 : 0] rvfi_rs2_addr
@@ -95,7 +95,7 @@ pre-state.
 addressed by ``rs1``/``rs2`` before execution of this instruction. This
 output must be zero when ``rs1``/``rs2`` is zero.
 
-::
+.. code-block:: systemverilog
 
    output [NRET *    5 - 1 : 0] rvfi_rd_addr
    output [NRET * XLEN - 1 : 0] rvfi_rd_wdata
@@ -111,7 +111,7 @@ after execution of this instruction. This output must be zero when
 Program counter
 ~~~~~~~~~~~~~~~
 
-::
+.. code-block:: systemverilog
 
    output [NRET * XLEN - 1 : 0] rvfi_pc_rdata
    output [NRET * XLEN - 1 : 0] rvfi_pc_wdata
@@ -124,7 +124,7 @@ instruction.
 Memory access
 ~~~~~~~~~~~~~
 
-::
+.. code-block:: systemverilog
 
    output [NRET * XLEN   - 1 : 0] rvfi_mem_addr
    output [NRET * XLEN/8 - 1 : 0] rvfi_mem_rmask
@@ -206,7 +206,7 @@ Control and Status Registers (CSRs)
 
 For each supported CSR there are four additional output ports:
 
-::
+.. code-block:: systemverilog
 
    output [NRET * XLEN - 1 : 0] rvfi_csr_<csrname>_rmask
    output [NRET * XLEN - 1 : 0] rvfi_csr_<csrname>_wmask
@@ -237,7 +237,7 @@ instructions on RVFI.
 Rollbacks must be output via the rollback interface, that is enabled
 when ``RISCV_FORMAL_ROLLBACK`` is defined:
 
-::
+.. code-block:: systemverilog
 
    output [ 0 : 0] rvfi_rollback_valid
    output [63 : 0] rvfi_rollback_order
@@ -259,7 +259,7 @@ determined by an external bus response can signal such faults via RVFI.
 When ``RISCV_FORMAL_MEM_FAULT`` is defined, the RVFI interface is
 extended by the following signal:
 
-::
+.. code-block:: systemverilog
 
    output [NRET          - 1 : 0] rvfi_mem_fault
    output [NRET * XLEN/8 - 1 : 0] rvfi_mem_fault_rmask
@@ -311,7 +311,7 @@ width, ``BUSLEN`` should be set to the maximum width in use.
 
 RVFI_BUS adds the following ouptuts:
 
-::
+.. code-block:: systemverilog
 
    output [NBUS *      1   - 1 : 0] rvfi_bus_valid
    output [NBUS *      1   - 1 : 0] rvfi_bus_insn
@@ -391,7 +391,7 @@ Modelling of Floating-Point State
 
 The following is the proposed RVFI extension for floating point ISAs:
 
-::
+.. code-block:: systemverilog
 
    output [NRET *    5 - 1 : 0] rvfi_frs1_addr
    output [NRET *    5 - 1 : 0] rvfi_frs2_addr
@@ -423,7 +423,7 @@ Modelling of Virtual Memory
 For processors with support for S-mode and virtual memory we define the
 following additional RVFI signals for data load/stores:
 
-::
+.. code-block:: systemverilog
 
    output [NRET *   64 - 1 : 0] rvfi_mem_paddr
    output [NRET * XLEN - 1 : 0] rvfi_mem_pte0
@@ -433,7 +433,7 @@ following additional RVFI signals for data load/stores:
 
 And the following additional RVFI signals for instruction fetches:
 
-::
+.. code-block:: systemverilog
 
    output [NRET *   64 - 1 : 0] rvfi_pc_paddr
    output [NRET * XLEN - 1 : 0] rvfi_pc_pte0
@@ -443,7 +443,7 @@ And the following additional RVFI signals for instruction fetches:
 
 And we require that the ``satp`` CSR is observable through RVFI:
 
-::
+.. code-block:: systemverilog
 
    output [NRET * XLEN - 1 : 0] rvfi_csr_satp_rmask
    output [NRET * XLEN - 1 : 0] rvfi_csr_satp_wmask
@@ -504,7 +504,7 @@ For atomic instructions with ``rd = x0`` a core might have no way of
 knowing the old or new value of the memory location. For those
 situations we add an additional RVFI output port:
 
-::
+.. code-block:: systemverilog
 
    output [NRET          - 1 : 0] rvfi_mem_extamo
 
@@ -534,7 +534,7 @@ instruction sequence.
 An additional signal can be added to RVFI that can be used to mark such
 instructions:
 
-::
+.. code-block:: systemverilog
 
    output [NRET        - 1 : 0] rvfi_skip
 

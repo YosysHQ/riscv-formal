@@ -12,7 +12,7 @@ after defining the macros must be
 
 Example configuration:
 
-::
+.. code-block:: systemverilog
 
    `define RISCV_FORMAL
    `define RISCV_FORMAL_NRET 1
@@ -252,7 +252,7 @@ constant signals with an unconstrained initial value
 
 Usage example:
 
-::
+.. code-block:: systemverilog
 
    `rvformal_rand_reg [7:0] anyseq;
    `rvformal_rand_const_reg [7:0] anyconst;
@@ -260,7 +260,7 @@ Usage example:
 For formal verification with Yosys (i.e. when ``YOSYS`` is defined),
 this will be converted to the following code:
 
-::
+.. code-block:: systemverilog
 
    rand reg [7:0] anyseq;
    rand const reg [7:0] anyconst;
@@ -268,14 +268,14 @@ this will be converted to the following code:
 For simulation (i.e. when ``SIMULATION`` is defined), this will be
 converted to:
 
-::
+.. code-block:: systemverilog
 
    reg [7:0] anyseq;
    reg [7:0] anyconst;
 
 And otherwise (for use with any formal verification tool):
 
-::
+.. code-block:: systemverilog
 
    wire [7:0] anyseq;
    reg [7:0] anyconst;
