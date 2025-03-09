@@ -1,0 +1,1 @@
+furo-ys @ git+https://github.com/YosysHQ/furo-ys
