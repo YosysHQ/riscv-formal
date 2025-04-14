@@ -710,14 +710,18 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
 
         if csr_mode:
             localdict = locals()
-            if "constval" in localdict:
-                print(f"`define RISCV_FORMAL_CSRC_CONSTVAL {constval}", file=sby_file)
-            if "hpmevent" in localdict:
-                print(f"`define RISCV_FORMAL_CSRC_HPMEVENT {hpmevent}", file=sby_file)
-            if "hpmcounter" in localdict:
-                print(f"`define RISCV_FORMAL_CSRC_HPMCOUNTER {hpmcounter}", file=sby_file)
-            if "csr_mask" in localdict:
-                print(f"`define RISCV_FORMAL_CSRC_MASK {csr_mask}", file=sby_file)
+            csr_defs = [
+                ("RISCV_FORMAL_CSRC_CONSTVAL", "constval"),
+                ("RISCV_FORMAL_CSRC_HPMEVENT", "hpmevent"),
+                ("RISCV_FORMAL_CSRC_HPMCOUNTER", "hpmcounter"),
+                ("RISCV_FORMAL_CSRC_MASK", "csr_mask"),
+            ]
+            for key, val  in csr_defs:
+                try:
+                    print(f"`define {key} {localdict[val]}", file=sby_file)
+                except UnboundLocalError:
+                    # no val for key
+                    pass
             print(f"`define RISCV_FORMAL_CSRC_NAME {csr_name}", file=sby_file)
 
         if custom_csrs:
