@@ -400,7 +400,7 @@ rvfi = Group(
     append = [group_extamo, group_rollback, group_fault, *csr_groups, custom_csr]
 ).print_macros()
 
-rvfi = Group(
+rvfi_bus = Group(
     condition="RISCV_FORMAL_BUS",
     name="RVFI_BUS",
     channels="`RISCV_FORMAL_NBUS",
