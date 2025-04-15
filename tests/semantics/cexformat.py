@@ -3,7 +3,7 @@
 from Verilog_VCD.Verilog_VCD import parse_vcd
 from os import system, remove
 from sys import argv, exit
-from getopt import getopt
+from getopt import getopt, GetoptError
 
 def usage():
     print("Usage: %s <vcd-file>" % argv[0])
@@ -11,7 +11,7 @@ def usage():
 
 try:
     opts, args = getopt(argv[1:], "", [])
-except:
+except GetoptError:
     usage()
 
 for o, a in opts:
