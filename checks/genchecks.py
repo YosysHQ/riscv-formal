@@ -719,7 +719,7 @@ def check_cons(grp, check, chanidx=None, start=None, trig=None, depth=None, csr_
             for key, val  in csr_defs:
                 try:
                     print(f"`define {key} {localdict[val]}", file=sby_file)
-                except UnboundLocalError:
+                except KeyError:
                     # no val for key
                     pass
             print(f"`define RISCV_FORMAL_CSRC_NAME {csr_name}", file=sby_file)
