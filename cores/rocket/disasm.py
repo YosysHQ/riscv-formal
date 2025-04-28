@@ -3,7 +3,7 @@
 from Verilog_VCD.Verilog_VCD import parse_vcd
 from os import system
 from sys import argv, exit
-from getopt import getopt
+from getopt import getopt, GetoptError
 
 mode_d = False
 mode_64 = False
@@ -14,7 +14,7 @@ def usage():
 
 try:
     opts, args = getopt(argv[1:], "d", ["64"])
-except:
+except GetoptError:
     usage()
 
 for o, a in opts:

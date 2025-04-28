@@ -62,7 +62,7 @@ Usage: %s [options] > outfile.v
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "i:p:c:r:aMRPAQV")
-except:
+except getopt.GetoptError:
     usage()
 
 for o, a in opts:
@@ -82,10 +82,6 @@ for o, a in opts:
         noregscheck = True
     elif o == "-P":
         nopccheck = True
-    elif o == "-U":
-        nocausality = True
-    elif o == "-O":
-        nocompleteness = True
     elif o == "-A":
         use_assert = True
     elif o == "-Q":
