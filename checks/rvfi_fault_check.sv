@@ -93,7 +93,6 @@ module rvfi_fault_check (
 						assert (csr_mcause_wdata == 1);
 					end
 `endif
-				else begin end
 				end else begin
 					assert (mem_fault_rmask == 0);
 					assert (mem_fault_wmask == 0);
