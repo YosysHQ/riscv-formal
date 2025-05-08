@@ -55,11 +55,9 @@ enables the specified effect.
 +=====================+==================+=============================+
 | isa                 | String           | ISA extensions,             |
 |                     |                  | e.g. \ ``RV64IMAFD``, or    |
-|                     |                  | ``rv32i``. Note that X and  |
-|                     |                  | Z extensions are not        |
-|                     |                  | currently supported and     |
-|                     |                  | should be removed from the  |
-|                     |                  | string.                     |
+|                     |                  | ``rv32i``. Refer to the     |
+|                     |                  | :ref:`proc-isa` section     |
+|                     |                  | below for more information. |
 +---------------------+------------------+-----------------------------+
 | nret                | Integer          | The number of channels for  |
 |                     |                  | the RVFI port. Defaults to  |
@@ -83,6 +81,52 @@ enables the specified effect.
 |                     |                  | ``prove``, and defaults to  |
 |                     |                  | ``bmc``.                    |
 +---------------------+------------------+-----------------------------+
+
+.. _proc-isa:
+
+Supported ISAs
+^^^^^^^^^^^^^^
+
+Note that X and Z extensions are not currently supported in the ``isa``
+string and should be removed.
+
+The following RISC-V ISA modules are supported for testing:
+
+.. list-table::
+   :widths: auto
+   :header-rows: 1
+
+   * - Module
+     - Version
+     - Notes
+   * - rv32i
+     - 2.1
+     - Base integer instruction set (32bit).
+   * - rv64i
+     - 2.1
+     - Base integer instruction set (64bit).
+   * - c
+     - 2.0
+     - Extension for compressed instructions.
+   * - m
+     - 2.0
+     - Extension for integer multiplication and division.
+   * - Zicsr
+     - 2.0
+     - CSRs are handled separately and "Zicsr" should not be included in
+       the ``isa`` string.  See :ref:`proc-csrs`.
+
+.. Implementation of I C and M extensions pre-date ratification (2019), so I'm not 100% sure on version
+
+Multi-character extensions (Z and X) are not well supported in the
+current version of ``riscv-formal`` and should be removed from the
+``isa`` string.  This also applies to version numbers for extensions and
+underscores.
+
+.. warning::
+
+   The ``isa`` string is currently case-sensitive and should match
+   values in the above table exactly.
 
 ``[depth]``
 ~~~~~~~~~~~
@@ -495,6 +539,8 @@ adjacent i/o memory accesses (as observed via RVFI) corresponds to
 adjacent i/o memory accesses on the bus. Non-i/o accesses are ignored by
 this check, so they can be arbitrarily reordered relative to i/o
 accesses and relative to each other.
+
+.. _proc-csrs:
 
 CSR checks
 ----------
