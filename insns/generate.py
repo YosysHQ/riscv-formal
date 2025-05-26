@@ -1619,6 +1619,12 @@ for ext in ["Zba", "Zbb", "Zbs"]:
     isa_propagate_pair("rv64i"+ext, "rv64ib")
 isa_propagate_pair("rv32ib", "rv64ib")
 
+## Extra B* extensions
+for ext in ["Zbc"]:
+    if "rv32i"+ext not in isa_database:
+        continue
+    isa_propagate(ext)
+
 ## ISA Fixup
 
 for isa, insns in isa_database.items():
