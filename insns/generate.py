@@ -1254,7 +1254,8 @@ def insn_bit(insn, funct6, funct3, expr, imode=False, misa=MISA_B):
         print("  wire [`RISCV_FORMAL_XLEN-1:0] result = %s;" % expr, file=f)
         assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct6 == 6'b %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s && %s" % (funct6, funct3, opcode, xtra_shamt_check))
         assign(f, "spec_rs1_addr", "insn_rs1")
-        assign(f, "spec_rs2_addr", "insn_rs2")
+        if not imode:
+            assign(f, "spec_rs2_addr", "insn_rs2")
         assign(f, "spec_rd_addr", "insn_rd")
         assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
         assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")

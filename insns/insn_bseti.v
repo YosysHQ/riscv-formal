@@ -47,12 +47,12 @@ module rvfi_insn_bseti (
   wire [`RISCV_FORMAL_XLEN-1:0] result = rvfi_rs1_rdata | (1 << index);
   assign spec_valid = rvfi_valid && !insn_padding && insn_funct6 == 6'b 001010 && insn_funct3 == 3'b 001 && insn_opcode == 7'b 0010011 && (!insn_shamt[5] || `RISCV_FORMAL_XLEN == 64);
   assign spec_rs1_addr = insn_rs1;
-  assign spec_rs2_addr = insn_rs2;
   assign spec_rd_addr = insn_rd;
   assign spec_rd_wdata = spec_rd_addr ? result : 0;
   assign spec_pc_wdata = rvfi_pc_rdata + 4;
 
   // default assignments
+  assign spec_rs2_addr = 0;
   assign spec_trap = !misa_ok;
   assign spec_mem_addr = 0;
   assign spec_mem_rmask = 0;
