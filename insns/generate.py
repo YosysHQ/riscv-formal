@@ -14,12 +14,14 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+import re
+
 current_isa = []
 isa_database = dict()
 defaults_cache = None
 
 MISA_A = 1 <<  0 # Atomic
-MISA_B = 1 <<  1 # -reserved-
+MISA_B = 1 <<  1 # Bit manipulation
 MISA_C = 1 <<  2 # Compressed
 MISA_D = 1 <<  3 # Double-precision float
 MISA_E = 1 <<  4 # RV32E base ISA
@@ -579,13 +581,18 @@ def insn_imm(insn, funct3, expr, wmode=False, misa=0):
 
         footer(f)
 
-def insn_shimm(insn, funct6, funct3, expr, wmode=False, misa=0):
+def insn_shimm(insn, funct6, funct3, expr, wmode=False, uwmode=False, misa=0):
     with open("insn_%s.v" % insn, "w") as f:
         header(f, insn)
         format_i_shift(f)
         misa_check(f, misa)
 
-        if wmode:
+        if uwmode:
+            assert not wmode
+            xtra_shamt_check = "1"
+            result_range = "`RISCV_FORMAL_XLEN-1:0"
+            opcode = "0011011"
+        elif wmode:
             xtra_shamt_check = "!insn_shamt[5]"
             result_range = "31:0"
             opcode = "0011011"
@@ -608,13 +615,17 @@ def insn_shimm(insn, funct6, funct3, expr, wmode=False, misa=0):
 
         footer(f)
 
-def insn_alu(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=False, wmode=False, misa=0):
+def insn_alu(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=False, wmode=False, uwmode=False, misa=0):
     with open("insn_%s.v" % insn, "w") as f:
         header(f, insn)
         format_r(f)
         misa_check(f, misa)
 
-        if wmode:
+        if uwmode:
+            assert not wmode
+            result_range = "`RISCV_FORMAL_XLEN-1:0"
+            opcode = "0111011"
+        elif wmode:
             result_range = "31:0"
             opcode = "0111011"
         else:
@@ -1238,6 +1249,37 @@ insn_alu("remuw",   "0000001", "111", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdat
 # insn_amo("amominu_d", "11000", "011", "rvfi_mem_extamo ? rvfi_rs2_rdata[63:0] : (rvfi_mem_rdata < rvfi_rs2_rdata[63:0] ? rvfi_mem_rdata : rvfi_rs2_rdata[63:0])")
 # insn_amo("amomaxu_d", "11100", "011", "rvfi_mem_extamo ? rvfi_rs2_rdata[63:0] : (rvfi_mem_rdata > rvfi_rs2_rdata[63:0] ? rvfi_mem_rdata : rvfi_rs2_rdata[63:0])")
 
+## Bit Manipulation ISA (B)
+
+### Zba: Address generation
+
+current_isa = ["rv32iZba"]
+
+insn_alu("sh1add",  "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 1)", misa=MISA_B)
+insn_alu("sh2add",  "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 2)", misa=MISA_B)
+insn_alu("sh3add",  "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 3)", misa=MISA_B)
+
+current_isa = ["rv64iZba"]
+
+insn_alu("add_uw",      "0000100", "000", "rvfi_rs2_rdata + rvfi_rs1_rdata[31:0]",          uwmode=True, misa=MISA_B)
+insn_alu("sh1add_uw",   "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 1)",   uwmode=True, misa=MISA_B)
+insn_alu("sh2add_uw",   "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 2)",   uwmode=True, misa=MISA_B)
+insn_alu("sh3add_uw",   "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 3)",   uwmode=True, misa=MISA_B)
+insn_shimm("slli_uw",   "000010",  "001", "rvfi_rs1_rdata[31:0] << insn_shamt",             uwmode=True, misa=MISA_B)
+# insn_alu("zext_w", wmode=True, misa=MISA_B) # ???
+
+### Zbb: Basic bit-manipulation
+
+current_isa = ["rv32iZbb"]
+
+current_isa = ["rv64iZbb"]
+
+### Zbs: Single-bit instructions
+
+current_isa = ["rv32iZbs"]
+
+current_isa = ["rv64iZbs"]
+
 ## Compressed Integer ISA (IC)
 
 current_isa = ["rv32ic"]
@@ -1283,17 +1325,24 @@ insn_c_ssp("c_sdsp", "111", 8)
 
 def isa_propagate_pair(from_isa, to_isa):
      global isa_database
-     assert from_isa in isa_database
+     assert from_isa in isa_database, f'{from_isa} not in {list(isa_database.keys())}'
      if to_isa not in isa_database:
          isa_database[to_isa] = set()
      isa_database[to_isa] |= isa_database[from_isa]
 
+# RISC-V ISA extensions are more than just a single character '[a-z]':
+# multi-letter extensions begin with Z X or S (technically Ss Sh Sv or Sm)
+# followed by one or more letters '[ZXS][a-z]+'; any extension may also have a
+# version number with the 'p' character as major/minor separator '([0-9p]+)?'.
+# Case also seems to be variable, so use 're.IGNORECASE'.
+rv_ext_pat = r'([ZXS][a-z]+|[a-z])([0-9p]+)?'
+
 def isa_propagate(suffix):
-    for i in range(2 ** len(suffix)):
-        src = ""
-        for k in range(len(suffix)):
-            if ((i >> k) & 1) == 0:
-                src += suffix[k]
+    if suffix:
+        isa_propagate_pair("rv32i", "rv32i"+suffix)
+        isa_propagate_pair("rv64i", "rv64i"+suffix)
+    for match in re.finditer(rv_ext_pat, suffix, flags=re.IGNORECASE):
+        src = match.group()
         if src != suffix:
             isa_propagate_pair("rv32i"+src, "rv32i"+suffix)
             isa_propagate_pair("rv64i"+src, "rv64i"+suffix)
@@ -1303,6 +1352,15 @@ isa_propagate("")
 isa_propagate("c")
 isa_propagate("m")
 isa_propagate("mc")
+
+## B extension is Zba, Zbb, and Zbs
+for ext in ["Zba", "Zbb", "Zbs"]:
+    if "rv32i"+ext not in isa_database:
+        continue
+    isa_propagate(ext)
+    isa_propagate_pair("rv32i"+ext, "rv32ib")
+    isa_propagate_pair("rv64i"+ext, "rv64ib")
+isa_propagate_pair("rv32ib", "rv64ib")
 
 ## ISA Fixup
 
