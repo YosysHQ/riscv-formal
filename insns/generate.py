@@ -1291,6 +1291,45 @@ def insn_bytes(insn, funct12, funct3, expr, misa=MISA_B):
 
         footer(f)
 
+def insn_clmul(insn, funct3, expr, index1=False, misa=0):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_r(f)
+        misa_check(f, misa)
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  integer i;", file=f)
+        print("  reg [`RISCV_FORMAL_XLEN-1:0] result;", file=f)
+
+        if index1:
+            i_first = "1"
+            i_last = "`RISCV_FORMAL_XLEN+1"
+        else:
+            i_first = "0"
+            i_last = "`RISCV_FORMAL_XLEN"
+
+        print("  always @(rvfi_rs1_rdata, rvfi_rs2_rdata)", file=f)
+        print("  begin", file=f)
+        print("    result = 0;", file=f)
+        print(f"    for (i={i_first}; i<{i_last}; i=i+1)", file=f)
+        print("    begin", file=f)
+        print("      if ((rvfi_rs2_rdata >> i) & 1)", file=f)
+        print(f"        result = result ^ ({expr});", file=f)
+        print("      else", file=f)
+        print("        result = result;", file=f)
+        print("    end", file=f)
+        print("  end", file=f)
+
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0000101 && insn_funct3 == 3'b %s && insn_opcode == 7'b 0110011" % funct3)
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
 ## Base Integer ISA (I)
 
 current_isa = ["rv32i"]
@@ -1477,6 +1516,13 @@ insn_count("cpopw", "00010", pop=True, wmode=True, misa=MISA_B)
 insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
 insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
 insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rvfi_rs1_rdata[31:0] << (32 - insn_shamt))", wmode=True, misa=MISA_B)
+
+### Zbc: Carry-less multiplication
+
+current_isa = ["rv32iZbc"]
+insn_clmul("clmul",  "001", "rvfi_rs1_rdata << i")
+insn_clmul("clmulh", "011", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i)", index1=True)
+insn_clmul("clmulr", "010", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i - 1)")
 
 ### Zbs: Single-bit instructions
 
