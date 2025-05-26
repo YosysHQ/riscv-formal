@@ -136,7 +136,7 @@ except AttributeError:
     print(f"Unable to parse isa string '{isa}'")
     exit(1)
 
-isa_mods: list[str] = [isa_dict["base"], isa_dict["width"]]
+isa_mods: list[str] = [isa_dict["base"].lower(), isa_dict["width"]]
 for mod in isa_dict["ext"]:
     isa_mods.append(mod.lower())
 for mod in isa_dict["multi"].split("_"):
