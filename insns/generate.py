@@ -1519,9 +1519,11 @@ insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rv
 
 ### Zbc: Carry-less multiplication
 
-current_isa = ["rv32iZbc"]
+current_isa = ["rv32iZbc", "rv32iZbkc"]
 insn_clmul("clmul",  "001", "rvfi_rs1_rdata << i")
 insn_clmul("clmulh", "011", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i)", index1=True)
+
+current_isa = ["rv32iZbc"]
 insn_clmul("clmulr", "010", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i - 1)")
 
 ### Zbs: Single-bit instructions
