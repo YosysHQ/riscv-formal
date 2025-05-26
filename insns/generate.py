@@ -1339,7 +1339,7 @@ def insn_clmul(insn, funct3, expr, index1=False, misa=0):
 
         footer(f)
 
-def insn_pack(insn, funct3="100", result_width="`RISCV_FORMAL_XLEN", signed=False, misa=0):
+def insn_pack(insn="pack", funct3="100", result_width="`RISCV_FORMAL_XLEN", signed=False, misa=0):
     with open("insn_%s.v" % insn, "w") as f:
         header(f, insn)
         format_r(f)
@@ -1393,6 +1393,35 @@ def insn_zip(insn, funct3, unzip=False, misa=0):
 
         assign(f, "spec_valid", "rvfi_valid && !insn_padding && `RISCV_FORMAL_XLEN==32 && insn_funct7 == 7'b 0000100 && insn_funct5 == 5'b 01111 && insn_funct3 == 3'b %s && insn_opcode == 7'b 0010011" % (funct3))
         assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_xperm(insn, funct3, width, misa=0):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_r(f)
+        misa_check(f, misa)
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  reg [`RISCV_FORMAL_XLEN-1:0] result;", file=f)
+        print("  integer i;", file=f)
+
+        print("  always @(rvfi_rs1_rdata, rvfi_rs2_rdata)", file=f)
+        print("  begin", file=f)
+        print("    result = 0;", file=f)
+        print(f"    for (i=0; i<`RISCV_FORMAL_XLEN; i=i+{width})", file=f)
+        print("    begin", file=f)
+        print(f"      result[i+:{width}] = (rvfi_rs1_rdata >> rvfi_rs2_rdata[i+:{width}]) & {{{width}{{1'b1}}}};", file=f)
+        print("    end", file=f)
+        print("  end", file=f)
+        
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0010100 && insn_funct3 == 3'b %s && insn_opcode == 7'b 01100_11" % (funct3))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
         assign(f, "spec_rd_addr", "insn_rd")
         assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
         assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
@@ -1582,7 +1611,7 @@ insn_bytes("rev8",  "{6'b 011010, `RISCV_FORMAL_XLEN == 64, 5'b 11000}", "101", 
 
 current_isa = ["rv32iZbkb"]
 
-insn_pack("pack", "100")
+insn_pack()
 insn_pack("packh", "111", result_width=16)
 insn_bytes("brev8", "12'b 011010000111", "101", "rvfi_rs1_rdata[(i+1)*8-(j+1)]", bitwise=True, misa=0)
 insn_zip("zip",   "001")
@@ -1625,6 +1654,11 @@ insn_bit("binv",    "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  misa=MISA
 insn_bit("binvi",   "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  imode=True, misa=MISA_B)
 insn_bit("bset",    "001010", "001", "rvfi_rs1_rdata | (1 << index)",  misa=MISA_B)
 insn_bit("bseti",   "001010", "001", "rvfi_rs1_rdata | (1 << index)",  imode=True, misa=MISA_B)
+
+current_isa = ["rv32iZbkx"]
+
+insn_xperm("xperm4", "010", 4)
+insn_xperm("xperm8", "100", 8)
 
 ## Compressed Integer ISA (IC)
 
