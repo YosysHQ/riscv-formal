@@ -87,9 +87,6 @@ enables the specified effect.
 Supported ISAs
 ^^^^^^^^^^^^^^
 
-Note that X and Z extensions are not currently supported in the ``isa``
-string and should be removed.
-
 The following RISC-V ISA modules are supported for testing:
 
 .. list-table::
@@ -115,18 +112,43 @@ The following RISC-V ISA modules are supported for testing:
      - 2.0
      - CSRs are handled separately and "Zicsr" should not be included in
        the ``isa`` string.  See :ref:`proc-csrs`.
+   * - b
+     - 1.0
+     - Extension for bit manipulation, comprising instructions provided
+       by the Zba, Zbb, and Zbs extensions.
+   * - Zba
+     - 1.0
+     - Address generation.
+   * - Zbb
+     - 1.0
+     - Basic bit-manipulation.
+   * - Zbc
+     - 1.0
+     - Carry-less multiplication.
+   * - Zbs
+     - 1.0
+     - Single-bit instructions.
+   * - Zbkb
+     - 1.0
+     - Bit-manipulation for cryptography.
+   * - Zbkc
+     - 1.0
+     - Carry-less multiplication for cryptography.
+   * - Zbkx
+     - 1.0
+     - Crossbar permutations.
 
 .. Implementation of I C and M extensions pre-date ratification (2019), so I'm not 100% sure on version
 
-Multi-character extensions (Z and X) are not well supported in the
-current version of ``riscv-formal`` and should be removed from the
-``isa`` string.  This also applies to version numbers for extensions and
-underscores.
+Instruction tests are available for each extension with both rv32i and
+rv64i base instruction sets, e.g. ``isa rv32iZbc``.  Support for
+multiple extensions in the same configuration file is currently limited,
+with only the "M" and "C" extensions available together.
 
 .. warning::
 
    The ``isa`` string is currently case-sensitive and should match
-   values in the above table exactly.
+   values in the above table exactly for instruction test generation.
 
 ``[depth]``
 ~~~~~~~~~~~
