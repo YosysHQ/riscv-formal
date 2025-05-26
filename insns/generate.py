@@ -207,6 +207,16 @@ def format_i_shift(f):
     print("  wire [4:0] insn_rd     = rvfi_insn[11: 7];", file=f)
     print("  wire [6:0] insn_opcode = rvfi_insn[ 6: 0];", file=f)
 
+def format_iB(f):
+    print("", file=f)
+    print("  // I-type instruction format (bytewise variation)", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
+    print("  wire [11:0] insn_funct12 = rvfi_insn[31:20];", file=f)
+    print("  wire [ 4:0] insn_rs1     = rvfi_insn[19:15];", file=f)
+    print("  wire [ 2:0] insn_funct3  = rvfi_insn[14:12];", file=f)
+    print("  wire [ 4:0] insn_rd      = rvfi_insn[11: 7];", file=f)
+    print("  wire [ 6:0] insn_opcode  = rvfi_insn[ 6: 0];", file=f)
+
 def format_b(f):
     print("", file=f)
     # TODO: figure out if there is an official name for this format
@@ -1251,6 +1261,35 @@ def insn_bit(insn, funct6, funct3, expr, imode=False, misa=MISA_B):
 
         footer(f)
 
+def insn_bytes(insn, funct12, funct3, expr, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_iB(f)
+        misa_check(f, misa)
+
+        opcode = "0010011"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  reg [`RISCV_FORMAL_XLEN-1:0] result;", file=f)
+        print("  integer i;", file=f)
+        print("  localparam integer nbytes = $clog2(`RISCV_FORMAL_XLEN)-1;", file=f)
+        print("  always @(rvfi_rs1_rdata)", file=f)
+        print("  begin", file=f)
+        print("    result = 0;", file=f)
+        print("    for (i=0; i<nbytes; i=i+1)", file=f)
+        print("    begin", file=f)
+        print(f"      result[i*8+:8] = {expr};", file=f)
+        print("    end", file=f)
+        print("  end", file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct12 == 12'b %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct12, funct3, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
 ## Base Integer ISA (I)
 
 current_isa = ["rv32i"]
@@ -1426,8 +1465,8 @@ insn_ext("zext_h",  "00000", misa=MISA_B)
 insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
 insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
 insn_shimm("rori",  "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt))", misa=MISA_B)
-# insn_("orc_b",   "001010000111", "101", "", misa=MISA_B)
-# insn_("rev8",    "011010011000", "101", "", misa=MISA_B)
+insn_bytes("orc_b", "001010000111", "101", "{8{|rvfi_rs1_rdata[i*8+:8]}}", misa=MISA_B)
+insn_bytes("rev8",  "011010011000", "101", "rvfi_rs1_rdata[((nbytes-i)*8)-1-:8]", misa=MISA_B)
 
 current_isa = ["rv64iZbb"]
 
