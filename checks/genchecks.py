@@ -546,10 +546,13 @@ def check_insn(grp, insn, chanidx, csr_mode=False, illegal_csr=False):
                     print(line, file=sby_file)
 
 for grp in groups:
-    with open(f"../../insns/isa_{isa}.txt") as isa_file:
-        for insn in isa_file:
-            for chanidx in range(nret):
-                check_insn(grp, insn.strip(), chanidx)
+    try:
+        with open(f"../../insns/isa_{isa}.txt", "r") as isa_file:
+            for insn in isa_file:
+                for chanidx in range(nret):
+                    check_insn(grp, insn.strip(), chanidx)
+    except FileNotFoundError:
+        print(f"Current isa string '{isa}' not supported, skipping instruction checks.", file=sys.stderr)
 
     for csr in sorted(csrs):
         for chanidx in range(nret):
