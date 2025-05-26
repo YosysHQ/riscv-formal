@@ -43,7 +43,7 @@ module rvfi_insn_rev8 (
   // REV8 instruction
   reg [`RISCV_FORMAL_XLEN-1:0] result;
   integer i;
-  localparam integer nbytes = $clog2(`RISCV_FORMAL_XLEN)-1;
+  localparam integer nbytes = `RISCV_FORMAL_XLEN / 8;
   always @(rvfi_rs1_rdata)
   begin
     result = 0;
@@ -52,7 +52,7 @@ module rvfi_insn_rev8 (
       result[i*8+:8] = rvfi_rs1_rdata[((nbytes-i)*8)-1-:8];
     end
   end
-  assign spec_valid = rvfi_valid && !insn_padding && insn_funct12 == 12'b 011010011000 && insn_funct3 == 3'b 101 && insn_opcode == 7'b 0010011;
+  assign spec_valid = rvfi_valid && !insn_padding && insn_funct12 == {6'b 011010, `RISCV_FORMAL_XLEN == 64, 5'b 11000} && insn_funct3 == 3'b 101 && insn_opcode == 7'b 0010011;
   assign spec_rs1_addr = insn_rs1;
   assign spec_rd_addr = insn_rd;
   assign spec_rd_wdata = spec_rd_addr ? result : 0;

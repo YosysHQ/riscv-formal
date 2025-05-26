@@ -42,7 +42,7 @@ module rvfi_insn_roriw (
 `endif
 
   // RORIW instruction
-  wire [31:0] result = (rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (32 - insn_shamt));
+  wire [31:0] result = (rvfi_rs1_rdata[31:0] >> insn_shamt) | (rvfi_rs1_rdata[31:0] << (32 - insn_shamt));
   assign spec_valid = rvfi_valid && !insn_padding && insn_funct6 == 6'b 011000 && insn_funct3 == 3'b 101 && insn_opcode == 7'b 0011011 && !insn_shamt[5];
   assign spec_rs1_addr = insn_rs1;
   assign spec_rd_addr = insn_rd;
