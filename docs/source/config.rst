@@ -7,8 +7,7 @@ Configuration macros
 The riscv-formal insn models and checkers are configured using a few
 Verilog pre-processor macros. They must be defined bofore reading any
 riscv-formal verilog files. The first riscv-formal verilog file read
-after defining the macros must be
-`rvfi_macros.vh <../checks/rvfi_macros.vh>`__.
+after defining the macros must be ``rvfi_macros.vh``.
 
 Example configuration:
 
