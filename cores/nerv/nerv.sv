@@ -1000,6 +1000,10 @@ module nerv #(
 					10'b 0110000_001 /* ROL    */: begin next_wr = 1; next_rd = rs1_value << rs2_value[4:0] | (rs1_value >> (32 - rs2_value[4:0])); end
 					10'b 0110000_101 /* ROR    */: begin next_wr = 1; next_rd = rs1_value >> rs2_value[4:0] | (rs1_value << (32 - rs2_value[4:0])); end
 					10'b 0000100_100 /* ZEXT.H */: begin next_wr = 1; next_rd = {16'b 0, rs1_value[15:0]}; end
+					// Zbc: Carry-less multiplication
+					10'b 0000101_001 /* CLMUL  */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = (rs2_value[i]) ? next_rd ^ (rs1_value << i) : next_rd; end
+					10'b 0000101_011 /* CLMULH */: begin next_wr = 1; next_rd = 0; for (int i=1; i<33; i=i+1) next_rd = ((rs2_value >> i) & 32'b1) ? next_rd ^ (rs1_value >> (32 - i)) : next_rd; end
+					10'b 0000101_010 /* CLMULR */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = (rs2_value[i]) ? next_rd ^ (rs1_value >> (32 - i - 1)) : next_rd; end
 					// Zbs: Single-bit instructions
 					10'b 0100100_001 /* BCLR */: begin next_wr = 1; next_rd = rs1_value & ~(1 << rs2_value[4:0]); end
 					10'b 0100100_101 /* BEXT */: begin next_wr = 1; next_rd = (rs1_value >> rs2_value[4:0]) & 1; end
