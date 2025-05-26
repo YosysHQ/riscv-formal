@@ -962,7 +962,15 @@ module nerv #(
 					end
 					10'b 0110000_101 /* RORI  */: begin next_wr = 1; next_rd = rs1_value >> insn[24:20] | (rs1_value << (32 - insn[24:20])); end
 					10'b 0010100_101 /* ORC.B */: begin next_wr = insn[24:20] == 5'b 00111; illinsn = !next_wr; next_rd = 0; for (int i=0; i<4; i=i+1) next_rd[i*8 +: 8] = {8{|rs1_value[i*8 +: 8]}}; end
-					10'b 0110100_101 /* REV8  */: begin next_wr = insn[24:20] == 5'b 11000; illinsn = !next_wr; next_rd = 0; for (int i=0; i<4; i=i+1) next_rd[i*8 +: 8] = rs1_value[(4-i)*8 - 1 -: 8]; end
+					10'b 0110100_101: begin
+						casez (insn[24:20])
+							5'b 11000 /* REV8  */: begin next_wr = 1; next_rd = 0; for (int i=0; i<4; i=i+1) next_rd[i*8 +: 8] = rs1_value[(4-i)*8 - 1 -: 8]; end
+							5'b 00111 /* BREV8 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<4; i=i+1) for (int j=0; j<8; j=j+1) next_rd[i*8 + j] = rs1_value[i*8 + 7 - j]; end
+							default: illinsn = 1;
+						endcase
+					end
+					10'b 0000100_001 /* ZIP   */: begin next_wr = insn[24:20] == 5'b 01111; illinsn = !next_wr; next_rd = 0; for (int i=0; i<16; i=i+1) begin next_rd[2*i] = rs1_value[i]; next_rd[2*i+1] = rs1_value[i+16]; end end
+					10'b 0000100_101 /* UNZIP */: begin next_wr = insn[24:20] == 5'b 01111; illinsn = !next_wr; next_rd = 0; for (int i=0; i<16; i=i+1) begin next_rd[i] = rs1_value[2*i]; next_rd[i+16] = rs1_value[2*i+1]; end end
 					// Zbs: Single-bit instructions
 					10'b 0100100_001 /* BCLRI */: begin next_wr = 1; next_rd = rs1_value & ~(1 << insn[24:20]); end
 					10'b 0100100_101 /* BEXTI */: begin next_wr = 1; next_rd = (rs1_value >> insn[24:20]) & 1; end
@@ -999,7 +1007,8 @@ module nerv #(
 					10'b 0000101_101 /* MINU   */: begin next_wr = 1; next_rd = (rs1_value < rs2_value) ? rs1_value : rs2_value; end
 					10'b 0110000_001 /* ROL    */: begin next_wr = 1; next_rd = rs1_value << rs2_value[4:0] | (rs1_value >> (32 - rs2_value[4:0])); end
 					10'b 0110000_101 /* ROR    */: begin next_wr = 1; next_rd = rs1_value >> rs2_value[4:0] | (rs1_value << (32 - rs2_value[4:0])); end
-					10'b 0000100_100 /* ZEXT.H */: begin next_wr = 1; next_rd = {16'b 0, rs1_value[15:0]}; end
+					10'b 0000100_100 /* PACK   */: begin next_wr = 1; next_rd = {rs2_value[15:0], rs1_value[15:0]}; end
+					10'b 0000100_111 /* PACKH  */: begin next_wr = 1; next_rd = {16'b0, rs2_value[7:0], rs1_value[7:0]}; end
 					// Zbc: Carry-less multiplication
 					10'b 0000101_001 /* CLMUL  */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = (rs2_value[i]) ? next_rd ^ (rs1_value << i) : next_rd; end
 					10'b 0000101_011 /* CLMULH */: begin next_wr = 1; next_rd = 0; for (int i=1; i<33; i=i+1) next_rd = ((rs2_value >> i) & 32'b1) ? next_rd ^ (rs1_value >> (32 - i)) : next_rd; end
