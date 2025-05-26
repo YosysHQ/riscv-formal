@@ -1405,7 +1405,6 @@ insn_alu("sh1add_uw",   "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0
 insn_alu("sh2add_uw",   "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 2)",   uwmode=True, misa=MISA_B)
 insn_alu("sh3add_uw",   "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 3)",   uwmode=True, misa=MISA_B)
 insn_shimm("slli_uw",   "000010",  "001", "rvfi_rs1_rdata[31:0] << insn_shamt",             uwmode=True, misa=MISA_B)
-# insn_alu("zext_w", wmode=True, misa=MISA_B) # ???
 
 ### Zbb: Basic bit-manipulation
 
