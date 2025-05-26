@@ -17,7 +17,7 @@
 import re
 
 current_isa = []
-isa_database = dict()
+isa_database: dict[str, set] = dict()
 defaults_cache = None
 
 MISA_A = 1 <<  0 # Atomic
@@ -1489,9 +1489,6 @@ insn_shimm("slli_uw",   "000010",  "001", "rvfi_rs1_rdata[31:0] << insn_shamt", 
 
 current_isa = ["rv32iZbb"]
 
-insn_alu("andn",    "0100000", "111", "rvfi_rs1_rdata & ~rvfi_rs2_rdata",   misa=MISA_B)
-insn_alu("orn",     "0100000", "110", "rvfi_rs1_rdata | ~rvfi_rs2_rdata",   misa=MISA_B)
-insn_alu("xnor",    "0100000", "100", "~(rvfi_rs1_rdata ^ rvfi_rs2_rdata)", misa=MISA_B)
 insn_count("clz",   "00000", misa=MISA_B)
 insn_count("ctz",   "00001", trailing=True, misa=MISA_B)
 insn_count("cpop",  "00010", pop=True, misa=MISA_B)
@@ -1502,20 +1499,41 @@ insn_alu("minu",    "0000101", "101", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_
 insn_ext("sext_b",  "00100", signed=True, bmode=True, misa=MISA_B)
 insn_ext("sext_h",  "00101", signed=True, misa=MISA_B)
 insn_ext("zext_h",  "00000", misa=MISA_B)
+insn_bytes("orc_b", "12'b 001010000111", "101", "{8{|rvfi_rs1_rdata[i*8+:8]}}", misa=MISA_B)
+
+current_isa = ["rv32iZbb", "rv32iZbkb"]
+
+insn_alu("andn",    "0100000", "111", "rvfi_rs1_rdata & ~rvfi_rs2_rdata",   misa=MISA_B)
+insn_alu("orn",     "0100000", "110", "rvfi_rs1_rdata | ~rvfi_rs2_rdata",   misa=MISA_B)
+insn_alu("xnor",    "0100000", "100", "~(rvfi_rs1_rdata ^ rvfi_rs2_rdata)", misa=MISA_B)
 insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
 insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
 insn_shimm("rori",  "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt))", misa=MISA_B)
-insn_bytes("orc_b", "12'b 001010000111", "101", "{8{|rvfi_rs1_rdata[i*8+:8]}}", misa=MISA_B)
 insn_bytes("rev8",  "{6'b 011010, `RISCV_FORMAL_XLEN == 64, 5'b 11000}", "101", "rvfi_rs1_rdata[((nbytes-i)*8)-1-:8]", misa=MISA_B)
+
+current_isa = ["rv32iZbkb"]
+
+# pack
+# packh
+# brev8
+# zip
+# unzip
 
 current_isa = ["rv64iZbb"]
 
 insn_count("clzw",  "00000", wmode=True, misa=MISA_B)
 insn_count("ctzw",  "00001", trailing=True, wmode=True, misa=MISA_B)
 insn_count("cpopw", "00010", pop=True, wmode=True, misa=MISA_B)
+
+current_isa = ["rv64iZbb", "rv64iZbkb"]
+
 insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
 insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
 insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rvfi_rs1_rdata[31:0] << (32 - insn_shamt))", wmode=True, misa=MISA_B)
+
+current_isa = ["rv64iZbkb"]
+
+# packw
 
 ### Zbc: Carry-less multiplication
 
@@ -1622,7 +1640,7 @@ for ext in ["Zba", "Zbb", "Zbs"]:
 isa_propagate_pair("rv32ib", "rv64ib")
 
 ## Extra B* extensions
-for ext in ["Zbc"]:
+for ext in ["Zbc", "Zbkb", "Zbkc", "Zbkx"]:
     if "rv32i"+ext not in isa_database:
         continue
     isa_propagate(ext)
@@ -1632,6 +1650,7 @@ for ext in ["Zbc"]:
 for isa, insns in isa_database.items():
     if isa.startswith("rv64"):
         insns.discard("c_jal")
+        insns -= set(["zip", "unzip"])
 
 ## ISA Listings and ISA Models
 
