@@ -1206,10 +1206,8 @@ def insn_ext(insn, funct5, signed=False, bmode=False, misa=MISA_B):
 
         if bmode:
             result_width = "8"
-            opcode = "7'b 0011011"
         else: # hmode
             result_width = "16"
-            opcode = "7'b 0010011"
 
         if signed:
             funct7 = "0110000"

@@ -129,7 +129,7 @@ if "options" in config:
             assert 0
 
 # parse isa string
-isa_regex = re.compile("^(?P<base>(?:rv)(?P<width>\d+)[ie])(?P<ext>[a-v]*)(?P<multi>(?:_?[SZX]\w+)*)$", re.I)
+isa_regex = re.compile("^(?P<base>rv(?P<width>\d+)[ie])(?P<ext>[a-v]*)(?P<multi>(?:_?[SZX]\w+)*)$", re.I)
 try:
     isa_dict = isa_regex.match(isa).groupdict()
 except AttributeError:
