@@ -128,10 +128,25 @@ if "options" in config:
             print(line)
             assert 0
 
-if "64" in isa:
+# parse isa string
+isa_regex = re.compile("^(?P<base>(?:rv)(?P<width>\d+)[ie])(?P<ext>[a-v]*)(?P<multi>(?:_?[SZX]\w+)*)$", re.I)
+try:
+    isa_dict = isa_regex.match(isa).groupdict()
+except AttributeError:
+    print(f"Unable to parse isa string '{isa}'")
+    exit(1)
+
+isa_mods: list[str] = [isa_dict["base"], isa_dict["width"]]
+for mod in isa_dict["ext"]:
+    isa_mods.append(mod.lower())
+for mod in isa_dict["multi"].split("_"):
+    if mod:
+        isa_mods.append(mod.title())
+
+if isa_dict["width"] == "64":
     xlen = 64
 
-if "c" in isa:
+if "c" in isa_mods:
     compr = True
 
 def add_csr_tests(name, test_str):
@@ -193,7 +208,7 @@ if csr_spec == "1.12":
         "menvcfgh"      : ("u",  "31A", None),  # u-mode only *and* 32bit only
     }
     for (name, data) in restricted_csrs.items():
-        if data[0] in isa:
+        if data[0] in isa_mods:
             spec_csrs[name] = data[2]
         else:
             illegal_csrs.add(
