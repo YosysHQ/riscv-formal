@@ -174,6 +174,18 @@ def format_ra(f):
     print("  wire [4:0] insn_rd     = rvfi_insn[11: 7];", file=f)
     print("  wire [6:0] insn_opcode = rvfi_insn[ 6: 0];", file=f)
 
+def format_rb(f):
+    print("", file=f)
+    print("  // R-type instruction format (bitwise variation)", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
+    print("  wire [6:0] insn_funct7 = rvfi_insn[31:25];", file=f)
+    print("  wire [5:0] insn_shamt  = rvfi_insn[25:20];", file=f)
+    print("  wire [4:0] insn_rs2    = rvfi_insn[24:20];", file=f)
+    print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
+    print("  wire [2:0] insn_funct3 = rvfi_insn[14:12];", file=f)
+    print("  wire [4:0] insn_rd     = rvfi_insn[11: 7];", file=f)
+    print("  wire [6:0] insn_opcode = rvfi_insn[ 6: 0];", file=f)
+
 def format_i(f):
     print("", file=f)
     print("  // I-type instruction format", file=f)
@@ -1213,6 +1225,34 @@ def insn_ext(insn, funct5, signed=False, bmode=False, misa=MISA_B):
 
         footer(f)
 
+def insn_bit(insn, funct6, funct3, expr, imode=False, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_rb(f)
+        misa_check(f, misa)
+
+        if imode:
+            opcode = "0010011"
+            xtra_shamt_check = "(!insn_shamt[5] || `RISCV_FORMAL_XLEN == 64)"
+            index = "shamt & (`RISCV_FORMAL_XLEN - 1)"
+        else:
+            opcode = "0110011"
+            xtra_shamt_check = "1"
+            index = "rvfi_rs2_rdata & (`RISCV_FORMAL_XLEN - 1)"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  wire [`RISCV_FORMAL_XLEN-1:0] index = %s;" % index, file=f)
+        print("  wire [`RISCV_FORMAL_XLEN-1:0] result = %s;" % expr, file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct6 == 6'b %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s && %s" % (funct6, funct3, opcode, xtra_shamt_check))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
 ## Base Integer ISA (I)
 
 current_isa = ["rv32i"]
@@ -1405,7 +1445,14 @@ insn_shimm("roriw", "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rda
 
 current_isa = ["rv32iZbs"]
 
-current_isa = ["rv64iZbs"]
+insn_bit("bclr",    "0100100", "001", "rvfi_rs1_rdata & ~(1 << index)", misa=MISA_B)
+insn_bit("bclri",   "0100100", "001", "rvfi_rs1_rdata & ~(1 << index)", imode=True, misa=MISA_B)
+insn_bit("bext",    "0100100", "101", "(rvfi_rs1_rdata >> index) & 1",  misa=MISA_B)
+insn_bit("bexti",   "0100100", "101", "(rvfi_rs1_rdata >> index) & 1",  imode=True, misa=MISA_B)
+insn_bit("binv",    "0110100", "001", "rvfi_rs1_rdata ^ (1 << index)",  misa=MISA_B)
+insn_bit("binvi",   "0110100", "001", "rvfi_rs1_rdata ^ (1 << index)",  imode=True, misa=MISA_B)
+insn_bit("bset",    "0010100", "001", "rvfi_rs1_rdata | (1 << index)",  misa=MISA_B)
+insn_bit("bseti",   "0010100", "001", "rvfi_rs1_rdata | (1 << index)",  imode=True, misa=MISA_B)
 
 ## Compressed Integer ISA (IC)
 
