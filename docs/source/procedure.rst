@@ -143,7 +143,14 @@ The following RISC-V ISA modules are supported for testing:
 Instruction tests are available for each extension with both rv32i and
 rv64i base instruction sets, e.g. ``isa rv32iZbc``.  Support for
 multiple extensions in the same configuration file is currently limited,
-with only the "M" and "C" extensions available together.
+with only the following combinations available:
+
+- rv32imc
+- rv32iZba_Zbb_Zbc_Zbs
+- rv32iZbkb_Zbkc_Zbkx
+- rv64imc
+- rv64iZba_Zbb_Zbc_Zbs
+- rv64iZbkb_Zbkc_Zbkx
 
 .. warning::
 
