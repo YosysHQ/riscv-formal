@@ -12,6 +12,7 @@ bgeu
 blt
 bltu
 bne
+brev8
 jal
 jalr
 lb
@@ -25,6 +26,9 @@ lwu
 or
 ori
 orn
+pack
+packh
+packw
 rev8
 rol
 rolw

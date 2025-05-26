@@ -1262,7 +1262,7 @@ def insn_bit(insn, funct6, funct3, expr, imode=False, misa=MISA_B):
 
         footer(f)
 
-def insn_bytes(insn, funct12, funct3, expr, misa=MISA_B):
+def insn_bytes(insn, funct12, funct3, expr, bitwise=False, misa=MISA_B):
     with open("insn_%s.v" % insn, "w") as f:
         header(f, insn)
         format_iB(f)
@@ -1274,13 +1274,22 @@ def insn_bytes(insn, funct12, funct3, expr, misa=MISA_B):
         print("  // %s instruction" % insn.upper(), file=f)
         print("  reg [`RISCV_FORMAL_XLEN-1:0] result;", file=f)
         print("  integer i;", file=f)
+        if bitwise:
+            print("  integer j;", file=f)
+
         print("  localparam integer nbytes = `RISCV_FORMAL_XLEN / 8;", file=f)
         print("  always @(rvfi_rs1_rdata)", file=f)
         print("  begin", file=f)
         print("    result = 0;", file=f)
         print("    for (i=0; i<nbytes; i=i+1)", file=f)
         print("    begin", file=f)
-        print(f"      result[i*8+:8] = {expr};", file=f)
+        if bitwise:
+            print("      for (j=0; j<8; j=j+1)", file=f)
+            print("      begin", file=f)
+            print(f"        result[i*8+j] = {expr};", file=f)
+            print("      end", file=f)
+        else:
+            print(f"      result[i*8+:8] = {expr};", file=f)
         print("    end", file=f)
         print("  end", file=f)
         assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct12 == %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct12, funct3, opcode))
@@ -1324,6 +1333,66 @@ def insn_clmul(insn, funct3, expr, index1=False, misa=0):
         assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0000101 && insn_funct3 == 3'b %s && insn_opcode == 7'b 0110011" % funct3)
         assign(f, "spec_rs1_addr", "insn_rs1")
         assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_pack(insn, funct3="100", result_width="`RISCV_FORMAL_XLEN", signed=False, misa=0):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_r(f)
+        misa_check(f, misa)
+
+        input_width = f"({result_width}/2)"
+
+        if signed:
+            opcode = "01110_11"
+            result_extension = f"result[{result_width}-1]"
+        else:
+            opcode = "0110011"
+            result_extension = "1'b 0"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  wire [%s-1:0] result = {rvfi_rs2_rdata[%s-1:0], rvfi_rs1_rdata[%s-1:0]};" % (result_width, input_width, input_width), file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0000100 && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct3, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-%s{%s}}, result} : 0" % (result_width, result_extension))
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_zip(insn, funct3, unzip=False, misa=0):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_b(f)
+        misa_check(f, misa)
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  reg [`RISCV_FORMAL_XLEN-1:0] result;", file=f)
+        print("  integer i;", file=f)
+
+        print("  always @(rvfi_rs1_rdata)", file=f)
+        print("  begin", file=f)
+        print("    result = 0;", file=f)
+        print(f"    for (i=0; i<(`RISCV_FORMAL_XLEN/2); i=i+1)", file=f)
+        print("    begin", file=f)
+        if unzip:
+            print("      result[i] = rvfi_rs1_rdata[2*i];", file=f)
+            print("      result[i + `RISCV_FORMAL_XLEN/2] = rvfi_rs1_rdata[2*i + 1];", file=f)
+        else:
+            print("      result[2*i] = rvfi_rs1_rdata[i];", file=f)
+            print("      result[2*i + 1] = rvfi_rs1_rdata[i + `RISCV_FORMAL_XLEN/2];", file=f)
+        print("    end", file=f)
+        print("  end", file=f)
+
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && `RISCV_FORMAL_XLEN==32 && insn_funct7 == 7'b 0000100 && insn_funct5 == 5'b 01111 && insn_funct3 == 3'b %s && insn_opcode == 7'b 0010011" % (funct3))
+        assign(f, "spec_rs1_addr", "insn_rs1")
         assign(f, "spec_rd_addr", "insn_rd")
         assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
         assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
@@ -1513,11 +1582,11 @@ insn_bytes("rev8",  "{6'b 011010, `RISCV_FORMAL_XLEN == 64, 5'b 11000}", "101", 
 
 current_isa = ["rv32iZbkb"]
 
-# pack
-# packh
-# brev8
-# zip
-# unzip
+insn_pack("pack", "100")
+insn_pack("packh", "111", result_width=16)
+insn_bytes("brev8", "12'b 011010000111", "101", "rvfi_rs1_rdata[(i+1)*8-(j+1)]", bitwise=True, misa=0)
+insn_zip("zip",   "001")
+insn_zip("unzip", "101", unzip=True)
 
 current_isa = ["rv64iZbb"]
 
@@ -1533,7 +1602,7 @@ insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rv
 
 current_isa = ["rv64iZbkb"]
 
-# packw
+insn_pack("packw", "100", result_width=32, signed=True)
 
 ### Zbc: Carry-less multiplication
 

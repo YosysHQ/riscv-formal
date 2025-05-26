@@ -10,6 +10,7 @@ bgeu
 blt
 bltu
 bne
+brev8
 jal
 jalr
 lb
@@ -21,6 +22,8 @@ lw
 or
 ori
 orn
+pack
+packh
 rev8
 rol
 ror
@@ -39,6 +42,8 @@ srl
 srli
 sub
 sw
+unzip
 xnor
 xor
 xori
+zip
