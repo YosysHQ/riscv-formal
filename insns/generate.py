@@ -1746,6 +1746,8 @@ for ext in ["Zbc", "Zbkb", "Zbkc", "Zbkx"]:
         continue
     isa_propagate(ext)
 
+
+## Additional ISA combinations
 isa_propagate("Zba_Zbb_Zbc_Zbs")
 isa_propagate("Zbkb_Zbkc_Zbkx")
 

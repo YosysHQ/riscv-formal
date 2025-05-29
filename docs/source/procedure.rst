@@ -143,7 +143,7 @@ The following RISC-V ISA modules are supported for testing:
 Instruction tests are available for each extension with both rv32i and
 rv64i base instruction sets, e.g. ``isa rv32iZbc``.  Support for
 multiple extensions in the same configuration file is currently limited,
-with only the following combinations available:
+with only the following combinations available by default:
 
 - rv32imc
 - rv32iZba_Zbb_Zbc_Zbs
@@ -156,6 +156,24 @@ with only the following combinations available:
 
    The ``isa`` string is currently case-sensitive and should match
    values in the above table exactly for instruction test generation.
+
+Generating new combinations locally
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Additional combinations can be generated locally as needed with the
+``insns/generate.py`` script.  First off, find the following section of
+code:
+
+.. code-block:: python3
+
+   ## Additional ISA combinations
+   isa_propagate("Zba_Zbb_Zbc_Zbs")
+   isa_propagate("Zbkb_Zbkc_Zbkx")
+
+Add the desired combination(s), e.g. ``isa_propagate("mcb")``, and then
+run the script with ``python3 generate.py``.  Each combination should
+generate a corresponding ``.txt`` and ``.v`` file that are used for
+testing.
 
 ``[depth]``
 ~~~~~~~~~~~
