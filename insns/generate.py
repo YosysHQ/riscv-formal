@@ -14,12 +14,14 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+import re
+
 current_isa = []
-isa_database = dict()
+isa_database: dict[str, set] = dict()
 defaults_cache = None
 
 MISA_A = 1 <<  0 # Atomic
-MISA_B = 1 <<  1 # -reserved-
+MISA_B = 1 <<  1 # Bit manipulation
 MISA_C = 1 <<  2 # Compressed
 MISA_D = 1 <<  3 # Double-precision float
 MISA_E = 1 <<  4 # RV32E base ISA
@@ -172,6 +174,18 @@ def format_ra(f):
     print("  wire [4:0] insn_rd     = rvfi_insn[11: 7];", file=f)
     print("  wire [6:0] insn_opcode = rvfi_insn[ 6: 0];", file=f)
 
+def format_rb(f):
+    print("", file=f)
+    print("  // R-type instruction format (bitwise variation)", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
+    print("  wire [6:0] insn_funct6 = rvfi_insn[31:26];", file=f)
+    print("  wire [5:0] insn_shamt  = rvfi_insn[25:20];", file=f)
+    print("  wire [4:0] insn_rs2    = rvfi_insn[24:20];", file=f)
+    print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
+    print("  wire [2:0] insn_funct3 = rvfi_insn[14:12];", file=f)
+    print("  wire [4:0] insn_rd     = rvfi_insn[11: 7];", file=f)
+    print("  wire [6:0] insn_opcode = rvfi_insn[ 6: 0];", file=f)
+
 def format_i(f):
     print("", file=f)
     print("  // I-type instruction format", file=f)
@@ -188,6 +202,28 @@ def format_i_shift(f):
     print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
     print("  wire [6:0] insn_funct6 = rvfi_insn[31:26];", file=f)
     print("  wire [5:0] insn_shamt  = rvfi_insn[25:20];", file=f)
+    print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
+    print("  wire [2:0] insn_funct3 = rvfi_insn[14:12];", file=f)
+    print("  wire [4:0] insn_rd     = rvfi_insn[11: 7];", file=f)
+    print("  wire [6:0] insn_opcode = rvfi_insn[ 6: 0];", file=f)
+
+def format_iB(f):
+    print("", file=f)
+    print("  // I-type instruction format (bytewise variation)", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
+    print("  wire [11:0] insn_funct12 = rvfi_insn[31:20];", file=f)
+    print("  wire [ 4:0] insn_rs1     = rvfi_insn[19:15];", file=f)
+    print("  wire [ 2:0] insn_funct3  = rvfi_insn[14:12];", file=f)
+    print("  wire [ 4:0] insn_rd      = rvfi_insn[11: 7];", file=f)
+    print("  wire [ 6:0] insn_opcode  = rvfi_insn[ 6: 0];", file=f)
+
+def format_b(f):
+    print("", file=f)
+    # TODO: figure out if there is an official name for this format
+    print("  // B-type instruction format", file=f)
+    print("  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;", file=f)
+    print("  wire [6:0] insn_funct7 = rvfi_insn[31:25];", file=f)
+    print("  wire [4:0] insn_funct5 = rvfi_insn[24:20];", file=f)
     print("  wire [4:0] insn_rs1    = rvfi_insn[19:15];", file=f)
     print("  wire [2:0] insn_funct3 = rvfi_insn[14:12];", file=f)
     print("  wire [4:0] insn_rd     = rvfi_insn[11: 7];", file=f)
@@ -579,13 +615,18 @@ def insn_imm(insn, funct3, expr, wmode=False, misa=0):
 
         footer(f)
 
-def insn_shimm(insn, funct6, funct3, expr, wmode=False, misa=0):
+def insn_shimm(insn, funct6, funct3, expr, wmode=False, uwmode=False, misa=0):
     with open("insn_%s.v" % insn, "w") as f:
         header(f, insn)
         format_i_shift(f)
         misa_check(f, misa)
 
-        if wmode:
+        if uwmode:
+            assert not wmode
+            xtra_shamt_check = "1"
+            result_range = "`RISCV_FORMAL_XLEN-1:0"
+            opcode = "0011011"
+        elif wmode:
             xtra_shamt_check = "!insn_shamt[5]"
             result_range = "31:0"
             opcode = "0011011"
@@ -608,13 +649,17 @@ def insn_shimm(insn, funct6, funct3, expr, wmode=False, misa=0):
 
         footer(f)
 
-def insn_alu(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=False, wmode=False, misa=0):
+def insn_alu(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=False, wmode=False, uwmode=False, misa=0):
     with open("insn_%s.v" % insn, "w") as f:
         header(f, insn)
         format_r(f)
         misa_check(f, misa)
 
-        if wmode:
+        if uwmode:
+            assert not wmode
+            result_range = "`RISCV_FORMAL_XLEN-1:0"
+            opcode = "0111011"
+        elif wmode:
             result_range = "31:0"
             opcode = "0111011"
         else:
@@ -1101,6 +1146,286 @@ def insn_c_mvadd(insn, funct4, add, misa=MISA_C):
 
         footer(f)
 
+def insn_count(insn, funct5, trailing=False, pop=False, wmode=False, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_b(f)
+        misa_check(f, misa)
+
+        if wmode:
+            result_width = "32"
+            result_range = "31:0"
+            opcode = "0011011"
+        else:
+            result_width = "`RISCV_FORMAL_XLEN"
+            result_range = "`RISCV_FORMAL_XLEN-1:0"
+            opcode = "0010011"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  integer i;", file=f)
+        print("  reg [%s] result;" % result_range, file=f)
+        print("  reg found;", file=f)
+
+        print("  always @(rvfi_rs1_rdata)", file=f)
+        print("  begin", file=f)
+        print("    result = 0;", file=f)
+        print("    found = 0;", file=f)
+        print(f"    for (i=0; i<{result_width}; i=i+1)", file=f)
+        print("    begin", file=f)
+        if pop: # count all ones
+            assert not trailing
+            print("      result = result + rvfi_rs1_rdata[i];", file=f)
+        elif trailing: # count trailing zeros
+            print("      found = found | rvfi_rs1_rdata[i];", file=f)
+            print("      result = result + !(rvfi_rs1_rdata[i] | found);", file=f)
+        else: # count leading zeros
+            print("      if (rvfi_rs1_rdata[i] == 1'b1)", file=f)
+            print("        result = 0;", file=f)
+            print("      else", file=f)
+            print("        result = result + 1;", file=f)
+        print("    end", file=f)
+        print("  end", file=f)
+
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0110000 && insn_funct5 == 5'b %s && insn_funct3 == 3'b 001 && insn_opcode == 7'b %s" % (funct5, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rd_addr", "insn_rd")
+        if wmode:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-32{result[31]}}, result} : 0")
+        else:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_ext(insn, funct5, signed=False, bmode=False, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_b(f)
+        misa_check(f, misa)
+
+        if bmode:
+            result_width = "8"
+        else: # hmode
+            result_width = "16"
+
+        if signed:
+            funct7 = "0110000"
+            funct3 = "001"
+            opcode = "7'b 0010011"
+            result_extension = f"result[{result_width}-1]"
+        else:
+            funct7 = "0000100"
+            funct3 = "100"
+            opcode = "{3'b 011, `RISCV_FORMAL_XLEN != 32, 3'b 011}"
+            result_extension = "1'b 0"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  wire [%s-1:0] result = rvfi_rs1_rdata[%s-1:0];" % (result_width, result_width), file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b %s && insn_funct5 == 5'b %s && insn_funct3 == 3'b %s && insn_opcode == %s" % (funct7, funct5, funct3, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-%s{%s}}, result} : 0" % (result_width, result_extension))
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_bit(insn, funct6, funct3, expr, imode=False, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_rb(f)
+        misa_check(f, misa)
+
+        if imode:
+            opcode = "0010011"
+            xtra_shamt_check = "(!insn_shamt[5] || `RISCV_FORMAL_XLEN == 64)"
+            index = "insn_shamt & (`RISCV_FORMAL_XLEN - 1)"
+        else:
+            opcode = "0110011"
+            xtra_shamt_check = "!insn_shamt[5]"
+            index = "rvfi_rs2_rdata & (`RISCV_FORMAL_XLEN - 1)"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  wire [`RISCV_FORMAL_XLEN-1:0] index = %s;" % index, file=f)
+        print("  wire [`RISCV_FORMAL_XLEN-1:0] result = %s;" % expr, file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct6 == 6'b %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s && %s" % (funct6, funct3, opcode, xtra_shamt_check))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        if not imode:
+            assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_bytes(insn, funct12, funct3, expr, bitwise=False, misa=MISA_B):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_iB(f)
+        misa_check(f, misa)
+
+        opcode = "0010011"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  reg [`RISCV_FORMAL_XLEN-1:0] result;", file=f)
+        print("  integer i;", file=f)
+        if bitwise:
+            print("  integer j;", file=f)
+
+        print("  localparam integer nbytes = `RISCV_FORMAL_XLEN / 8;", file=f)
+        print("  always @(rvfi_rs1_rdata)", file=f)
+        print("  begin", file=f)
+        print("    result = 0;", file=f)
+        print("    for (i=0; i<nbytes; i=i+1)", file=f)
+        print("    begin", file=f)
+        if bitwise:
+            print("      for (j=0; j<8; j=j+1)", file=f)
+            print("      begin", file=f)
+            print(f"        result[i*8+j] = {expr};", file=f)
+            print("      end", file=f)
+        else:
+            print(f"      result[i*8+:8] = {expr};", file=f)
+        print("    end", file=f)
+        print("  end", file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct12 == %s && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct12, funct3, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_clmul(insn, funct3, expr, index1=False, misa=0):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_r(f)
+        misa_check(f, misa)
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  integer i;", file=f)
+        print("  reg [`RISCV_FORMAL_XLEN-1:0] result;", file=f)
+
+        if index1:
+            i_first = "1"
+            i_last = "`RISCV_FORMAL_XLEN+1"
+        else:
+            i_first = "0"
+            i_last = "`RISCV_FORMAL_XLEN"
+
+        print("  always @(rvfi_rs1_rdata, rvfi_rs2_rdata)", file=f)
+        print("  begin", file=f)
+        print("    result = 0;", file=f)
+        print(f"    for (i={i_first}; i<{i_last}; i=i+1)", file=f)
+        print("    begin", file=f)
+        print("      if ((rvfi_rs2_rdata >> i) & 1)", file=f)
+        print(f"        result = result ^ ({expr});", file=f)
+        print("      else", file=f)
+        print("        result = result;", file=f)
+        print("    end", file=f)
+        print("  end", file=f)
+
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0000101 && insn_funct3 == 3'b %s && insn_opcode == 7'b 0110011" % funct3)
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_pack(insn="pack", funct3="100", result_width="`RISCV_FORMAL_XLEN", signed=False, misa=0):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_r(f)
+        misa_check(f, misa)
+
+        input_width = f"({result_width}/2)"
+
+        if signed:
+            opcode = "01110_11"
+            result_extension = f"result[{result_width}-1]"
+        else:
+            opcode = "0110011"
+            result_extension = "1'b 0"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  wire [%s-1:0] result = {rvfi_rs2_rdata[%s-1:0], rvfi_rs1_rdata[%s-1:0]};" % (result_width, input_width, input_width), file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0000100 && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct3, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-%s{%s}}, result} : 0" % (result_width, result_extension))
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_zip(insn, funct3, unzip=False, misa=0):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_b(f)
+        misa_check(f, misa)
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  reg [`RISCV_FORMAL_XLEN-1:0] result;", file=f)
+        print("  integer i;", file=f)
+
+        print("  always @(rvfi_rs1_rdata)", file=f)
+        print("  begin", file=f)
+        print("    result = 0;", file=f)
+        print(f"    for (i=0; i<(`RISCV_FORMAL_XLEN/2); i=i+1)", file=f)
+        print("    begin", file=f)
+        if unzip:
+            print("      result[i] = rvfi_rs1_rdata[2*i];", file=f)
+            print("      result[i + `RISCV_FORMAL_XLEN/2] = rvfi_rs1_rdata[2*i + 1];", file=f)
+        else:
+            print("      result[2*i] = rvfi_rs1_rdata[i];", file=f)
+            print("      result[2*i + 1] = rvfi_rs1_rdata[i + `RISCV_FORMAL_XLEN/2];", file=f)
+        print("    end", file=f)
+        print("  end", file=f)
+
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && `RISCV_FORMAL_XLEN==32 && insn_funct7 == 7'b 0000100 && insn_funct5 == 5'b 01111 && insn_funct3 == 3'b %s && insn_opcode == 7'b 0010011" % (funct3))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
+def insn_xperm(insn, funct3, width, misa=0):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_r(f)
+        misa_check(f, misa)
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("  reg [`RISCV_FORMAL_XLEN-1:0] result;", file=f)
+        print("  integer i;", file=f)
+
+        print("  always @(rvfi_rs1_rdata, rvfi_rs2_rdata)", file=f)
+        print("  begin", file=f)
+        print("    result = 0;", file=f)
+        print(f"    for (i=0; i<`RISCV_FORMAL_XLEN; i=i+{width})", file=f)
+        print("    begin", file=f)
+        print(f"      result[i+:{width}] = (rvfi_rs1_rdata >> rvfi_rs2_rdata[i+:{width}]) & {{{width}{{1'b1}}}};", file=f)
+        print("    end", file=f)
+        print("  end", file=f)
+        
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0010100 && insn_funct3 == 3'b %s && insn_opcode == 7'b 01100_11" % (funct3))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
 ## Base Integer ISA (I)
 
 current_isa = ["rv32i"]
@@ -1238,6 +1563,101 @@ insn_alu("remuw",   "0000001", "111", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdat
 # insn_amo("amominu_d", "11000", "011", "rvfi_mem_extamo ? rvfi_rs2_rdata[63:0] : (rvfi_mem_rdata < rvfi_rs2_rdata[63:0] ? rvfi_mem_rdata : rvfi_rs2_rdata[63:0])")
 # insn_amo("amomaxu_d", "11100", "011", "rvfi_mem_extamo ? rvfi_rs2_rdata[63:0] : (rvfi_mem_rdata > rvfi_rs2_rdata[63:0] ? rvfi_mem_rdata : rvfi_rs2_rdata[63:0])")
 
+## Bit Manipulation ISA (B)
+
+### Zba: Address generation
+
+current_isa = ["rv32iZba"]
+
+insn_alu("sh1add",  "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 1)", misa=MISA_B)
+insn_alu("sh2add",  "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 2)", misa=MISA_B)
+insn_alu("sh3add",  "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 3)", misa=MISA_B)
+
+current_isa = ["rv64iZba"]
+
+insn_alu("add_uw",      "0000100", "000", "rvfi_rs2_rdata + rvfi_rs1_rdata[31:0]",          uwmode=True, misa=MISA_B)
+insn_alu("sh1add_uw",   "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 1)",   uwmode=True, misa=MISA_B)
+insn_alu("sh2add_uw",   "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 2)",   uwmode=True, misa=MISA_B)
+insn_alu("sh3add_uw",   "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 3)",   uwmode=True, misa=MISA_B)
+insn_shimm("slli_uw",   "000010",  "001", "rvfi_rs1_rdata[31:0] << insn_shamt",             uwmode=True, misa=MISA_B)
+
+### Zbb: Basic bit-manipulation
+
+current_isa = ["rv32iZbb"]
+
+insn_count("clz",   "00000", misa=MISA_B)
+insn_count("ctz",   "00001", trailing=True, misa=MISA_B)
+insn_count("cpop",  "00010", pop=True, misa=MISA_B)
+insn_alu("max",     "0000101", "110", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs2_rdata : rvfi_rs1_rdata", misa=MISA_B)
+insn_alu("maxu",    "0000101", "111", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", misa=MISA_B)
+insn_alu("min",     "0000101", "100", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
+insn_alu("minu",    "0000101", "101", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", misa=MISA_B)
+insn_ext("sext_b",  "00100", signed=True, bmode=True, misa=MISA_B)
+insn_ext("sext_h",  "00101", signed=True, misa=MISA_B)
+insn_ext("zext_h",  "00000", misa=MISA_B)
+insn_bytes("orc_b", "12'b 001010000111", "101", "{8{|rvfi_rs1_rdata[i*8+:8]}}", misa=MISA_B)
+
+current_isa = ["rv32iZbb", "rv32iZbkb"]
+
+insn_alu("andn",    "0100000", "111", "rvfi_rs1_rdata & ~rvfi_rs2_rdata",   misa=MISA_B)
+insn_alu("orn",     "0100000", "110", "rvfi_rs1_rdata | ~rvfi_rs2_rdata",   misa=MISA_B)
+insn_alu("xnor",    "0100000", "100", "~(rvfi_rs1_rdata ^ rvfi_rs2_rdata)", misa=MISA_B)
+insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
+insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, misa=MISA_B)
+insn_shimm("rori",  "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt))", misa=MISA_B)
+insn_bytes("rev8",  "{6'b 011010, `RISCV_FORMAL_XLEN == 64, 5'b 11000}", "101", "rvfi_rs1_rdata[((nbytes-i)*8)-1-:8]", misa=MISA_B)
+
+current_isa = ["rv32iZbkb"]
+
+insn_pack()
+insn_pack("packh", "111", result_width=16)
+insn_bytes("brev8", "12'b 011010000111", "101", "rvfi_rs1_rdata[(i+1)*8-(j+1)]", bitwise=True, misa=0)
+insn_zip("zip",   "001")
+insn_zip("unzip", "101", unzip=True)
+
+current_isa = ["rv64iZbb"]
+
+insn_count("clzw",  "00000", wmode=True, misa=MISA_B)
+insn_count("ctzw",  "00001", trailing=True, wmode=True, misa=MISA_B)
+insn_count("cpopw", "00010", pop=True, wmode=True, misa=MISA_B)
+
+current_isa = ["rv64iZbb", "rv64iZbkb"]
+
+insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
+insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, misa=MISA_B)
+insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rvfi_rs1_rdata[31:0] << (32 - insn_shamt))", wmode=True, misa=MISA_B)
+
+current_isa = ["rv64iZbkb"]
+
+insn_pack("packw", "100", result_width=32, signed=True)
+
+### Zbc: Carry-less multiplication
+
+current_isa = ["rv32iZbc", "rv32iZbkc"]
+insn_clmul("clmul",  "001", "rvfi_rs1_rdata << i")
+insn_clmul("clmulh", "011", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i)", index1=True)
+
+current_isa = ["rv32iZbc"]
+insn_clmul("clmulr", "010", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i - 1)")
+
+### Zbs: Single-bit instructions
+
+current_isa = ["rv32iZbs"]
+
+insn_bit("bclr",    "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", misa=MISA_B)
+insn_bit("bclri",   "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", imode=True, misa=MISA_B)
+insn_bit("bext",    "010010", "101", "(rvfi_rs1_rdata >> index) & 1",  misa=MISA_B)
+insn_bit("bexti",   "010010", "101", "(rvfi_rs1_rdata >> index) & 1",  imode=True, misa=MISA_B)
+insn_bit("binv",    "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  misa=MISA_B)
+insn_bit("binvi",   "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  imode=True, misa=MISA_B)
+insn_bit("bset",    "001010", "001", "rvfi_rs1_rdata | (1 << index)",  misa=MISA_B)
+insn_bit("bseti",   "001010", "001", "rvfi_rs1_rdata | (1 << index)",  imode=True, misa=MISA_B)
+
+current_isa = ["rv32iZbkx"]
+
+insn_xperm("xperm4", "010", 4)
+insn_xperm("xperm8", "100", 8)
+
 ## Compressed Integer ISA (IC)
 
 current_isa = ["rv32ic"]
@@ -1283,17 +1703,24 @@ insn_c_ssp("c_sdsp", "111", 8)
 
 def isa_propagate_pair(from_isa, to_isa):
      global isa_database
-     assert from_isa in isa_database
+     assert from_isa in isa_database, f'{from_isa} not in {list(isa_database.keys())}'
      if to_isa not in isa_database:
          isa_database[to_isa] = set()
      isa_database[to_isa] |= isa_database[from_isa]
 
+# RISC-V ISA extensions are more than just a single character '[a-z]':
+# multi-letter extensions begin with Z X or S (technically Ss Sh Sv or Sm)
+# followed by one or more letters '[ZXS][a-z]+'; any extension may also have a
+# version number with the 'p' character as major/minor separator '([0-9p]+)?'.
+# Case also seems to be variable, so use 're.IGNORECASE'.
+rv_ext_pat = r'([ZXS][a-z]+|[a-z])([0-9p]+)?'
+
 def isa_propagate(suffix):
-    for i in range(2 ** len(suffix)):
-        src = ""
-        for k in range(len(suffix)):
-            if ((i >> k) & 1) == 0:
-                src += suffix[k]
+    if suffix:
+        isa_propagate_pair("rv32i", "rv32i"+suffix)
+        isa_propagate_pair("rv64i", "rv64i"+suffix)
+    for match in re.finditer(rv_ext_pat, suffix, flags=re.IGNORECASE):
+        src = match.group()
         if src != suffix:
             isa_propagate_pair("rv32i"+src, "rv32i"+suffix)
             isa_propagate_pair("rv64i"+src, "rv64i"+suffix)
@@ -1304,11 +1731,32 @@ isa_propagate("c")
 isa_propagate("m")
 isa_propagate("mc")
 
+## B extension is Zba, Zbb, and Zbs
+for ext in ["Zba", "Zbb", "Zbs"]:
+    if "rv32i"+ext not in isa_database:
+        continue
+    isa_propagate(ext)
+    isa_propagate_pair("rv32i"+ext, "rv32ib")
+    isa_propagate_pair("rv64i"+ext, "rv64ib")
+isa_propagate_pair("rv32ib", "rv64ib")
+
+## Extra B* extensions
+for ext in ["Zbc", "Zbkb", "Zbkc", "Zbkx"]:
+    if "rv32i"+ext not in isa_database:
+        continue
+    isa_propagate(ext)
+
+
+## Additional ISA combinations
+isa_propagate("Zba_Zbb_Zbc_Zbs")
+isa_propagate("Zbkb_Zbkc_Zbkx")
+
 ## ISA Fixup
 
 for isa, insns in isa_database.items():
     if isa.startswith("rv64"):
         insns.discard("c_jal")
+        insns -= set(["zip", "unzip"])
 
 ## ISA Listings and ISA Models
 

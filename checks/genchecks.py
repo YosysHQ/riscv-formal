@@ -128,10 +128,25 @@ if "options" in config:
             print(line)
             assert 0
 
-if "64" in isa:
+# parse isa string
+isa_regex = re.compile(r"^rv(?P<width>\d+)(?P<base>[ie])(?P<ext>[a-v]*)(?P<multi>_?[SZX]\w+)?$", re.I)
+try:
+    isa_dict = isa_regex.match(isa).groupdict()
+except AttributeError:
+    print(f"Unable to parse isa string '{isa}'")
+    exit(1)
+
+isa_mods: list[str] = [isa_dict["base"].lower(), isa_dict["width"]]
+for mod in (isa_dict["ext"] or ""):
+    isa_mods.append(mod.lower())
+for mod in (isa_dict["multi"] or "").split("_"):
+    if mod:
+        isa_mods.append(mod.title())
+
+if isa_dict["width"] == "64":
     xlen = 64
 
-if "c" in isa:
+if "c" in isa_mods:
     compr = True
 
 def add_csr_tests(name, test_str):
@@ -193,7 +208,7 @@ if csr_spec == "1.12":
         "menvcfgh"      : ("u",  "31A", None),  # u-mode only *and* 32bit only
     }
     for (name, data) in restricted_csrs.items():
-        if data[0] in isa:
+        if data[0] in isa_mods:
             spec_csrs[name] = data[2]
         else:
             illegal_csrs.add(
@@ -531,10 +546,13 @@ def check_insn(grp, insn, chanidx, csr_mode=False, illegal_csr=False):
                     print(line, file=sby_file)
 
 for grp in groups:
-    with open(f"../../insns/isa_{isa}.txt") as isa_file:
-        for insn in isa_file:
-            for chanidx in range(nret):
-                check_insn(grp, insn.strip(), chanidx)
+    try:
+        with open(f"../../insns/isa_{isa}.txt", "r") as isa_file:
+            for insn in isa_file:
+                for chanidx in range(nret):
+                    check_insn(grp, insn.strip(), chanidx)
+    except FileNotFoundError:
+        print(f"Current isa string '{isa}' not supported, skipping instruction checks.", file=sys.stderr)
 
     for csr in sorted(csrs):
         for chanidx in range(nret):
