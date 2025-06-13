@@ -55,3 +55,17 @@ Configuring a new RISC-V processor
   breakdown of how to use riscv-formal checks without using `genchecks.py`.
 - The [cover check](docs/source/procedure.rst#cover) can be used to help determine the depth needed for the
   core to reach certain states as needed for other checks.
+
+Funding
+-------
+
+`riscv-formal` checks for memory buses, CSRs, and the B extension were made
+possible with funding from Sandia National Laboratories.
+
+Sandia National Laboratories is a multimission laboratory operated by National
+Technology and Engineering Solutions of Sandia LLC, a wholly owned subsidiary of
+Honeywell International Inc., for the U.S. Department of Energy's National
+Nuclear Security Administration. Sandia Labs has major research and development
+responsibilities in nuclear deterrence, global security, defense, energy
+technologies and economic competitiveness, with main facilities in Albuquerque,
+New Mexico, and Livermore, California.
