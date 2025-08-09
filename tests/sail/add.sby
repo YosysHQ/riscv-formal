@@ -1,0 +1,154 @@
+[tasks]
+nerv
+picorv
+
+[options]
+mode bmc
+expect pass,fail
+append 0
+nerv:
+depth 11
+skip 10
+--
+picorv:
+depth 21
+skip 20
+--
+
+[engines]
+smtbmc boolector
+
+[script]
+# loading sail generated sv
+verific -vlog-incdir /home/dawn/sail/lib/sv
+verific -set-ignore VERI-1018
+verific -set-ignore VDB-1002
+
+# loading nerv
+nerv: read -sv insn_add_ch0.sv /home/dawn/riscv-formal/cores/nerv/wrapper.sv /home/dawn/riscv-formal/cores/nerv/nerv.sv
+picorv: read -sv insn_add_ch0.sv /home/dawn/riscv-formal/cores/picorv32/wrapper.sv /home/dawn/riscv-formal/cores/picorv32/picorv32.v
+prep -flatten -nordff -top rvfi_testbench
+chformal -early
+
+[files]
+/home/dawn/riscv-formal/checks/rvfi_macros.vh
+/home/dawn/riscv-formal/checks/rvfi_channel.sv
+/home/dawn/riscv-formal/checks/rvfi_testbench.sv
+/home/dawn/riscv-formal/checks/rvfi_insn_check.sv
+/home/dawn/riscv-formal/insns/insn_add.v
+generated_rtype.sv
+
+[file defines.sv]
+`define RISCV_FORMAL
+`define RISCV_FORMAL_NRET 1
+`define RISCV_FORMAL_XLEN 32
+`define RISCV_FORMAL_ILEN 32
+`define RISCV_FORMAL_RESET_CYCLES 1
+`define RISCV_FORMAL_CHANNEL_IDX 0
+`define RISCV_FORMAL_CHECKER rvfi_insn_check
+`define RISCV_FORMAL_INSN_MODEL rvfi_insn_rtype
+nerv:
+`define RISCV_FORMAL_CHECK_CYCLE 10
+`define YOSYS // Hotfix for older Tabby CAD Releases
+`define NERV_RVFI
+`define NERV_FAULT
+`define RISCV_FORMAL_ALIGNED_MEM
+--
+picorv:
+`define RISCV_FORMAL_CHECK_CYCLE 20
+`define RISCV_FORMAL_COMPRESSED
+`define RISCV_FORMAL_ALIGNED_MEM
+`define RISCV_FORMAL_ALTOPS
+`define RISCV_FORMAL_UMODE
+`define PICORV32_TESTBUG_NONE
+`define DEBUGNETS
+--
+`include "rvfi_macros.vh"
+
+[file insn_add_ch0.sv]
+`include "defines.sv"
+`include "rvfi_channel.sv"
+`include "rvfi_testbench.sv"
+`include "rvfi_insn_check.sv"
+`include "generated_rtype.sv"
+
+module rvfi_insn_rtype (
+  input                                 rvfi_valid,
+  input  [`RISCV_FORMAL_ILEN   - 1 : 0] rvfi_insn,
+  input  [`RISCV_FORMAL_XLEN   - 1 : 0] rvfi_pc_rdata,
+  input  [`RISCV_FORMAL_XLEN   - 1 : 0] rvfi_rs1_rdata,
+  input  [`RISCV_FORMAL_XLEN   - 1 : 0] rvfi_rs2_rdata,
+  input  [`RISCV_FORMAL_XLEN   - 1 : 0] rvfi_mem_rdata,
+`ifdef RISCV_FORMAL_CSR_MISA
+  input  [`RISCV_FORMAL_XLEN   - 1 : 0] rvfi_csr_misa_rdata,
+  output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_csr_misa_rmask,
+`endif
+
+  output                                spec_valid,
+  output                                spec_trap,
+  output [                       4 : 0] spec_rs1_addr,
+  output [                       4 : 0] spec_rs2_addr,
+  output [                       4 : 0] spec_rd_addr,
+  output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_rd_wdata,
+  output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_pc_wdata,
+  output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_mem_addr,
+  output [`RISCV_FORMAL_XLEN/8 - 1 : 0] spec_mem_rmask,
+  output [`RISCV_FORMAL_XLEN/8 - 1 : 0] spec_mem_wmask,
+  output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_mem_wdata
+);
+
+  // R-type instruction format
+  wire [`RISCV_FORMAL_ILEN-1:0] insn_padding = rvfi_insn >> 16 >> 16;
+  wire [6:0] insn_funct7 = rvfi_insn[31:25];
+  wire [4:0] insn_rs2    = rvfi_insn[24:20];
+  wire [4:0] insn_rs1    = rvfi_insn[19:15];
+  wire [2:0] insn_funct3 = rvfi_insn[14:12];
+  wire [4:0] insn_rd     = rvfi_insn[11: 7];
+  wire [6:0] insn_opcode = rvfi_insn[ 6: 0];
+
+`ifdef RISCV_FORMAL_CSR_MISA
+  wire misa_ok = (rvfi_csr_misa_rdata & `RISCV_FORMAL_XLEN'h 0) == `RISCV_FORMAL_XLEN'h 0;
+  assign spec_csr_misa_rmask = `RISCV_FORMAL_XLEN'h 0;
+`else
+  wire misa_ok = 1;
+`endif
+
+    // register wrapping
+    logic [31:0] x_in[31:1];
+    logic [31:0] x_out[31:1];
+
+    // insert rs vals into x_in
+    assign x_in[1] = rvfi_rs1_rdata;
+    assign x_in[2] = rvfi_rs2_rdata;
+
+    // extract result from x_out
+    wire [`RISCV_FORMAL_XLEN-1:0] sail_result = x_out[3];
+
+    // extra signals
+    sail_unit sail_stdout_0;
+    sail_unit sail_stdout_2;
+    t_Retired sail_return_2;
+    bit sail_have_exception_2;
+    t_exception sail_current_exception_2;
+    t_rop op_0 = RISCV_ADD;
+    bit assert_reachable = 0;
+
+    // RTYPE instance
+    execute_RTYPE inst_0_execute_RTYPE(5'd2, 5'd1, 5'd3, op_0, x_in[1], x_in[2], x_in[3], x_in[4], x_in[5], x_in[6], x_in[7], x_in[8], x_in[9], x_in[10], x_in[11], x_in[12], x_in[13], x_in[14], x_in[15], x_in[16], x_in[17], x_in[18], x_in[19], x_in[20], x_in[21], x_in[22], x_in[23], x_in[24], x_in[25], x_in[26], x_in[27], x_in[28], x_in[29], x_in[30], x_in[31], sail_stdout_0, assert_reachable, sail_return_2, x_out[1], x_out[2], x_out[3], x_out[4], x_out[5], x_out[6], x_out[7], x_out[8], x_out[9], x_out[10], x_out[11], x_out[12], x_out[13], x_out[14], x_out[15], x_out[16], x_out[17], x_out[18], x_out[19], x_out[20], x_out[21], x_out[22], x_out[23], x_out[24], x_out[25], x_out[26], x_out[27], x_out[28], x_out[29], x_out[30], x_out[31], sail_have_exception_2, sail_current_exception_2, sail_stdout_2);
+
+  // RTYPE instruction
+  assign spec_valid = rvfi_valid && !insn_padding && insn_funct7 == 7'b 0000000 && insn_funct3 == 3'b 000 && insn_opcode == 7'b 0110011;
+  assign spec_rs1_addr = insn_rs1;
+  assign spec_rs2_addr = insn_rs2;
+  assign spec_rd_addr = insn_rd;
+  assign spec_rd_wdata = spec_rd_addr ? sail_result : 0;
+  assign spec_pc_wdata = rvfi_pc_rdata + 4;
+
+  // default assignments
+  assign spec_trap = !misa_ok;
+  assign spec_mem_addr = 0;
+  assign spec_mem_rmask = 0;
+  assign spec_mem_wmask = 0;
+  assign spec_mem_wdata = 0;
+endmodule
+

@@ -1,0 +1,7 @@
+sail-riscv/
+rtype/
+rtype_*/
+add/
+add_*/
+generated_rtype.sv
+z3_problems
