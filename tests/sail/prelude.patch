@@ -1,0 +1,16 @@
+diff --git a/model/prelude.sail b/model/prelude.sail
+index 62fbc74..f7ec9d2 100644
+--- a/model/prelude.sail
++++ b/model/prelude.sail
+@@ -34,9 +34,9 @@ overload operator | = {or_vec}
+ 
+ overload operator ^ = {xor_vec, concat_str}
+ 
+-val sub_vec = pure {c: "sub_bits", lean: "_lean_sub", _: "sub_vec"} : forall 'n. (bits('n), bits('n)) -> bits('n)
++val sub_vec = pure {c: "sub_bits", lean: "_lean_sub", systemverilog: "sub_bits", _: "sub_vec"} : forall 'n. (bits('n), bits('n)) -> bits('n)
+ 
+-val sub_vec_int = pure {c: "sub_bits_int", lean: "BitVec.subInt", _: "sub_vec_int"} : forall 'n. (bits('n), int) -> bits('n)
++val sub_vec_int = pure {c: "sub_bits_int", lean: "BitVec.subInt", systemverilog: "sub_bits", _: "sub_vec_int"} : forall 'n. (bits('n), int) -> bits('n)
+ 
+ overload operator - = {sub_vec, sub_vec_int}
+ 

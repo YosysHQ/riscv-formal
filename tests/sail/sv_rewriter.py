@@ -22,23 +22,31 @@ def rewrite(force: bool, file: Path = None):
     with open(file_old, 'rt', encoding='utf-8') as in_f:
         with open(file, 'wt', encoding='utf-8') as out_f:
             skip_module = False
-            let_var: str = ""
+            let_vars: set[str] = set()
             for line in in_f:
                 # catch localparam definitions
-                m = re.fullmatch(r'(logic \[[0-9:]+\]|bit) (\S+);\n', line)
+                m = re.fullmatch(r'(\s*)(logic \[[0-9:]+\]|bit|t_\w+) (\S+);\n', line)
                 if m:
-                    _, let_var = m.groups()
-                    skip_module = True
+                    space, _, let_var = m.groups()
+                    let_vars.add(let_var)
+                    if len(space) == 0:
+                        skip_module = True
 
                 m = re.fullmatch(r'module sail_setup_let_\d+;\n', line)
                 if m:
                     skip_module = True
 
                 # get localparam value
-                m = re.fullmatch(r'\s+(\S+)_1 = (\S+);\n', line)
-                if m and m.group(1) == let_var:
-                    let_val = m.group(2)
-                    click.echo(f'localparam {let_var} = {let_val};', out_f)
+                m = re.fullmatch(r'\s+(\S+) = (\S+);\n', line)
+                if m and skip_module:
+                    let_var, let_val = m.groups()
+                    if let_var.endswith("_1"): let_var = let_var[:-2]
+                    try:
+                        let_vars.remove(let_var)
+                    except KeyError:
+                        pass
+                    else:
+                        click.echo(f'localparam {let_var} = {let_val};', out_f)
 
                 # skip setup module
                 if skip_module:

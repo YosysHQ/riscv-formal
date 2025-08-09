@@ -116,25 +116,19 @@ module rvfi_insn_rtype (
     // register wrapping
     logic [31:0] x_in[31:1];
     logic [31:0] x_out[31:1];
-
-    // insert rs vals into x_in
-    assign x_in[1] = rvfi_rs1_rdata;
-    assign x_in[2] = rvfi_rs2_rdata;
-
-    // extract result from x_out
-    wire [`RISCV_FORMAL_XLEN-1:0] sail_result = x_out[3];
+    localparam rs2_0 = 5'd1, rs1_0 = 5'd2, rd_0 = 5'd3;
+    assign x_in[rs1_0] = rvfi_rs1_rdata;
+    assign x_in[rs2_0] = rvfi_rs2_rdata;
+    wire [`RISCV_FORMAL_XLEN-1:0] sail_result = x_out[rd_0];
 
     // extra signals
-    sail_unit sail_stdout_0;
-    sail_unit sail_stdout_2;
-    t_Retired sail_return_2;
+    t_ExecutionResult sail_return_2;
     bit sail_have_exception_2;
     t_exception sail_current_exception_2;
-    t_rop op_0 = RISCV_ADD;
-    bit assert_reachable = 0;
+    t_rop op_0 = ADD;
 
     // RTYPE instance
-    execute_RTYPE inst_0_execute_RTYPE(5'd2, 5'd1, 5'd3, op_0, x_in[1], x_in[2], x_in[3], x_in[4], x_in[5], x_in[6], x_in[7], x_in[8], x_in[9], x_in[10], x_in[11], x_in[12], x_in[13], x_in[14], x_in[15], x_in[16], x_in[17], x_in[18], x_in[19], x_in[20], x_in[21], x_in[22], x_in[23], x_in[24], x_in[25], x_in[26], x_in[27], x_in[28], x_in[29], x_in[30], x_in[31], sail_stdout_0, assert_reachable, sail_return_2, x_out[1], x_out[2], x_out[3], x_out[4], x_out[5], x_out[6], x_out[7], x_out[8], x_out[9], x_out[10], x_out[11], x_out[12], x_out[13], x_out[14], x_out[15], x_out[16], x_out[17], x_out[18], x_out[19], x_out[20], x_out[21], x_out[22], x_out[23], x_out[24], x_out[25], x_out[26], x_out[27], x_out[28], x_out[29], x_out[30], x_out[31], sail_have_exception_2, sail_current_exception_2, sail_stdout_2);
+    execute_RTYPE inst_0_execute_RTYPE(rs2_0, rs1_0, rd_0, op_0, x_in[1], x_in[2], x_in[3], x_in[4], x_in[5], x_in[6], x_in[7], x_in[8], x_in[9], x_in[10], x_in[11], x_in[12], x_in[13], x_in[14], x_in[15], x_in[16], x_in[17], x_in[18], x_in[19], x_in[20], x_in[21], x_in[22], x_in[23], x_in[24], x_in[25], x_in[26], x_in[27], x_in[28], x_in[29], x_in[30], x_in[31], sail_return_2, x_out[1], x_out[2], x_out[3], x_out[4], x_out[5], x_out[6], x_out[7], x_out[8], x_out[9], x_out[10], x_out[11], x_out[12], x_out[13], x_out[14], x_out[15], x_out[16], x_out[17], x_out[18], x_out[19], x_out[20], x_out[21], x_out[22], x_out[23], x_out[24], x_out[25], x_out[26], x_out[27], x_out[28], x_out[29], x_out[30], x_out[31], sail_have_exception_2, sail_current_exception_2);
 
   // RTYPE instruction
   assign spec_valid = rvfi_valid && !insn_padding && insn_funct7 == 7'b 0000000 && insn_funct3 == 3'b 000 && insn_opcode == 7'b 0110011;
