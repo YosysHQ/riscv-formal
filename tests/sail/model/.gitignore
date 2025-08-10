@@ -1,1 +1,1 @@
-riscv_insts_rtype.sail
+riscv_insts_base_*.sail

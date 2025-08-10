@@ -10,8 +10,8 @@ sail-riscv:
 		patch -p1 < ../prelude.patch
 
 # insts_rtype is just the RTYPE section from insts_base
-model/riscv_insts_rtype.sail: $(SAIL_RISCV_DIR)
-	sed -n -e '1,8p' -e 'H; /^\/\*/!d ; x ; /RTYPE\b/p' $^/model/riscv_insts_base.sail > $@
+model/riscv_insts_base_%.sail: $(SAIL_RISCV_DIR)
+	sed -n -e '1,8p' -e 'H; /^\/\*/!d ; x ; /$*\b/Ip' $^/model/riscv_insts_base.sail > $@
 
 sail-riscv/model/riscv_min.sail_project: sail-riscv riscv_min.sail_project
 	cp riscv_min.sail_project $@
@@ -26,8 +26,9 @@ SV_FLAGS += --sv-toplevel execute
 
 RV_PROJECTS := $(SAIL_RISCV_DIR)/model/riscv_min.sail_project ./model/rtype.sail_project
 RV_TARGET := riscv_rtype
+RV_SAIL := model/riscv_insts_base_rtype.sail
 
-generated_rtype.sv: Makefile $(RV_PROJECTS)
+generated_rtype.sv: Makefile $(RV_PROJECTS) $(RV_SAIL)
 	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $(RV_PROJECTS) -o $(basename $@) $(RV_TARGET)
 	$(PYTHON) sv_rewriter.py -f $@
 
