@@ -1,0 +1,30 @@
+
+riscv_min_core {
+  files
+    prelude.sail,
+    riscv_errors.sail,
+    riscv_xlen.sail,    
+    riscv_types_common.sail,
+    riscv_types_ext.sail,
+    riscv_types.sail,
+}
+
+riscv_min_regs {
+  requires riscv_min_core, riscv_min_platform
+  files
+    riscv_reg_type.sail,
+    riscv_regs.sail,
+}
+
+riscv_min {
+  requires riscv_min_core, riscv_min_platform
+  files
+    riscv_insts_begin.sail,
+}
+
+riscv_min_postlude {
+  after riscv_min_extensions
+  requires riscv_min_core, riscv_min_platform, riscv_min
+  files
+    riscv_insts_end.sail,
+}

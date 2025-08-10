@@ -9,29 +9,26 @@ sail-riscv:
 		git sparse-checkout set model/ config/ && \
 		patch -p1 < ../prelude.patch
 
-sail-riscv/model/%.sail: %.sail sail-riscv
-	cp -T $< $@
+# insts_rtype is just the RTYPE section from insts_base
+model/riscv_insts_rtype.sail: $(SAIL_RISCV_DIR)
+	sed -n -e '1,8p' -e 'H; /^\/\*/!d ; x ; /RTYPE\b/p' $^/model/riscv_insts_base.sail > $@
+
+sail-riscv/model/riscv_min.sail_project: sail-riscv riscv_min.sail_project
+	cp riscv_min.sail_project $@
 
 SAIL_FLAGS := --require-version 0.19.1
 SAIL_FLAGS += --config sail-riscv/config/rv32d.json
 SAIL_FLAGS += --strict-var
 SAIL_FLAGS += -dno_cast
 
-# riscv_insts_rtype.sail is a cut down version of riscv_insts_base.sail
-# with just the base RTYPE instructions
-INST := riscv_insts_rtype.sail
-RV_PRELUDE := prelude.sail riscv_errors.sail riscv_xlen.sail
-RV_TYPES := riscv_types_common.sail riscv_types_ext.sail riscv_types.sail
-RV_PLATFORM := riscv_dummy.sail
-RV_REGS := riscv_reg_type.sail riscv_regs.sail
-RV_PRE := $(RV_PRELUDE) $(RV_TYPES) $(RV_PLATFORM) $(RV_REGS) riscv_insts_begin.sail
-RV_POST := riscv_insts_end.sail
-RV_SRCS := $(addprefix $(SAIL_RISCV_DIR)/model/,$(RV_PRE) $(INST) $(RV_POST))
+SV_FLAGS := --Oconstant-fold --sv --sv-no-assertions --sv-no-strings --sv-no-packed --sv-no-write-flush
+SV_FLAGS += --sv-toplevel execute
 
-SV_FLAGS := --sv --sv-no-assertions --sv-no-strings --sv-no-packed --sv-no-write-flush
+RV_PROJECTS := $(SAIL_RISCV_DIR)/model/riscv_min.sail_project ./model/rtype.sail_project
+RV_TARGET := riscv_rtype
 
-generated_rtype.sv: Makefile
-	$(SAIL) $(SAIL_FLAGS) -O --Oconstant-fold $(SV_FLAGS) --sv-toplevel execute $(RV_SRCS) -o $(basename $@)
+generated_rtype.sv: Makefile $(RV_PROJECTS)
+	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $(RV_PROJECTS) -o $(basename $@) $(RV_TARGET)
 	$(PYTHON) sv_rewriter.py -f $@
 
 .PHONY: clean-sby
