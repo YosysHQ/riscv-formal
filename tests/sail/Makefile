@@ -24,12 +24,10 @@ SAIL_FLAGS += -dno_cast
 SV_FLAGS := --Oconstant-fold --sv --sv-no-assertions --sv-no-strings --sv-no-packed --sv-no-write-flush
 SV_FLAGS += --sv-toplevel execute
 
-RV_PROJECTS := $(SAIL_RISCV_DIR)/model/riscv_min.sail_project ./model/rtype.sail_project
-RV_TARGET := riscv_rtype
-RV_SAIL := model/riscv_insts_base_rtype.sail
+RV_PROJECT := $(SAIL_RISCV_DIR)/model/riscv_min.sail_project
 
-generated_rtype.sv: Makefile $(RV_PROJECTS) $(RV_SAIL)
-	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $(RV_PROJECTS) -o $(basename $@) $(RV_TARGET)
+generated_%.sv: Makefile $(RV_PROJECT) model/riscv_insts_base_%.sail
+	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $(RV_PROJECT) model/$*.sail_project -o $(basename $@) riscv_$*
 	$(PYTHON) sv_rewriter.py -f $@
 
 .PHONY: clean-sby

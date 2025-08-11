@@ -1,0 +1,16 @@
+
+riscv_min_platform {
+  requires riscv_min_core
+  files
+    riscv_dummy.sail,
+}
+
+riscv_min_extensions {
+  requires riscv_min_core, riscv_min_platform, riscv_min_regs, riscv_min
+  files
+    riscv_insts_base_itype.sail
+}
+
+riscv_itype {
+  requires riscv_min_extensions, riscv_min_postlude
+}
