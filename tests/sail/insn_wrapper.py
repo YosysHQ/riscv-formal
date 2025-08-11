@@ -2,15 +2,36 @@
 from pathlib import Path
 from textwrap import dedent, indent
 import click
+import json
 
 ILEN = 32
 XLEN = 32
 
 @click.command()
 @click.option('-f', '--force', is_flag=True)
-@click.argument('name', type=str)
-def wrap(force: bool, name: str):
+@click.argument('cfg', type=click.Path(exists=True, path_type=Path))
+def wrap(force: bool, cfg: Path):
     """main function"""
+    # load cfg
+    with open(cfg, 'r', encoding='utf-8') as f:
+        cfg_json = json.load(f)
+
+    name: str = cfg_json['name']
+    insn_parts: list[tuple[str, int]] = cfg_json['insn_parts']
+    inst_args: list[str] = cfg_json['inst_args']
+    wrap_in: bool = cfg_json['wrap_in']
+    wrap_out: bool = cfg_json['wrap_out']
+    x_upper: int = cfg_json['x_upper']
+    x_lower: int = cfg_json['x_lower']
+    r_bits: int = cfg_json['r_bits']
+    extra_sig1: list[tuple[str, str, str]] = cfg_json['extra_sig1']
+    extra_sig2: list[tuple[str, str, str]] = cfg_json['extra_sig2']
+    op_type_enum: str = cfg_json['op_type_enum']
+    op_values: list[tuple[str, str]] = cfg_json['op_values']
+    op_value_switch: str = cfg_json['op_value_switch']
+    checker_module: str = cfg_json['checker_module']
+    opcode: str = cfg_json['opcode']
+
     # get output file
     out_file = Path(f"{name}_wrapper.sv")
     if out_file.exists() and not force:
@@ -41,14 +62,6 @@ def wrap(force: bool, name: str):
         output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_mem_wdata""")
 
     # insn decode
-    #todo: input 1
-    insn_parts = [
-        ("imm", 12),
-        ("rs1", 5),
-        ("op", 3),
-        ("rd", 5),
-        ("opcode", 7),
-    ]
     insn_parts_dict = dict(insn_parts)
     upper = ILEN
     insn_format = "// instruction format\n"
@@ -59,18 +72,11 @@ def wrap(force: bool, name: str):
     assert(upper == 0)
 
     # check instance map
-    #todo: input 1
-    inst_args = ["imm", "rs1", "rd", "op"]
+    inst_args_avail = list(insn_parts_dict.keys()) + ["op"]
     for inst_arg in inst_args:
-        assert (inst_arg in insn_parts_dict.keys())
+        assert (inst_arg in inst_args_avail)
 
     # wrap registers
-    # todo: input 5
-    wrap_in = True
-    wrap_out = True
-    x_upper = 31
-    x_lower = 1
-    r_bits = 5
     x_type = f"logic [{XLEN-1}:0]"
     x_range = f"[{x_upper}:{x_lower}]"
     reg_wrap = "// register wrapping\n"
@@ -105,23 +111,6 @@ def wrap(force: bool, name: str):
     reg_wrap += result_decl
 
     # extra signals
-    #todo: input 4
-    extra_sig1: list[tuple[str, str, str]] = [
-        ("t_ExecutionResult", "sail_return_2", None),
-    ]
-    extra_sig2: list[tuple[str, str, str]] = [
-        ("bit", "sail_have_exception_2", None),
-        ("t_exception", "sail_current_exception_2", None),
-    ]
-    op_type_enum = "t_iop"
-    op_values: list[tuple[str, str]] = [
-            ("000", "ADDI"),
-            ("010", "SLTI"),
-            ("011", "SLTIU"),
-            ("100", "XORI"),
-            ("110", "ORI"),
-            ("111", "ANDI"),
-    ]
     extra_signals = "// extra signals\n"
     op_default = op_values[0][1] if len(op_values) == 1 else None
     extra_signal_decls = extra_sig1 + extra_sig2 + [(op_type_enum, "op_0", op_default)]
@@ -129,19 +118,21 @@ def wrap(force: bool, name: str):
         extra_signals += f"{t} {n};\n" if v == None else f"{t} {n} = {v};\n"
 
     # combined instruction checking
-    #todo: multi value switching
-    #todo: input 1
-    op_value_switch = "op"
-    op_value_bits = insn_parts_dict[op_value_switch]
+    op_value_keys = op_value_switch.split()
+    op_value_bits = sum([insn_parts_dict[k] for k in op_value_keys])
     insn_check = "// insn check\n"
     if len(op_values) == 1:
         insn_check += f"wire illinsn = {op_value_bits}'b {op_values[0][0]};\n"
     else:
+        if len(op_value_keys) == 1:
+            case_switch = f"insn_{op_value_switch}"
+        else:
+            case_switch = '{' + ', '.join([f"insn_{k}" for k in op_value_keys]) + '}'
         insn_check += dedent(f"""\
             reg illinsn;
             always @* begin
                 illinsn <= 0;
-                case (insn_{op_value_switch})
+                case ({case_switch})
         """)
         for bin, enum in op_values:
             insn_check += f"        {op_value_bits}'b {bin}: op_0 <= {enum};\n"
@@ -152,8 +143,6 @@ def wrap(force: bool, name: str):
         """)
 
     # wrapped checker
-    #todo: input 1
-    checker_module = "execute_ITYPE"
     instantiation = f"// {name} instance\n"
     checker_args: list[str] = []
     for inst_arg in inst_args:
@@ -196,8 +185,6 @@ def wrap(force: bool, name: str):
     ]
     spec_map = {k: "0" for k in spec_sigs}
 
-    #todo: input 1
-    opcode = "0010011"
     spec_map["valid"] = f"rvfi_valid && !illinsn && insn_opcode == 7'b {opcode}"
 
     for used_reg in used_regs:

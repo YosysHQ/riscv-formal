@@ -1,0 +1,52 @@
+{
+    "name": "itype",
+    "insn_parts": [
+        ["imm", 12],
+        ["rs1", 5],
+        ["funct3", 3],
+        ["rd", 5],
+        ["opcode", 7]
+    ],
+    "inst_args": [
+        "imm",
+        "rs1",
+        "rd",
+        "op"
+    ],
+    "wrap_in": true,
+    "wrap_out": true,
+    "x_upper": 31,
+    "x_lower": 1,
+    "r_bits": 5,
+    "extra_sig1": [
+        [
+            "t_ExecutionResult",
+            "sail_return_2",
+            null
+        ]
+    ],
+    "extra_sig2": [
+        [
+            "bit",
+            "sail_have_exception_2",
+            null
+        ],
+        [
+            "t_exception",
+            "sail_current_exception_2",
+            null
+        ]
+    ],
+    "op_type_enum": "t_iop",
+    "op_values": [
+        ["000", "ADDI"],
+        ["010", "SLTI"],
+        ["011", "SLTIU"],
+        ["100", "XORI"],
+        ["110", "ORI"],
+        ["111", "ANDI"]
+    ],
+    "op_value_switch": "funct3",
+    "checker_module": "execute_ITYPE",
+    "opcode": "0010011"
+}
