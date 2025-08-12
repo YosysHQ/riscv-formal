@@ -82,6 +82,9 @@ class SetupTask(tl.Task):
                 tl.log(f"got default defines")
             tl.log_debug(defines)
 
+        for check_filter in App.config.filter_checks.filters:
+            tl.log(f"got check filter {check_filter!r}")
+
         for unhandled_section in App.config.unhandled:
             tl.log("unhandled section", unhandled_section.header)
 

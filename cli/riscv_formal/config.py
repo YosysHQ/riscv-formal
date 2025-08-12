@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+import re
+from typing import Any, Literal, Self
 
 import yosys_mau.config_parser as cfg
 from yosys_mau import task_loop as tl
@@ -97,6 +99,44 @@ class RvfOptions(cfg.ConfigOptions):
     csr_spec = cfg.Option(cfg.StrValue(), default=None)  # TODO validate value?
 
 
+@dataclass
+class CheckFilter:
+    mode: Literal["-", "+"]
+    pattern: re.Pattern[str]
+
+    @classmethod
+    def parse(cls, line: str) -> Self:
+        parts = line.split(None, 1)
+        if len(parts) != 2:
+            raise report.InputError(line, "expected filter mode followed by a regular expression")
+        mode, pattern_str = parts
+        if mode not in ("+", "-"):
+            raise report.InputError(mode, "expected `+` for inclusion or `-` for exclusion")
+
+        # TODO provide a re.compile wrapper in mau
+        try:
+            pattern = re.compile(pattern_str)
+        except re.error as err:
+            if err.pos is None:
+                raise report.InputError(pattern_str, "regex error: " + err.msg)
+            else:
+                raise report.InputError(
+                    pattern_str[err.pos : err.pos + 1], "regex error: " + err.msg
+                )
+        return cls(mode, pattern)
+
+
+@dataclass
+class CheckFilters:
+    filters: list[CheckFilter]
+
+    def is_enabled(self, name: str) -> bool:
+        for filter in self.filters:
+            if filter.pattern.match(name):
+                return filter.mode == "+"
+        return True
+
+
 class RvfConfig(cfg.ConfigParser):
     options = cfg.OptionsSection(RvfOptions)
 
@@ -113,8 +153,13 @@ class RvfConfig(cfg.ConfigParser):
     vhdl_files = cfg.FilesSection()
     vhdl_files.attr_name = "vhdl-files"  # TODO some sections use - some _
 
-    # filter_checks = TODO
-    # filter_checks.attr_name = "filter-checks"  # TODO some sections use - some _
+    @cfg.postprocess_section(
+        cfg.FilesSection()
+    )  # TODO there should be a separate LinesSection in mau
+    def filter_checks(self, lines: list[str]) -> CheckFilters:
+        return CheckFilters([CheckFilter.parse(line) for line in lines])
+
+    filter_checks.attr_name = "filter-checks"  # TODO some sections use - some _
 
     # csrs = TODO
     # custom_csrs = TODO
