@@ -85,6 +85,9 @@ class SetupTask(tl.Task):
         for check_filter in App.config.filter_checks.filters:
             tl.log(f"got check filter {check_filter!r}")
 
+        for csr in [*App.config.csrs, *App.config.custom_csrs, *App.config.illegal_csrs]:
+            tl.log(f"got csr config {csr!r}")
+
         for unhandled_section in App.config.unhandled:
             tl.log("unhandled section", unhandled_section.header)
 

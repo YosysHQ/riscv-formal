@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import re
 from typing import Any, Literal, Self
 
 import yosys_mau.config_parser as cfg
 from yosys_mau import task_loop as tl
-from yosys_mau.source_str import report, read_file
+from yosys_mau.source_str import report, read_file, re as ssre
 
 
 def sphinx_docs_arg_parser() -> argparse.ArgumentParser:
@@ -137,6 +137,98 @@ class CheckFilters:
         return True
 
 
+@dataclass
+class CsrConfig:
+    name: str
+    tests: dict[str, str | None]
+
+    @classmethod
+    def parse(cls, line: str, **kwds) -> Self:
+        match line.split(maxsplit=1):
+            case [name]:
+                return cls(name, {})
+            case [name, tests_str]:
+                tests = {}
+
+                for test_str in ssre.findall(r"((?:\S*?\"[^\"]*\")+|\S+)", tests_str):
+                    if "=" in test_str:
+                        test_name, test_arg = test_str.split("=", 1)
+                        test_arg = test_arg.strip('"')
+                    else:
+                        test_name = test_str
+                        test_arg = None
+                    tests[test_name] = test_arg
+
+                return cls(name, tests, **kwds)
+            case _:
+                raise report.InputError(
+                    line, "expected a csr name followed by an optional list of csr tests"
+                )
+
+
+def parse_csr_addr_and_mode(
+    addr_str: str, modes_str: str
+) -> tuple[int, set[Literal["m", "s", "u"]]]:
+    try:
+        addr = int(addr_str, base=16)
+    except ValueError:
+        raise report.InputError(addr_str, "expected hexadecimal csr address")
+
+    modes = set()
+    for mode in ssre.findall(r".", modes_str):
+        if mode in ("m", "s", "u"):
+            modes.add(mode)
+        else:
+            raise report.InputError(mode, f"unsupported privilege mode `{mode}`")
+
+    return addr, modes
+
+
+@dataclass
+class CustomCsrConfig(CsrConfig):
+    addr: int
+    modes: set[Literal["m", "s", "u"]]
+
+    @classmethod
+    def parse(cls, line: str, **kwds) -> Self:
+        match line.split(maxsplit=2):
+            case [addr_str, modes_str, csr_str]:
+                addr, modes = parse_csr_addr_and_mode(addr_str, modes_str)
+                return super().parse(csr_str, addr=addr, modes=modes, **kwds)
+            case _:
+                raise report.InputError(
+                    line,
+                    "expected a csr addr, a list of privilege modes and a csr name "
+                    "followed by an optional list of csr tsts",
+                )
+
+
+@dataclass
+class IllegalCsrConfig:
+    addr: int
+    modes: set[Literal["m", "s", "u"]]
+    rw: set[Literal["r", "w"]]
+
+    @classmethod
+    def parse(cls, line: str) -> Self:
+        match line.split():
+            case [addr_str, modes_str, rw_str]:
+                addr, modes = parse_csr_addr_and_mode(addr_str, modes_str)
+
+                rw = set()
+                for c in ssre.findall(r".", rw_str):
+                    if c in ("r", "w"):
+                        rw.add(c)
+                    else:
+                        raise report.InputError(c, f"unsupported access mode `{c}`")
+                return cls(addr, modes, rw)
+            case _:
+                raise report.InputError(
+                    line,
+                    "expected a csr addr, a list of privilege modes and a list of access modes",
+                )
+
+
 class RvfConfig(cfg.ConfigParser):
     options = cfg.OptionsSection(RvfOptions)
 
@@ -161,9 +253,23 @@ class RvfConfig(cfg.ConfigParser):
 
     filter_checks.attr_name = "filter-checks"  # TODO some sections use - some _
 
-    # csrs = TODO
-    # custom_csrs = TODO
-    # illegal_csrs = TODO
+    @cfg.postprocess_section(
+        cfg.FilesSection()
+    )  # TODO there should be a separate LinesSection in mau
+    def csrs(self, lines: list[str]) -> list[CsrConfig]:
+        return [CsrConfig.parse(line) for line in lines]
+
+    @cfg.postprocess_section(
+        cfg.FilesSection()
+    )  # TODO there should be a separate LinesSection in mau
+    def custom_csrs(self, lines: list[str]) -> list[CustomCsrConfig]:
+        return [CustomCsrConfig.parse(line) for line in lines]
+
+    @cfg.postprocess_section(
+        cfg.FilesSection()
+    )  # TODO there should be a separate LinesSection in mau
+    def illegal_csrs(self, lines: list[str]) -> list[IllegalCsrConfig]:
+        return [IllegalCsrConfig.parse(line) for line in lines]
 
     # sort = TODO
     # groups = TODO
