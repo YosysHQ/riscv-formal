@@ -13,8 +13,8 @@
         "rd",
         "op"
     ],
-    "wrap_in": true,
-    "wrap_out": true,
+    "wrap_x_in": true,
+    "wrap_x_out": true,
     "x_upper": 31,
     "x_lower": 1,
     "r_bits": 5,

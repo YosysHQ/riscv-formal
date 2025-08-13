@@ -1,21 +1,25 @@
 {
-    "name": "rtype",
+    "name": "btype",
     "insn_parts": [
-        ["funct7", 7],
+        ["imm12", 1],
+        ["imm10_5", 6],
         ["rs2", 5],
         ["rs1", 5],
         ["funct3", 3],
-        ["rd", 5],
+        ["imm4_1", 4],
+        ["imm11", 1],
         ["opcode", 7]
     ],
     "inst_args": [
+        "imm12 imm11 imm10_5 imm4_1 1'b0",
         "rs2",
         "rs1",
-        "rd",
         "op"
     ],
     "wrap_x_in": true,
-    "wrap_x_out": true,
+    "wrap_x_out": false,
+    "wrap_pc": true,
+    "wrap_next_pc": true,
     "x_upper": 31,
     "x_lower": 1,
     "r_bits": 5,
@@ -38,20 +42,16 @@
             null
         ]
     ],
-    "op_type_enum": "t_rop",
+    "op_type_enum": "t_bop",
     "op_values": [
-        ["0000000_000", "ADD"],
-        ["0100000_000", "SUB"],
-        ["0000000_001", "SLL"],
-        ["0000000_010", "SLT"],
-        ["0000000_011", "SLTU"],
-        ["0000000_100", "XOR"],
-        ["0000000_101", "SRL"],
-        ["0100000_101", "SRA"],
-        ["0000000_110", "OR"],
-        ["0000000_111", "AND"]
+        ["000", "BEQ"],
+        ["001", "BNE"],
+        ["100", "BLT"],
+        ["101", "BGE"],
+        ["110", "BLTU"],
+        ["111", "BGEU"]
     ],
-    "op_value_switch": "funct7 funct3",
-    "checker_module": "execute_RTYPE",
-    "opcode": "0110011"
+    "op_value_switch": "funct3",
+    "checker_module": "execute_BTYPE",
+    "opcode": "1100011"
 }

@@ -1,8 +1,10 @@
 [tasks]
 nerv_rtype nerv rtype
 nerv_itype nerv itype
+nerv_btype nerv btype
 picorv_rtype picorv rtype
 picorv_itype picorv itype
+picorv_btype picorv btype
 
 [options]
 mode bmc
@@ -45,6 +47,10 @@ itype:
 generated_itype.sv
 itype_wrapper.sv
 --
+btype:
+generated_btype.sv
+btype_wrapper.sv
+--
 
 [file defines.sv]
 `define RISCV_FORMAL
@@ -56,6 +62,7 @@ itype_wrapper.sv
 `define RISCV_FORMAL_CHECKER rvfi_insn_check
 rtype: `define RISCV_FORMAL_INSN_MODEL rvfi_insn_rtype
 itype: `define RISCV_FORMAL_INSN_MODEL rvfi_insn_itype
+btype: `define RISCV_FORMAL_INSN_MODEL rvfi_insn_btype
 nerv:
 `define RISCV_FORMAL_CHECK_CYCLE 10
 `define YOSYS // Hotfix for older Tabby CAD Releases
@@ -86,5 +93,9 @@ rtype:
 itype:
 `include "generated_itype.sv"
 `include "itype_wrapper.sv"
+--
+btype:
+`include "generated_btype.sv"
+`include "btype_wrapper.sv"
 --
 

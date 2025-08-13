@@ -23,3 +23,9 @@ scattered function currentlyEnabled
 
 enum clause extension = Ext_I
 mapping clause extensionName = Ext_I <-> "i"
+
+val sail_branch_announce : (int, xlenbits) -> unit
+function sail_branch_announce(_) = ()
+
+val pc_write_callback : (xlenbits) -> unit
+function pc_write_callback(_) = ()

@@ -14,23 +14,29 @@ def wrap(force: bool, cfg: Path):
     """main function"""
     # load cfg
     with open(cfg, 'r', encoding='utf-8') as f:
-        cfg_json = json.load(f)
+        cfg_json: dict[str] = json.load(f)
 
-    name: str = cfg_json['name']
-    insn_parts: list[tuple[str, int]] = cfg_json['insn_parts']
-    inst_args: list[str] = cfg_json['inst_args']
-    wrap_in: bool = cfg_json['wrap_in']
-    wrap_out: bool = cfg_json['wrap_out']
-    x_upper: int = cfg_json['x_upper']
-    x_lower: int = cfg_json['x_lower']
-    r_bits: int = cfg_json['r_bits']
-    extra_sig1: list[tuple[str, str, str]] = cfg_json['extra_sig1']
-    extra_sig2: list[tuple[str, str, str]] = cfg_json['extra_sig2']
-    op_type_enum: str = cfg_json['op_type_enum']
-    op_values: list[tuple[str, str]] = cfg_json['op_values']
-    op_value_switch: str = cfg_json['op_value_switch']
-    checker_module: str = cfg_json['checker_module']
-    opcode: str = cfg_json['opcode']
+    name: str = cfg_json.pop('name')
+    insn_parts: list[tuple[str, int]] = cfg_json.pop('insn_parts')
+    inst_args: list[str] = cfg_json.pop('inst_args')
+    wrap_x_in: bool = cfg_json.pop('wrap_x_in')
+    wrap_x_out: bool = cfg_json.pop('wrap_x_out')
+    wrap_pc: bool = cfg_json.pop('wrap_pc', False)
+    wrap_next_pc: bool = cfg_json.pop('wrap_next_pc', False)
+    x_upper: int = cfg_json.pop('x_upper')
+    x_lower: int = cfg_json.pop('x_lower')
+    r_bits: int = cfg_json.pop('r_bits')
+    extra_sig1: list[tuple[str, str, str]] = cfg_json.pop('extra_sig1')
+    extra_sig2: list[tuple[str, str, str]] = cfg_json.pop('extra_sig2')
+    op_type_enum: str = cfg_json.pop('op_type_enum')
+    op_values: list[tuple[str, str]] = cfg_json.pop('op_values')
+    op_value_switch: str = cfg_json.pop('op_value_switch')
+    checker_module: str = cfg_json.pop('checker_module')
+    opcode: str = cfg_json.pop('opcode')
+
+    for key in cfg_json.keys():
+        click.echo(f"Unhandled config key {key!r}")
+    assert (len(cfg_json) == 0)
 
     # get output file
     out_file = Path(f"{name}_wrapper.sv")
@@ -74,13 +80,14 @@ def wrap(force: bool, cfg: Path):
     # check instance map
     inst_args_avail = list(insn_parts_dict.keys()) + ["op"]
     for inst_arg in inst_args:
-        assert (inst_arg in inst_args_avail)
+        for arg_part in inst_arg.split():
+            assert (arg_part in inst_args_avail or arg_part[0].isdigit())
 
     # wrap registers
     x_type = f"logic [{XLEN-1}:0]"
     x_range = f"[{x_upper}:{x_lower}]"
     reg_wrap = "// register wrapping\n"
-    for x_inout, do_wrap in [("x_in", wrap_in), ("x_out", wrap_out)]:
+    for x_inout, do_wrap in [("x_in", wrap_x_in), ("x_out", wrap_x_out)]:
         if do_wrap:
             reg_wrap += f"{x_type} {x_inout}{x_range};\n"
 
@@ -99,9 +106,9 @@ def wrap(force: bool, cfg: Path):
     for idx, used_reg in enumerate(used_regs, start=1):
         raddr = f"{used_reg}_0"
         localparams.append(f"{raddr} = {r_bits}'d{idx}")
-        if used_reg in maybe_sources and wrap_in:
+        if used_reg in maybe_sources and wrap_x_in:
             x_assigns.append(f"assign x_in[{raddr}] = rvfi_{used_reg}_rdata;")
-        if used_reg in maybe_dests and wrap_out:
+        if used_reg in maybe_dests and wrap_x_out:
             result_decl = f"wire [{XLEN-1}:0] result = x_out[{raddr}];\n"
     if localparams:
         localparams = ", ".join(localparams)
@@ -109,6 +116,9 @@ def wrap(force: bool, cfg: Path):
     if x_assigns:
         reg_wrap += "\n".join(x_assigns) + "\n"
     reg_wrap += result_decl
+
+    if wrap_next_pc:
+        reg_wrap += f"wire [{XLEN-1}:0] next_pc = rvfi_pc_rdata + 4;\n"
 
     # extra signals
     extra_signals = "// extra signals\n"
@@ -150,17 +160,26 @@ def wrap(force: bool, cfg: Path):
             checker_arg = f"{inst_arg}_0"
         elif inst_arg == "op":
             checker_arg = "op_0"
+        elif " " in inst_arg:
+            arg_parts = [k if k[0].isdigit() else f"insn_{k}" for k in inst_arg.split()]
+            checker_arg = '{' + ', '.join(arg_parts) + '}'
         else:
             checker_arg = f"insn_{inst_arg}"
         if checker_arg: checker_args.append(checker_arg)
-    if wrap_in:
+    if wrap_pc:
+        checker_args.append(f"rvfi_pc_rdata")
+    if wrap_next_pc:
+        checker_args.append(f"next_pc")
+    if wrap_x_in:
         for idx in range(x_lower, x_upper + 1):
             checker_args.append(f"x_in[{idx}]")
     for _, extra_sig, _ in extra_sig1:
         checker_args.append(extra_sig)
-    if wrap_out:
+    if wrap_x_out:
         for idx in range(x_lower, x_upper + 1):
             checker_args.append(f"x_out[{idx}]")
+    if wrap_next_pc:
+        checker_args.append("spec_pc_wdata")
     for _, extra_sig, _ in extra_sig2:
         checker_args.append(extra_sig)
 
@@ -192,7 +211,10 @@ def wrap(force: bool, cfg: Path):
         if used_reg in maybe_dests:
             spec_map[f"{used_reg}_wdata"] = f"spec_{used_reg}_addr ? result : 0"
 
-    spec_map["pc_wdata"] = "rvfi_pc_rdata + 4"
+    if wrap_next_pc:
+        spec_map.pop("pc_wdata")
+    else:
+        spec_map["pc_wdata"] = "rvfi_pc_rdata + 4"
 
     for spec_sig, spec_val in spec_map.items():
         spec_mapping += f"assign spec_{spec_sig} = {spec_val};\n"

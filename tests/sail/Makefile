@@ -1,6 +1,7 @@
 SAIL_RISCV_DIR ?= sail-riscv
 PYTHON ?= python3
 SAIL ?= sail
+SBY ?= sby
 
 sail-riscv:
 	git clone --sparse --depth=1 --filter=tree:0 \
@@ -30,6 +31,12 @@ generated_%.sv: Makefile $(RV_PROJECT) model/riscv_insts_base_%.sail
 	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $(RV_PROJECT) model/$*.sail_project -o $(basename $@) riscv_$*
 	$(PYTHON) sv_rewriter.py -f $@
 
+%_wrapper.sv: model/%.json insn_wrapper.py
+	$(PYTHON) insn_wrapper.py $< -f
+
+nerv_%: %_wrapper.sv generated_%.sv rvf_sail.sby
+	$(SBY) -f rvf_sail.sby $@
+
 .PHONY: clean-sby
 clean-sby:
-	rm -rf rtype rtype_* add add_*
+	rm -rf rvf_sail rvf_sail_*
