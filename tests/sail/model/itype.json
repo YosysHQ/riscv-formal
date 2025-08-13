@@ -1,11 +1,26 @@
 {
     "name": "itype",
     "insn_parts": [
-        ["imm", 12],
-        ["rs1", 5],
-        ["funct3", 3],
-        ["rd", 5],
-        ["opcode", 7]
+        [
+            "imm",
+            12
+        ],
+        [
+            "rs1",
+            5
+        ],
+        [
+            "part_0",
+            3
+        ],
+        [
+            "rd",
+            5
+        ],
+        [
+            "opcode",
+            7
+        ]
     ],
     "inst_args": [
         "imm",
@@ -15,6 +30,8 @@
     ],
     "wrap_x_in": true,
     "wrap_x_out": true,
+    "wrap_pc": false,
+    "wrap_next_pc": false,
     "x_upper": 31,
     "x_lower": 1,
     "r_bits": 5,
@@ -39,14 +56,32 @@
     ],
     "op_type_enum": "t_iop",
     "op_values": [
-        ["000", "ADDI"],
-        ["010", "SLTI"],
-        ["011", "SLTIU"],
-        ["100", "XORI"],
-        ["110", "ORI"],
-        ["111", "ANDI"]
+        [
+            "000",
+            "ADDI"
+        ],
+        [
+            "010",
+            "SLTI"
+        ],
+        [
+            "011",
+            "SLTIU"
+        ],
+        [
+            "111",
+            "ANDI"
+        ],
+        [
+            "110",
+            "ORI"
+        ],
+        [
+            "100",
+            "XORI"
+        ]
     ],
-    "op_value_switch": "funct3",
+    "op_value_switch": "part_0",
     "checker_module": "execute_ITYPE",
     "opcode": "0010011"
 }

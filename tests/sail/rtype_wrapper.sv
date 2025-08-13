@@ -20,10 +20,10 @@ output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_mem_wdata
 );
 
     // instruction format
-    wire [ 6:0] insn_funct7 = rvfi_insn[31:25];
+    wire [ 6:0] insn_part_0 = rvfi_insn[31:25];
     wire [ 4:0] insn_rs2    = rvfi_insn[24:20];
     wire [ 4:0] insn_rs1    = rvfi_insn[19:15];
-    wire [ 2:0] insn_funct3 = rvfi_insn[14:12];
+    wire [ 2:0] insn_part_1 = rvfi_insn[14:12];
     wire [ 4:0] insn_rd     = rvfi_insn[11: 7];
     wire [ 6:0] insn_opcode = rvfi_insn[ 6: 0];
 
@@ -45,17 +45,17 @@ output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_mem_wdata
     reg illinsn;
     always @* begin
         illinsn <= 0;
-        case ({insn_funct7, insn_funct3})
+        case ({insn_part_0, insn_part_1})
             10'b 0000000_000: op_0 <= ADD;
-            10'b 0100000_000: op_0 <= SUB;
-            10'b 0000000_001: op_0 <= SLL;
             10'b 0000000_010: op_0 <= SLT;
             10'b 0000000_011: op_0 <= SLTU;
-            10'b 0000000_100: op_0 <= XOR;
-            10'b 0000000_101: op_0 <= SRL;
-            10'b 0100000_101: op_0 <= SRA;
-            10'b 0000000_110: op_0 <= OR;
             10'b 0000000_111: op_0 <= AND;
+            10'b 0000000_110: op_0 <= OR;
+            10'b 0000000_100: op_0 <= XOR;
+            10'b 0000000_001: op_0 <= SLL;
+            10'b 0000000_101: op_0 <= SRL;
+            10'b 0100000_000: op_0 <= SUB;
+            10'b 0100000_101: op_0 <= SRA;
             default: illinsn <= 1;
         endcase
     end

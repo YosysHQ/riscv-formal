@@ -22,7 +22,7 @@ output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_mem_wdata
     // instruction format
     wire [11:0] insn_imm    = rvfi_insn[31:20];
     wire [ 4:0] insn_rs1    = rvfi_insn[19:15];
-    wire [ 2:0] insn_funct3 = rvfi_insn[14:12];
+    wire [ 2:0] insn_part_0 = rvfi_insn[14:12];
     wire [ 4:0] insn_rd     = rvfi_insn[11: 7];
     wire [ 6:0] insn_opcode = rvfi_insn[ 6: 0];
 
@@ -43,13 +43,13 @@ output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_mem_wdata
     reg illinsn;
     always @* begin
         illinsn <= 0;
-        case (insn_funct3)
+        case (insn_part_0)
             3'b 000: op_0 <= ADDI;
             3'b 010: op_0 <= SLTI;
             3'b 011: op_0 <= SLTIU;
-            3'b 100: op_0 <= XORI;
-            3'b 110: op_0 <= ORI;
             3'b 111: op_0 <= ANDI;
+            3'b 110: op_0 <= ORI;
+            3'b 100: op_0 <= XORI;
             default: illinsn <= 1;
         endcase
     end
