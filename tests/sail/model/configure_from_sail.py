@@ -39,6 +39,7 @@ def configure(sail: Path):
     in_encdec_insn = False
     op_bits: int
     op_type: str = ""
+    arg_remap: set[str] = set()
     with open(sail, 'rt', encoding='utf-8') as f:
         for line in f:
             # instruction type def
@@ -69,7 +70,12 @@ def configure(sail: Path):
             m = re.match(r"mapping clause encdec = (?P<insn>\w+)\((?P<args>.*)\)(?:$|\s+<-> (?P<mapping>.*))", line)
             mapping = None
             if m and m.group(1) == name.upper():
-                maybe_args = m.group(2).split(", ")
+                maybe_args = []
+                for maybe_arg in m.group(2).split(", "):
+                    if "@" in maybe_arg:
+                        maybe_args.append(maybe_arg.split(" @ "))
+                    else:
+                        maybe_args.append(maybe_arg)
                 mapping = m.group(3)
                 if mapping is None:
                     in_encdec_insn = True
@@ -108,12 +114,19 @@ def configure(sail: Path):
                             part = f"part_{part_idx}"
                             part_idx += 1
                             op_value_switch = part
+                        else:
+                            m = re.match(r"((\w+?)_?[\d_]+) : bits\((\d+)\)", part)
+                            part, arg_name, part_size = m.groups()
+                            part_size = int(part_size)
+                            arg_remap.add(arg_name)
                     else:
                         arg_type = arg_types[idx]
                         if arg_type == "regidx":
                             part_size = 5
                         elif arg_type.startswith("bits("):
                             part_size = int(arg_type[5:-1])
+                        else:
+                            assert False
                     insn_part = (part, part_size)
                     if has_insn_parts:
                         assert insn_part in insn_parts
@@ -129,9 +142,27 @@ def configure(sail: Path):
             m = re.match(r"function clause execute \((?P<insn>\w+)\s?\((?P<args>.*)\)\) = {", line)
             if m and m.group(1) == name.upper():
                 d = m.groupdict()
-                inst_args = d['args'].split(', ')
+                inst_args = []
+                for idx, inst_arg in enumerate(d['args'].split(', ')):
+                    if inst_arg in arg_remap:
+                        inst_arg = []
+                        for inst_arg_part in maybe_args[idx]:
+                            if inst_arg_part.startswith("0b"):
+                                value = inst_arg_part[2:]
+                                inst_arg_part = f"{len(value)}'b{value}"
+                            inst_arg.append(inst_arg_part)
+                        inst_arg = " ".join(inst_arg)
+                    inst_args.append(inst_arg)
                 wrap_x_in = "rs2" in inst_args or "rs1" in inst_args
                 wrap_x_out = "rd" in inst_args
+
+            # jump check
+            ml = re.findall(r"\b(jump_to|set_next_pc|get_next_pc)\(.*\)", line)
+            if ml:
+                wrap_next_pc = True
+            ml = re.findall(r"\b(PC\b|get_arch_pc\(\))", line)
+            if ml:
+                wrap_pc = True
 
     # write json
     if name:

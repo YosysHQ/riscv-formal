@@ -1,17 +1,41 @@
 {
     "name": "btype",
     "insn_parts": [
-        ["imm12", 1],
-        ["imm10_5", 6],
-        ["rs2", 5],
-        ["rs1", 5],
-        ["funct3", 3],
-        ["imm4_1", 4],
-        ["imm11", 1],
-        ["opcode", 7]
+        [
+            "imm7_6",
+            1
+        ],
+        [
+            "imm7_5_0",
+            6
+        ],
+        [
+            "rs2",
+            5
+        ],
+        [
+            "rs1",
+            5
+        ],
+        [
+            "part_0",
+            3
+        ],
+        [
+            "imm5_4_1",
+            4
+        ],
+        [
+            "imm5_0",
+            1
+        ],
+        [
+            "opcode",
+            7
+        ]
     ],
     "inst_args": [
-        "imm12 imm11 imm10_5 imm4_1 1'b0",
+        "imm7_6 imm5_0 imm7_5_0 imm5_4_1 1'b0",
         "rs2",
         "rs1",
         "op"
@@ -44,14 +68,32 @@
     ],
     "op_type_enum": "t_bop",
     "op_values": [
-        ["000", "BEQ"],
-        ["001", "BNE"],
-        ["100", "BLT"],
-        ["101", "BGE"],
-        ["110", "BLTU"],
-        ["111", "BGEU"]
+        [
+            "000",
+            "BEQ"
+        ],
+        [
+            "001",
+            "BNE"
+        ],
+        [
+            "100",
+            "BLT"
+        ],
+        [
+            "101",
+            "BGE"
+        ],
+        [
+            "110",
+            "BLTU"
+        ],
+        [
+            "111",
+            "BGEU"
+        ]
     ],
-    "op_value_switch": "funct3",
+    "op_value_switch": "part_0",
     "checker_module": "execute_BTYPE",
     "opcode": "1100011"
 }
