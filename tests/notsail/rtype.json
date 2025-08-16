@@ -1,0 +1,48 @@
+{
+    "insn_parts": [
+        ["funct7", 7],
+        ["rs2", 5],
+        ["rs1", 5],
+        ["funct3", 3],
+        ["rd", 5],
+        ["opcode", 7]
+    ],
+    "instructions": {
+        "add": {
+            "funct7": "0000000",
+            "funct3": "000",
+            "result": "rvfi_rs1_rdata + rvfi_rs2_rdata"
+        },
+        "sub": {
+            "funct7": "0100000",
+            "funct3": "000",
+            "result": "rvfi_rs1_rdata - rvfi_rs2_rdata"
+        },
+        "slt": {
+            "funct7": "0000000",
+            "funct3": "010",
+            "result": "$signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)"
+        },
+        "sltu": {
+            "funct7": "0000000",
+            "funct3": "011",
+            "result": "rvfi_rs1_rdata < rvfi_rs2_rdata"
+        },
+        "xor": {
+            "funct7": "0000000",
+            "funct3": "100",
+            "result": "rvfi_rs1_rdata ^ rvfi_rs2_rdata"
+        },
+        "or": {
+            "funct7": "0000000",
+            "funct3": "110",
+            "result": "rvfi_rs1_rdata | rvfi_rs2_rdata"
+        },
+        "and": {
+            "funct7": "0000000",
+            "funct3": "111",
+            "result": "rvfi_rs1_rdata & rvfi_rs2_rdata"
+        }
+    },
+    "opcode": "0110011"
+}

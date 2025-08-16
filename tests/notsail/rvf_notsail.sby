@@ -1,0 +1,73 @@
+[tasks]
+nerv
+picorv
+
+[options]
+mode bmc
+expect pass,fail
+append 0
+nerv:
+depth 11
+skip 10
+--
+picorv:
+depth 21
+skip 20
+--
+
+[engines]
+smtbmc boolector
+
+[script]
+# loading sail generated sv
+verific -vlog-incdir /home/dawn/sail/lib/sv
+verific -set-ignore VERI-1018
+verific -set-ignore VDB-1002
+
+# loading nerv
+nerv: read -sv insn_add_ch0.sv /home/dawn/riscv-formal/cores/nerv/wrapper.sv /home/dawn/riscv-formal/cores/nerv/nerv.sv
+picorv: read -sv insn_add_ch0.sv /home/dawn/riscv-formal/cores/picorv32/wrapper.sv /home/dawn/riscv-formal/cores/picorv32/picorv32.v
+prep -flatten -nordff -top rvfi_testbench
+chformal -early
+
+[files]
+/home/dawn/riscv-formal/checks/rvfi_macros.vh
+/home/dawn/riscv-formal/checks/rvfi_channel.sv
+/home/dawn/riscv-formal/checks/rvfi_testbench.sv
+/home/dawn/riscv-formal/checks/rvfi_insn_check.sv
+insn_wrapper.sv
+
+[file defines.sv]
+`define RISCV_FORMAL
+`define RISCV_FORMAL_NRET 1
+`define RISCV_FORMAL_XLEN 32
+`define RISCV_FORMAL_ILEN 32
+`define RISCV_FORMAL_RESET_CYCLES 1
+`define RISCV_FORMAL_CHANNEL_IDX 0
+`define RISCV_FORMAL_CHECKER rvfi_insn_check
+`define RISCV_FORMAL_INSN_MODEL rvfi_insn_wrapper
+nerv:
+`define RISCV_FORMAL_CHECK_CYCLE 10
+`define YOSYS // Hotfix for older Tabby CAD Releases
+`define NERV_RVFI
+`define NERV_FAULT
+`define RISCV_FORMAL_ALIGNED_MEM
+--
+picorv:
+`define RISCV_FORMAL_CHECK_CYCLE 20
+`define RISCV_FORMAL_COMPRESSED
+`define RISCV_FORMAL_ALIGNED_MEM
+`define RISCV_FORMAL_ALTOPS
+`define RISCV_FORMAL_UMODE
+`define PICORV32_TESTBUG_NONE
+`define DEBUGNETS
+--
+`include "rvfi_macros.vh"
+
+[file insn_add_ch0.sv]
+`include "defines.sv"
+`include "rvfi_channel.sv"
+`include "rvfi_testbench.sv"
+`include "rvfi_insn_check.sv"
+`include "insn_wrapper.sv"
+
