@@ -18,22 +18,24 @@ def wrap(force: bool, cfg: Path):
 
     name: str = cfg_json.pop('name')
     insn_parts: list[tuple[str, int]] = cfg_json.pop('insn_parts')
-    inst_args: list[str] = cfg_json.pop('inst_args')
-    wrap_x_in: bool = cfg_json.pop('wrap_x_in')
-    wrap_x_out: bool = cfg_json.pop('wrap_x_out')
+    inst_args: list[str] = cfg_json.pop('inst_args', None)
+    wrap_x_in: bool = cfg_json.pop('wrap_x_in', False)
+    wrap_x_out: bool = cfg_json.pop('wrap_x_out', False)
     wrap_pc: bool = cfg_json.pop('wrap_pc', False)
     wrap_next_pc: bool = cfg_json.pop('wrap_next_pc', False)
-    x_upper: int = cfg_json.pop('x_upper')
-    x_lower: int = cfg_json.pop('x_lower')
-    r_bits: int = cfg_json.pop('r_bits')
-    extra_sig1: list[tuple[str, str, str]] = cfg_json.pop('extra_sig1')
-    extra_sig2: list[tuple[str, str, str]] = cfg_json.pop('extra_sig2')
+    x_upper: int = cfg_json.pop('x_upper', None)
+    x_lower: int = cfg_json.pop('x_lower', None)
+    r_bits: int = cfg_json.pop('r_bits', None)
+    extra_sig1: list[tuple[str, str, str]] = cfg_json.pop('extra_sig1', [])
+    extra_sig2: list[tuple[str, str, str]] = cfg_json.pop('extra_sig2', [])
     op_name: str = cfg_json.pop('op_name', "op")
-    op_type_enum: str = cfg_json.pop('op_type_enum')
-    op_values: list[tuple[str, str]] = cfg_json.pop('op_values')
-    op_value_switch: str = cfg_json.pop('op_value_switch')
-    checker_module: str = cfg_json.pop('checker_module')
+    op_type_enum: str = cfg_json.pop('op_type_enum', None)
+    op_values: list[tuple[str, str]] | dict[str, str] = cfg_json.pop('op_values')
+    op_value_switch: str = cfg_json.pop('op_value_switch', None)
+    checker_module: str = cfg_json.pop('checker_module', None)
     opcode: str = cfg_json.pop('opcode')
+    raw_code: list[str] = cfg_json.pop('raw_code', [])
+    result: str = cfg_json.pop('result', None)
 
     for key in cfg_json.keys():
         click.echo(f"Unhandled config key {key!r}")
@@ -78,19 +80,10 @@ def wrap(force: bool, cfg: Path):
         upper = lower
     assert(upper == 0)
 
-    # check instance map
-    inst_args_avail = list(insn_parts_dict.keys()) + [op_name]
-    for inst_arg in inst_args:
-        for arg_part in inst_arg.split():
-            assert (arg_part in inst_args_avail or arg_part[0].isdigit())
-
-    # wrap registers
-    x_type = f"logic [{XLEN-1}:0]"
-    x_range = f"[{x_upper}:{x_lower}]"
-    reg_wrap = "// register wrapping\n"
-    for x_inout, do_wrap in [("x_in", wrap_x_in), ("x_out", wrap_x_out)]:
-        if do_wrap:
-            reg_wrap += f"{x_type} {x_inout}{x_range};\n"
+    # register checks
+    insn_part_keys = list(insn_parts_dict.keys())
+    if inst_args is None:
+        inst_args = insn_part_keys
 
     maybe_sources = ["rs2", "rs1"]
     maybe_dests = ["rd"]
@@ -98,95 +91,134 @@ def wrap(force: bool, cfg: Path):
     for maybe_reg in maybe_sources + maybe_dests:
         if maybe_reg in inst_args:
             used_regs.append(maybe_reg)
-    
-    # address fixing
-    localparams = []
-    x_assigns = []
-    #todo: multiple destination regs
-    result_decl = ""
-    for idx, used_reg in enumerate(used_regs, start=1):
-        raddr = f"{used_reg}_0"
-        localparams.append(f"{raddr} = {r_bits}'d{idx}")
-        if used_reg in maybe_sources and wrap_x_in:
-            x_assigns.append(f"assign x_in[{raddr}] = rvfi_{used_reg}_rdata;")
-        if used_reg in maybe_dests and wrap_x_out:
-            result_decl = f"wire [{XLEN-1}:0] result = x_out[{raddr}];\n"
-    if localparams:
-        localparams = ", ".join(localparams)
-        reg_wrap += f"localparam {localparams};\n"
-    if x_assigns:
-        reg_wrap += "\n".join(x_assigns) + "\n"
-    reg_wrap += result_decl
 
-    if wrap_next_pc:
-        reg_wrap += f"wire [{XLEN-1}:0] next_pc = rvfi_pc_rdata + 4;\n"
+    # check instance map
+    inst_args_avail = insn_part_keys + [op_name]
+    for inst_arg in inst_args:
+        for arg_part in inst_arg.split():
+            assert (arg_part in inst_args_avail or arg_part[0].isdigit())
+
+    # wrap registers
+    if x_upper and x_lower:
+        x_type = f"logic [{XLEN-1}:0]"
+        x_range = f"[{x_upper}:{x_lower}]"
+        reg_wrap = "// register wrapping\n"
+        for x_inout, do_wrap in [("x_in", wrap_x_in), ("x_out", wrap_x_out)]:
+            if do_wrap:
+                reg_wrap += f"{x_type} {x_inout}{x_range};\n"
+
+        # address fixing
+        localparams = []
+        x_assigns = []
+        #todo: multiple destination regs
+        result_decl = ""
+        for idx, used_reg in enumerate(used_regs, start=1):
+            raddr = f"{used_reg}_0"
+            localparams.append(f"{raddr} = {r_bits}'d{idx}")
+            if used_reg in maybe_sources and wrap_x_in:
+                x_assigns.append(f"assign x_in[{raddr}] = rvfi_{used_reg}_rdata;")
+            if used_reg in maybe_dests and wrap_x_out:
+                result_decl = f"wire [{XLEN-1}:0] result = x_out[{raddr}];\n"
+        if localparams:
+            localparams = ", ".join(localparams)
+            reg_wrap += f"localparam {localparams};\n"
+        if x_assigns:
+            reg_wrap += "\n".join(x_assigns) + "\n"
+        reg_wrap += result_decl
+
+        if wrap_next_pc:
+            reg_wrap += f"wire [{XLEN-1}:0] next_pc = rvfi_pc_rdata + 4;\n"
+    else:
+        reg_wrap = ""
 
     # extra signals
-    extra_signals = "// extra signals\n"
-    op_default = op_values[0][1] if len(op_values) == 1 else None
-    extra_signal_decls = extra_sig1 + extra_sig2 + [(op_type_enum, f"{op_name}_0", op_default)]
-    for t, n, v in extra_signal_decls:
-        extra_signals += f"{t} {n};\n" if v == None else f"{t} {n} = {v};\n"
+    if extra_sig1 or extra_sig2:
+        extra_signals = "// extra signals\n"
+        op_default = op_values[0][1] if len(op_values) == 1 else None
+        extra_signal_decls = extra_sig1 + extra_sig2 + [(op_type_enum, f"{op_name}_0", op_default)]
+        for t, n, v in extra_signal_decls:
+            extra_signals += f"{t} {n};\n" if v == None else f"{t} {n} = {v};\n"
+    else:
+        extra_signals = ""
 
     # combined instruction checking
-    op_value_keys = op_value_switch.split()
-    if len(op_value_keys) == 1:
-        case_switch = f"insn_{op_value_switch}"
-    else:
-        case_switch = '{' + ', '.join([f"insn_{k}" for k in op_value_keys]) + '}'
-    op_value_bits = sum([insn_parts_dict[k] for k in op_value_keys])
     insn_check = "// insn check\n"
-    if len(op_values) == 1:
-        insn_check += f"wire illinsn = {case_switch} != {op_value_bits}'b {op_values[0][0]};\n"
+    if isinstance(op_values, list):
+        op_value_keys = op_value_switch.split()
+        if len(op_value_keys) == 1:
+            case_switch = f"insn_{op_value_switch}"
+        else:
+            case_switch = '{' + ', '.join([f"insn_{k}" for k in op_value_keys]) + '}'
+        op_value_bits = sum([insn_parts_dict[k] for k in op_value_keys])
+        if len(op_values) == 1:
+            insn_check += f"wire illinsn = {case_switch} != {op_value_bits}'b {op_values[0][0]};\n"
+        else:
+            insn_check += dedent(f"""\
+                reg illinsn;
+                always @* begin
+                    illinsn <= 0;
+                    case ({case_switch})
+            """)
+            for bin, enum in op_values:
+                insn_check += f"        {op_value_bits}'b {bin}: {op_name}_0 <= {enum};\n"
+            insn_check += dedent(f"""\
+                        default: illinsn <= 1;
+                    endcase
+                end
+            """)
+    elif isinstance(op_values, dict):
+        insn_check += f"wire illinsn = "
+        op_value_checks = []
+        for key, bin in op_values.items():
+            op_value_bits = insn_parts_dict[key]
+            op_value_checks.append(f"(insn_{key} != {op_value_bits}'b {bin})")
+        insn_check += " || ".join(op_value_checks) + ";"
     else:
-        insn_check += dedent(f"""\
-            reg illinsn;
-            always @* begin
-                illinsn <= 0;
-                case ({case_switch})
-        """)
-        for bin, enum in op_values:
-            insn_check += f"        {op_value_bits}'b {bin}: {op_name}_0 <= {enum};\n"
-        insn_check += dedent(f"""\
-                    default: illinsn <= 1;
-                endcase
-            end
-        """)
+        raise NotImplementedError(type(op_values))
 
     # wrapped checker
-    instantiation = f"// {name} instance\n"
-    checker_args: list[str] = []
-    for inst_arg in inst_args:
-        if inst_arg in used_regs:
-            checker_arg = f"{inst_arg}_0"
-        elif inst_arg == op_name:
-            checker_arg = f"{op_name}_0"
-        elif " " in inst_arg:
-            arg_parts = [k if k[0].isdigit() else f"insn_{k}" for k in inst_arg.split()]
-            checker_arg = '{' + ', '.join(arg_parts) + '}'
-        else:
-            checker_arg = f"insn_{inst_arg}"
-        if checker_arg: checker_args.append(checker_arg)
-    if wrap_pc:
-        checker_args.append(f"rvfi_pc_rdata")
-    if wrap_next_pc:
-        checker_args.append(f"next_pc")
-    if wrap_x_in:
-        for idx in range(x_lower, x_upper + 1):
-            checker_args.append(f"x_in[{idx}]")
-    for _, extra_sig, _ in extra_sig1:
-        checker_args.append(extra_sig)
-    if wrap_x_out:
-        for idx in range(x_lower, x_upper + 1):
-            checker_args.append(f"x_out[{idx}]")
-    if wrap_next_pc:
-        checker_args.append("spec_pc_wdata")
-    for _, extra_sig, _ in extra_sig2:
-        checker_args.append(extra_sig)
+    if checker_module:
+        instantiation = f"// {name} instance\n"
+        checker_args: list[str] = []
+        for inst_arg in inst_args:
+            if inst_arg in used_regs:
+                checker_arg = f"{inst_arg}_0"
+            elif inst_arg == op_name:
+                checker_arg = f"{op_name}_0"
+            elif " " in inst_arg:
+                arg_parts = [k if k[0].isdigit() else f"insn_{k}" for k in inst_arg.split()]
+                checker_arg = '{' + ', '.join(arg_parts) + '}'
+            else:
+                checker_arg = f"insn_{inst_arg}"
+            if checker_arg: checker_args.append(checker_arg)
+        if wrap_pc:
+            checker_args.append(f"rvfi_pc_rdata")
+        if wrap_next_pc:
+            checker_args.append(f"next_pc")
+        if wrap_x_in:
+            for idx in range(x_lower, x_upper + 1):
+                checker_args.append(f"x_in[{idx}]")
+        for _, extra_sig, _ in extra_sig1:
+            checker_args.append(extra_sig)
+        if wrap_x_out:
+            for idx in range(x_lower, x_upper + 1):
+                checker_args.append(f"x_out[{idx}]")
+        if wrap_next_pc:
+            checker_args.append("spec_pc_wdata")
+        for _, extra_sig, _ in extra_sig2:
+            checker_args.append(extra_sig)
 
-    instantiation += f"{checker_module} wrapped_checker("
-    instantiation += ", ".join(checker_args)
-    instantiation += ");\n"
+        instantiation += f"{checker_module} wrapped_checker("
+        instantiation += ", ".join(checker_args)
+        instantiation += ");\n"
+    else:
+        instantiation = ""
+
+    # raw code injection
+    if raw_code:
+        instantiation += "\n".join(raw_code) + "\n"
+    if result:
+        instantiation += f"wire [{XLEN-1}:0] result = {result};\n"
 
     # map spec values
     spec_mapping = "// spec mapping\n"
@@ -226,8 +258,8 @@ def wrap(force: bool, cfg: Path):
         click.echo(insn_check_io, file=f)
         click.echo(");\n", file=f)
         click.echo(indent(insn_format, '    '), file=f)
-        click.echo(indent(reg_wrap, '    '), file=f)
-        click.echo(indent(extra_signals, '    '), file=f)
+        if reg_wrap: click.echo(indent(reg_wrap, '    '), file=f)
+        if extra_signals: click.echo(indent(extra_signals, '    '), file=f)
         click.echo(indent(insn_check, '    '), file=f)
         click.echo(indent(instantiation, '    '), file=f)
         click.echo(indent(spec_mapping, '    '), file=f)

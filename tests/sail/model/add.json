@@ -1,0 +1,17 @@
+{
+    "name": "add",
+    "insn_parts": [
+        ["funct7", 7],
+        ["rs2", 5],
+        ["rs1", 5],
+        ["funct3", 3],
+        ["rd", 5],
+        ["opcode", 7]
+    ],
+    "op_values": {
+        "funct7": "0000000",
+        "funct3": "000"
+    },
+    "opcode": "0110011",
+    "result": "rvfi_rs1_rdata + rvfi_rs2_rdata"
+}
