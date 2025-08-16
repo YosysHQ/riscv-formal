@@ -28,6 +28,7 @@ def wrap(force: bool, cfg: Path):
     r_bits: int = cfg_json.pop('r_bits')
     extra_sig1: list[tuple[str, str, str]] = cfg_json.pop('extra_sig1')
     extra_sig2: list[tuple[str, str, str]] = cfg_json.pop('extra_sig2')
+    op_name: str = cfg_json.pop('op_name', "op")
     op_type_enum: str = cfg_json.pop('op_type_enum')
     op_values: list[tuple[str, str]] = cfg_json.pop('op_values')
     op_value_switch: str = cfg_json.pop('op_value_switch')
@@ -78,7 +79,7 @@ def wrap(force: bool, cfg: Path):
     assert(upper == 0)
 
     # check instance map
-    inst_args_avail = list(insn_parts_dict.keys()) + ["op"]
+    inst_args_avail = list(insn_parts_dict.keys()) + [op_name]
     for inst_arg in inst_args:
         for arg_part in inst_arg.split():
             assert (arg_part in inst_args_avail or arg_part[0].isdigit())
@@ -123,21 +124,21 @@ def wrap(force: bool, cfg: Path):
     # extra signals
     extra_signals = "// extra signals\n"
     op_default = op_values[0][1] if len(op_values) == 1 else None
-    extra_signal_decls = extra_sig1 + extra_sig2 + [(op_type_enum, "op_0", op_default)]
+    extra_signal_decls = extra_sig1 + extra_sig2 + [(op_type_enum, f"{op_name}_0", op_default)]
     for t, n, v in extra_signal_decls:
         extra_signals += f"{t} {n};\n" if v == None else f"{t} {n} = {v};\n"
 
     # combined instruction checking
     op_value_keys = op_value_switch.split()
+    if len(op_value_keys) == 1:
+        case_switch = f"insn_{op_value_switch}"
+    else:
+        case_switch = '{' + ', '.join([f"insn_{k}" for k in op_value_keys]) + '}'
     op_value_bits = sum([insn_parts_dict[k] for k in op_value_keys])
     insn_check = "// insn check\n"
     if len(op_values) == 1:
-        insn_check += f"wire illinsn = {op_value_bits}'b {op_values[0][0]};\n"
+        insn_check += f"wire illinsn = {case_switch} != {op_value_bits}'b {op_values[0][0]};\n"
     else:
-        if len(op_value_keys) == 1:
-            case_switch = f"insn_{op_value_switch}"
-        else:
-            case_switch = '{' + ', '.join([f"insn_{k}" for k in op_value_keys]) + '}'
         insn_check += dedent(f"""\
             reg illinsn;
             always @* begin
@@ -145,7 +146,7 @@ def wrap(force: bool, cfg: Path):
                 case ({case_switch})
         """)
         for bin, enum in op_values:
-            insn_check += f"        {op_value_bits}'b {bin}: op_0 <= {enum};\n"
+            insn_check += f"        {op_value_bits}'b {bin}: {op_name}_0 <= {enum};\n"
         insn_check += dedent(f"""\
                     default: illinsn <= 1;
                 endcase
@@ -158,8 +159,8 @@ def wrap(force: bool, cfg: Path):
     for inst_arg in inst_args:
         if inst_arg in used_regs:
             checker_arg = f"{inst_arg}_0"
-        elif inst_arg == "op":
-            checker_arg = "op_0"
+        elif inst_arg == op_name:
+            checker_arg = f"{op_name}_0"
         elif " " in inst_arg:
             arg_parts = [k if k[0].isdigit() else f"insn_{k}" for k in inst_arg.split()]
             checker_arg = '{' + ', '.join(arg_parts) + '}'

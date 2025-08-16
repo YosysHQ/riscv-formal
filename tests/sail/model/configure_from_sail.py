@@ -26,6 +26,7 @@ def configure(sail: Path):
         ("bit", "sail_have_exception_2", None),
         ("t_exception", "sail_current_exception_2", None),
     ]
+    op_name: str = ""
     op_type_enum: str = ""
     op_values: list[tuple[str, str]] = []
     op_value_switch: str = ""
@@ -136,7 +137,8 @@ def configure(sail: Path):
                     # assumes the op is the last arg
                     op_values.append(("_".join(binary_parts), maybe_args[-1]))
                     op_value_switch = " ".join(binary_part_names)
-                    op_type_enum = f"t_{arg_types[-1]}"
+                    op_type = arg_types[-1]
+                    op_type_enum = f"t_{op_type}"
 
             # instruction args
             m = re.match(r"function clause execute \((?P<insn>\w+)\s?\((?P<args>.*)\)\) = {", line)
@@ -152,6 +154,8 @@ def configure(sail: Path):
                                 inst_arg_part = f"{len(value)}'b{value}"
                             inst_arg.append(inst_arg_part)
                         inst_arg = " ".join(inst_arg)
+                    elif op_type == arg_types[idx]:
+                            op_name = inst_arg
                     inst_args.append(inst_arg)
                 wrap_x_in = "rs2" in inst_args or "rs1" in inst_args
                 wrap_x_out = "rd" in inst_args
@@ -181,6 +185,7 @@ def configure(sail: Path):
                 "r_bits": r_bits,
                 "extra_sig1": extra_sig1,
                 "extra_sig2": extra_sig2,
+                "op_name": op_name,
                 "op_type_enum": op_type_enum,
                 "op_values": op_values,
                 "op_value_switch": op_value_switch,
