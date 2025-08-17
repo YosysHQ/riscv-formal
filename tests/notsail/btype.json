@@ -1,0 +1,48 @@
+{
+    "insn_parts": [
+        ["imm12", 1],
+        ["imm10_5", 6],
+        ["rs2", 5],
+        ["rs1", 5],
+        ["funct3", 3],
+        ["imm4_1", 4],
+        ["imm11", 1],
+        ["opcode", 7]
+    ],
+    "raw_code": [
+        "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({{insn_imm12, insn_imm11, insn_imm10_5, insn_imm4_1, 1'b0}});",
+        "wire cond = {cond};",
+        "wire [`RISCV_FORMAL_XLEN-1:0] next_pc = cond ? rvfi_pc_rdata + insn_imm : rvfi_pc_rdata + 4;"
+    ],
+    "spec_map": {
+        "pc_wdata": "next_pc",
+        "trap": "next_pc[1:0] != 0"
+    },
+    "instructions": {
+        "beq": {
+            "funct3": "000",
+            "cond": "rvfi_rs1_rdata == rvfi_rs2_rdata"
+        },
+        "bne": {
+            "funct3": "001",
+            "cond": "rvfi_rs1_rdata != rvfi_rs2_rdata"
+        },
+        "blt": {
+            "funct3": "100",
+            "cond": "$signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)"
+        },
+        "bge": {
+            "funct3": "101",
+            "cond": "$signed(rvfi_rs1_rdata) >= $signed(rvfi_rs2_rdata)"
+        },
+        "bltu": {
+            "funct3": "110",
+            "cond": "rvfi_rs1_rdata < rvfi_rs2_rdata"
+        },
+        "bgeu": {
+            "funct3": "111",
+            "cond": "rvfi_rs1_rdata >= rvfi_rs2_rdata"
+        }
+    },
+    "opcode": "1100011"
+}

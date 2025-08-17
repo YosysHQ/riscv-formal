@@ -1,5 +1,6 @@
 """insn_config_generator"""
 from pathlib import Path
+import string
 import click
 import json
 
@@ -13,6 +14,8 @@ def generate(force: bool, cfg: Path):
         cfg_json: dict[str] = json.load(f)
 
     insn_parts: list[tuple[str, int]] = cfg_json.pop('insn_parts')
+    raw_code: list[str] = cfg_json.pop('raw_code', [])
+    spec_map: dict[str, str] = cfg_json.pop('spec_map', {})
     instructions: dict[str, dict[str, str]] = cfg_json.pop('instructions')
     opcode: str = cfg_json.pop('opcode')
 
@@ -39,11 +42,27 @@ def generate(force: bool, cfg: Path):
             'opcode': opcode,
         }
 
+        # substitute instruction specific raw code
+        replacement_vars: list[str] = []
+        if raw_code:
+            out_cfg['raw_code'] = []
+            for raw_line in raw_code:
+                out_cfg['raw_code'].append(raw_line.format_map(mappings))
+                replacement_vars.extend([fn for _, fn, _, _ in string.Formatter().parse(raw_line) if fn is not None])
+
+        # speculative value map
+        if spec_map: out_cfg['spec_map'] = spec_map
+
         # remap for instruction config
         for key, val in mappings.items():
             if key in insn_part_keys:
+                # instruction parts go into op_values for checking instruction validity
                 op_values[key] = val
+            elif key in replacement_vars:
+                # ignore raw code replacement variables
+                pass
             else:
+                # include the rest verbatim
                 out_cfg[key] = val
 
         # sanity check format

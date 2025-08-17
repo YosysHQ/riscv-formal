@@ -36,6 +36,7 @@ def wrap(force: bool, cfg: Path):
     opcode: str = cfg_json.pop('opcode')
     raw_code: list[str] = cfg_json.pop('raw_code', [])
     result: str = cfg_json.pop('result', None)
+    spec_map: dict[str, str] = cfg_json.pop('spec_map', {})
 
     for key in cfg_json.keys():
         click.echo(f"Unhandled config key {key!r}")
@@ -235,19 +236,27 @@ def wrap(force: bool, cfg: Path):
         "mem_wmask",
         "mem_wdata",
     ]
-    spec_map = {k: "0" for k in spec_sigs}
-
-    spec_map["valid"] = f"rvfi_valid && !illinsn && insn_opcode == 7'b {opcode}"
+    for spec_sig in spec_map.keys():
+        if spec_sig not in spec_sigs:
+            raise NotImplementedError(f"spec_sig {spec_sig}")
 
     for used_reg in used_regs:
         spec_map[f"{used_reg}_addr"] = f"insn_{used_reg}"
         if used_reg in maybe_dests:
             spec_map[f"{used_reg}_wdata"] = f"spec_{used_reg}_addr ? result : 0"
 
+    for spec_sig in spec_sigs:
+        if spec_sig not in spec_map:
+            if spec_sig == "pc_wdata":
+                val = "rvfi_pc_rdata + 4"
+            elif spec_sig == "valid":
+                val = f"rvfi_valid && !illinsn && insn_opcode == 7'b {opcode}"
+            else:
+                val = "0"
+            spec_map[spec_sig] = val
+
     if wrap_next_pc:
         spec_map.pop("pc_wdata")
-    else:
-        spec_map["pc_wdata"] = "rvfi_pc_rdata + 4"
 
     for spec_sig, spec_val in spec_map.items():
         spec_mapping += f"assign spec_{spec_sig} = {spec_val};\n"
