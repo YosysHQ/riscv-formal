@@ -1,18 +1,24 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 import traceback
 
 import yosys_mau.task_loop.job_server as job
 from yosys_mau import task_loop as tl
 
 from riscv_formal.config import arg_parser, App, parse_config
+from riscv_formal.genchecks import GenChecks
 
 
 def main() -> None:
     args = arg_parser().parse_args()
 
     job.global_client(args.jobs)
+
+    # TODO make it possible to override base_dir and come up with a way to handle
+    # running when this python project is installed
+    App.base_dir = Path(__file__).parent.parent.parent
 
     # Move command line arguments into the App context
     for name in dir(args):
@@ -40,6 +46,8 @@ async def task_loop_main() -> None:
     match App.command:
         case "setup":
             await SetupTask().finished
+        case "genchecks": # TODO eventually rename to setup?
+            await GenChecks().finished
         case _:
             raise NotImplementedError()
 
@@ -51,6 +59,8 @@ class SetupTask(tl.Task):
         tl.LogContext.scope = "setup"
 
     async def on_run(self):
+        tl.log("path", App.work_dir)
+
         for option in App.config.options.options():
             tl.log("option", option.name, repr(getattr(App.config.options, option.name)))
 

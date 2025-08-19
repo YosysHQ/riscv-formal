@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass, field
+from functools import cache
 from pathlib import Path
 import re
-from typing import Any, Literal, Mapping, Self
+from typing import Any, Iterable, Literal, Mapping, NoReturn, Self
 
 import yosys_mau.config_parser as cfg
 from yosys_mau import task_loop as tl
 from yosys_mau.source_str import report, read_file, re as ssre
+
+from riscv_formal.csr_specs import extend_config_with_csr_spec
 
 
 def sphinx_docs_arg_parser() -> argparse.ArgumentParser:
@@ -57,6 +60,13 @@ def arg_parser(sphinx_docs=False) -> argparse.ArgumentParser:
         help="TODO",
     )
 
+    commands.add_parser(
+        "genchecks",
+        usage="%(prog)s",
+        parents=parents,
+        help="TODO",
+    )
+
     parser.set_defaults(command="setup", proof_args=[])
 
     return parser
@@ -73,6 +83,7 @@ class App:
 
     cfg_file: Path
     work_dir: Path
+    base_dir: Path
 
     config: RvfConfig
 
@@ -86,9 +97,54 @@ class FlagPresent(cfg.ValueParser[bool]):  # TODO move to mau
         return True
 
 
+@dataclass
+class Isa:
+    str: str
+    xlen: int
+    compressed: bool
+    mods: list[str]
+
+    @property
+    def insns(self) -> tuple[str, ...]:
+        return isa_insns(App.base_dir, self.str)
+
+
+@cache
+def isa_insns(base_dir: Path, isa_str: str) -> tuple[str, ...]:
+    isa_file = App.base_dir / "insns" / f"isa_{isa_str}.txt"
+    return tuple(read_file(isa_file).split())
+
+
+class IsaValue(cfg.ValueParser[Isa]):
+    def parse(self, input: str) -> Isa:
+        matched = ssre.match(
+            r"rv(?P<width>\d+)(?P<base>[ie])(?P<ext>[a-v]*)(?P<multi>_?[SZX]\w+)?$", input, ssre.I
+        )
+        if matched is None:
+            raise report.InputError(input, "Unable to parse isa string")
+        isa_dict: dict[str, Any] = matched.groupdict()
+
+        isa_mods: list[str] = [isa_dict["base"].lower(), isa_dict["width"]]
+        for mod in isa_dict["ext"] or "":
+            isa_mods.append(mod.lower())
+        for mod in (isa_dict["multi"] or "").split("_"):
+            if mod:
+                isa_mods.append(mod.title())
+
+        match isa_dict["width"]:
+            case "64":
+                xlen = 64
+            case "32":
+                xlen = 32
+            case other:
+                raise report.InputError(other, f"Unsupported xlen {other}")
+
+        return Isa(str=input, xlen=xlen, mods=isa_mods, compressed="c" in isa_mods)
+
+
 class RvfOptions(cfg.ConfigOptions):
     nret = cfg.Option(cfg.IntValue(min=1), default=1)
-    isa = cfg.Option(cfg.StrValue(), default="rv32i")  # TODO validate value?
+    isa = cfg.Option(IsaValue(), default=IsaValue().parse("rv32i"))
     blackbox = cfg.Option(FlagPresent(), default=False)
     solver = cfg.Option(cfg.StrValue(), default="boolector")
     dumpsmt2 = cfg.Option(FlagPresent(), default=False)
@@ -172,6 +228,8 @@ class AssumeStatement:
 
         return cls(compile_re(pattern_str), invert_pattern, sv_statement)
 
+    def is_enabled(self, check: str) -> bool:
+        return bool(self.pattern.match(check)) ^ self.invert_pattern
 
 @dataclass
 class AssumeStatements:
@@ -183,6 +241,8 @@ class CheckDepth:
     pattern: re.Pattern[str]
     depths: tuple[int, ...]
 
+    parts: tuple[str, ...]  # for error reporting
+
     @classmethod
     def parse(cls, line: str) -> Self:
         parts = line.split()
@@ -190,15 +250,34 @@ class CheckDepth:
             raise report.InputError(
                 line, "expected regular expression followed by a list of cycle counts"
             )
-        pattern_str, *depths = parts
+        pattern_str, *depths_str = parts
         depth_parser = cfg.IntValue(min=0)
-        depths = tuple(map(depth_parser.parse, depths))
-        return cls(compile_re(pattern_str), depths)
+        depths = tuple(map(depth_parser.parse, depths_str))
+        return cls(compile_re(pattern_str), depths, tuple(parts))
+
+    def excess_depths(self, n: int) -> NoReturn:
+        raise report.InputError(self.parts[n + 1], "unexpected extra depth value")
+
+    def missing_depths(self, n: int) -> NoReturn:
+        raise report.InputError(self.parts[-1][-1:], f"expected {n} depth values")
+
+    def incorrect_depths(self, n: int) -> NoReturn:
+        assert len(self.depths) != n
+        if len(self.depths) < n:
+            self.missing_depths(n)
+        else:
+            self.excess_depths(n)
 
 
 @dataclass
 class CheckDepths:
     depths: list[CheckDepth]
+
+    def __getitem__(self, key: Iterable[str]) -> CheckDepth | None:
+        for depth in self.depths:
+            for alternative in key:
+                if depth.pattern.fullmatch(alternative):
+                    return depth
 
 
 @dataclass
@@ -210,24 +289,49 @@ class CsrConfig:
     def parse(cls, line: str, **kwds) -> Self:
         match line.split(maxsplit=1):
             case [name]:
-                return cls(name, {})
+                return cls(name, {}, **kwds)
             case [name, tests_str]:
-                tests = {}
+                new = cls(name, {}, **kwds)
 
                 for test_str in ssre.findall(r"((?:\S*?\"[^\"]*\")+|\S+)", tests_str):
-                    if "=" in test_str:
-                        test_name, test_arg = test_str.split("=", 1)
-                        test_arg = test_arg.strip('"')
-                    else:
-                        test_name = test_str
-                        test_arg = None
-                    tests[test_name] = test_arg
-
-                return cls(name, tests, **kwds)
+                    new.parse_and_add_test(test_str)
+                return new
             case _:
                 raise report.InputError(
                     line, "expected a csr name followed by an optional list of csr tests"
                 )
+
+    def parse_and_add_test(self, test_str):
+        if "=" in test_str:
+            test_name, test_arg = test_str.split("=", 1)
+            test_arg = test_arg.strip('"')
+        else:
+            test_name = test_str
+            test_arg = None
+        self.add_test(test_name, test_arg)
+
+    def add_test(self, test_name: str, test_param: str | None):
+        if test_name in self.tests:
+            previous_name = next(name for name in self.tests.keys() if name == test_name)
+            raise report.InputError(
+                test_name + previous_name,
+                f"test {test_name!r} for CSR {self.name!r} is defined multiple times",
+            )
+        self.tests[test_name] = test_param
+
+
+@dataclass
+class CsrConfigs:
+    configs: dict[str, CsrConfig]
+
+    def __init__(self, csrs: Iterable[CsrConfig]):
+        self.configs = {}
+        for csr in csrs:
+            self.append(csr)
+
+    def append(self, csr: CsrConfig):
+        if csr.name in self.configs:
+            self.configs[csr.name].tests
 
 
 def parse_csr_addr_and_mode(
@@ -299,10 +403,10 @@ class RvfConfig(cfg.ConfigParser):
     defines = cfg.StrSection(concat=True).with_arguments(cfg.StrValue(allow_empty=True))
     script_defines = cfg.StrSection(concat=True).with_arguments(cfg.StrValue(allow_empty=True))
     script_defines.attr_name = "script-defines"  # TODO some sections use - some _
-    script_sources = cfg.StrSection(concat=True).with_arguments(cfg.StrValue(allow_empty=True))
+    script_sources = cfg.StrSection(concat=True, default="")
     script_sources.attr_name = "script-sources"  # TODO some sections use - some _
-    script_links = cfg.StrSection(concat=True).with_arguments(cfg.StrValue(allow_empty=True))
-    script_links.attr_name = "script-links"  # TODO some sections use - some _
+    script_link = cfg.StrSection(concat=True, default="")
+    script_link.attr_name = "script-link"  # TODO some sections use - some _
 
     verilog_files = cfg.FilesSection()
     verilog_files.attr_name = "verilog-files"  # TODO some sections use - some _
@@ -320,8 +424,8 @@ class RvfConfig(cfg.ConfigParser):
     @cfg.postprocess_section(
         cfg.FilesSection()
     )  # TODO there should be a separate LinesSection in mau
-    def csrs(self, lines: list[str]) -> list[CsrConfig]:
-        return [CsrConfig.parse(line) for line in lines]
+    def csrs(self, lines: list[str]) -> CsrConfigs:
+        return CsrConfigs(CsrConfig.parse(line) for line in lines)
 
     @cfg.postprocess_section(
         cfg.FilesSection()
@@ -344,8 +448,8 @@ class RvfConfig(cfg.ConfigParser):
     @cfg.postprocess_section(
         cfg.FilesSection()
     )  # TODO there should be a separate LinesSection in mau
-    def groups(self, lines: list[str]) -> list[str]:
-        return [line.strip() for line in lines]
+    def groups(self, lines: list[str]) -> list[str | None]:
+        return [None] + [line.strip() for line in lines]
 
     @cfg.postprocess_section(
         cfg.FilesSection().with_arguments(cfg.StrValue(allow_empty=True))
@@ -369,12 +473,16 @@ class RvfConfig(cfg.ConfigParser):
 
 
 def parse_config():
-    cfg_file = App.cfg_file
-    tl.log_debug("parsing config file", cfg_file)
-    if not cfg_file.name.endswith(".cfg"):
-        tl.log_error("A riscv-formal configuration file name has to end with '.cfg'")
+    App.cfg_file
+    tl.log_debug("parsing config file", App.cfg_file)
+    if not App.cfg_file.name.endswith(".cfg"):
+        # the old genchecks.py unconditionally appends '.cfg'
+        App.cfg_file = App.cfg_file.with_suffix(".cfg")
+
+    App.work_dir = App.cfg_file.with_suffix("")
     try:
         App.config = RvfConfig(read_file(App.cfg_file))
     except BaseException:
         tl.log_error("Failed to parse config:", raise_error=False)
         raise
+    extend_config_with_csr_spec(App.config)
