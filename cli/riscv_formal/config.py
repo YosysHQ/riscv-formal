@@ -99,6 +99,17 @@ class RvfOptions(cfg.ConfigOptions):
     csr_spec = cfg.Option(cfg.StrValue(), default=None)  # TODO validate value?
 
 
+def compile_re(pattern: str) -> re.Pattern[str]:
+    # TODO provide a re.compile wrapper like this in mau
+    try:
+        return re.compile(pattern)
+    except re.error as err:
+        if err.pos is None:
+            raise report.InputError(pattern, "regex error: " + err.msg)
+        else:
+            raise report.InputError(pattern[err.pos : err.pos + 1], "regex error: " + err.msg)
+
+
 @dataclass
 class CheckFilter:
     mode: Literal["-", "+"]
@@ -113,17 +124,7 @@ class CheckFilter:
         if mode not in ("+", "-"):
             raise report.InputError(mode, "expected `+` for inclusion or `-` for exclusion")
 
-        # TODO provide a re.compile wrapper in mau
-        try:
-            pattern = re.compile(pattern_str)
-        except re.error as err:
-            if err.pos is None:
-                raise report.InputError(pattern_str, "regex error: " + err.msg)
-            else:
-                raise report.InputError(
-                    pattern_str[err.pos : err.pos + 1], "regex error: " + err.msg
-                )
-        return cls(mode, pattern)
+        return cls(mode, compile_re(pattern_str))
 
 
 @dataclass
@@ -135,6 +136,66 @@ class CheckFilters:
             if filter.pattern.match(name):
                 return filter.mode == "+"
         return True
+
+
+@dataclass
+class CheckSorting:
+    patterns: list[re.Pattern[str]]
+
+    def sort_key(self, name: str) -> tuple[int, str]:
+        for i, pattern in enumerate(self.patterns):
+            if pattern.fullmatch(name):
+                return i, name
+        return len(self.patterns), name
+
+
+@dataclass
+class AssumeStatement:
+    pattern: re.Pattern[str]
+    invert_pattern: bool
+    sv_statement: str
+
+    @classmethod
+    def parse(cls, line: str) -> Self:
+        parts = line.split(None, 1)
+        if len(parts) != 2:
+            raise report.InputError(
+                line, "expected regular expression followed by a SystemVerilog statement"
+            )
+        pattern_str, sv_statement = parts
+        invert_pattern = pattern_str.startswith("!")
+        if invert_pattern:
+            pattern_str = pattern_str[1:]
+
+        return cls(compile_re(pattern_str), invert_pattern, sv_statement)
+
+
+@dataclass
+class AssumeStatements:
+    statements: list[AssumeStatement]
+
+
+@dataclass
+class CheckDepth:
+    pattern: re.Pattern[str]
+    depths: tuple[int, ...]
+
+    @classmethod
+    def parse(cls, line: str) -> Self:
+        parts = line.split()
+        if len(parts) < 2:
+            raise report.InputError(
+                line, "expected regular expression followed by a list of cycle counts"
+            )
+        pattern_str, *depths = parts
+        depth_parser = cfg.IntValue(min=0)
+        depths = tuple(map(depth_parser.parse, depths))
+        return cls(compile_re(pattern_str), depths)
+
+
+@dataclass
+class CheckDepths:
+    depths: list[CheckDepth]
 
 
 @dataclass
@@ -271,13 +332,31 @@ class RvfConfig(cfg.ConfigParser):
     def illegal_csrs(self, lines: list[str]) -> list[IllegalCsrConfig]:
         return [IllegalCsrConfig.parse(line) for line in lines]
 
-    # sort = TODO
-    # groups = TODO
-    # assume = TODO
-    # cover = TODO
-    # depth = TODO
+    @cfg.postprocess_section(
+        cfg.FilesSection()
+    )  # TODO there should be a separate LinesSection in mau
+    def sort(self, lines: list[str]) -> CheckSorting:
+        return CheckSorting([compile_re(line) for line in lines])
 
-    unhandled = cfg.RawSection(all_sections=True)
+    @cfg.postprocess_section(
+        cfg.FilesSection()
+    )  # TODO there should be a separate LinesSection in mau
+    def groups(self, lines: list[str]) -> list[str]:
+        return [line.strip() for line in lines]
+
+    @cfg.postprocess_section(
+        cfg.FilesSection()
+    )  # TODO there should be a separate LinesSection in mau
+    def assume(self, lines: list[str]) -> AssumeStatements:
+        return AssumeStatements([AssumeStatement.parse(line) for line in lines])
+
+    cover = cfg.StrSection(default="")
+
+    @cfg.postprocess_section(
+        cfg.FilesSection()
+    )  # TODO there should be a separate LinesSection in mau
+    def depth(self, lines: list[str]) -> CheckDepths:
+        return CheckDepths([CheckDepth.parse(line) for line in lines])
 
 
 def parse_config():

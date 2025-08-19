@@ -88,8 +88,17 @@ class SetupTask(tl.Task):
         for csr in [*App.config.csrs, *App.config.custom_csrs, *App.config.illegal_csrs]:
             tl.log(f"got csr config {csr!r}")
 
-        for unhandled_section in App.config.unhandled:
-            tl.log("unhandled section", unhandled_section.header)
+        for pattern in App.config.sort.patterns:
+            tl.log(f"got sort order item {pattern!r}")
+
+        for group in App.config.groups:
+            tl.log(f"got group {group!r}")
+
+        for assume_statement in App.config.assume.statements:
+            tl.log(f"got assume statement {assume_statement!r}")
+
+        for depth in App.config.depth.depths:
+            tl.log(f"got depth config {depth!r}")
 
 
 def setup_logging() -> io.StringIO:
