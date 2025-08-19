@@ -4,7 +4,7 @@ import argparse
 from dataclasses import dataclass, field
 from pathlib import Path
 import re
-from typing import Any, Literal, Self
+from typing import Any, Literal, Mapping, Self
 
 import yosys_mau.config_parser as cfg
 from yosys_mau import task_loop as tl
@@ -156,8 +156,11 @@ class AssumeStatement:
     sv_statement: str
 
     @classmethod
-    def parse(cls, line: str) -> Self:
-        parts = line.split(None, 1)
+    def parse(cls, subsection: str, line: str) -> Self:
+        if subsection == "":
+            parts = line.split(None, 1)
+        else:
+            parts = subsection, line
         if len(parts) != 2:
             raise report.InputError(
                 line, "expected regular expression followed by a SystemVerilog statement"
@@ -345,10 +348,16 @@ class RvfConfig(cfg.ConfigParser):
         return [line.strip() for line in lines]
 
     @cfg.postprocess_section(
-        cfg.FilesSection()
+        cfg.FilesSection().with_arguments(cfg.StrValue(allow_empty=True))
     )  # TODO there should be a separate LinesSection in mau
-    def assume(self, lines: list[str]) -> AssumeStatements:
-        return AssumeStatements([AssumeStatement.parse(line) for line in lines])
+    def assume(self, lines_per_subsection: Mapping[str, list[str]]) -> AssumeStatements:
+        return AssumeStatements(
+            [
+                AssumeStatement.parse(subsection, line)
+                for subsection, lines in lines_per_subsection.items()
+                for line in lines
+            ]
+        )
 
     cover = cfg.StrSection(default="")
 
