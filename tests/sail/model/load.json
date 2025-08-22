@@ -1,0 +1,163 @@
+{
+    "name": "load",
+    "insn_parts": [
+        [
+            "imm",
+            12
+        ],
+        [
+            "rs1",
+            5
+        ],
+        [
+            "is_unsigned",
+            1
+        ],
+        [
+            "width",
+            2
+        ],
+        [
+            "rd",
+            5
+        ],
+        [
+            "opcode",
+            7
+        ]
+    ],
+    "inst_args": [
+        "imm",
+        "rs1",
+        "rd",
+        "is_unsigned",
+        "width"
+    ],
+    "wrap_x_in": true,
+    "wrap_x_out": true,
+    "wrap_pc": false,
+    "wrap_next_pc": false,
+    "x_upper": 31,
+    "x_lower": 1,
+    "r_bits": 5,
+    "extra_sig1": [
+        [
+            "t_ExecutionResult",
+            "sail_return_2",
+            null
+        ]
+    ],
+    "extra_sig2": [
+        [
+            "bit",
+            "sail_have_exception_2",
+            null
+        ],
+        [
+            "t_exception",
+            "sail_current_exception_2",
+            null
+        ]
+    ],
+    "op_name": [
+        "width",
+        "is_unsigned"
+    ],
+    "op_type_enum": [
+        "logic [63:0]",
+        "bit"
+    ],
+    "op_values": [
+        [
+            "lb",
+            [
+                "1",
+                "0"
+            ],
+            [
+                "00",
+                "0"
+            ]
+        ],
+        [
+            "lbu",
+            [
+                "1",
+                "1"
+            ],
+            [
+                "00",
+                "1"
+            ]
+        ],
+        [
+            "lh",
+            [
+                "2",
+                "0"
+            ],
+            [
+                "01",
+                "0"
+            ]
+        ],
+        [
+            "lhu",
+            [
+                "2",
+                "1"
+            ],
+            [
+                "01",
+                "1"
+            ]
+        ],
+        [
+            "lw",
+            [
+                "4",
+                "0"
+            ],
+            [
+                "10",
+                "0"
+            ]
+        ],
+        [
+            "lwu",
+            [
+                "4",
+                "1"
+            ],
+            [
+                "10",
+                "1"
+            ]
+        ],
+        [
+            "ld",
+            [
+                "8",
+                "0"
+            ],
+            [
+                "11",
+                "0"
+            ]
+        ],
+        [
+            "ldu",
+            [
+                "8",
+                "1"
+            ],
+            [
+                "11",
+                "1"
+            ]
+        ]
+    ],
+    "op_value_switch": null,
+    "checker_module": "execute_LOAD",
+    "opcode": "0000011"
+}

@@ -14,8 +14,8 @@ sail-riscv:
 model/riscv_insts_base_%.sail: $(SAIL_RISCV_DIR)
 	sed -n -e '1,8p' -e 'H; /^\/\*/!d ; x ; /$*\b/Ip' $^/model/riscv_insts_base.sail > $@
 
-sail-riscv/model/riscv_min.sail_project: sail-riscv riscv_min.sail_project
-	cp riscv_min.sail_project $@
+sail-riscv/model/%.sail_project: %.sail_project sail-riscv
+	cp $< $@
 
 SAIL_FLAGS := --require-version 0.19.1
 SAIL_FLAGS += --config sail-riscv/config/rv32d.json
@@ -27,9 +27,12 @@ SV_FLAGS += --sv-toplevel execute
 
 RV_PROJECT := $(SAIL_RISCV_DIR)/model/riscv_min.sail_project
 
-generated_%.sv: Makefile $(RV_PROJECT) model/riscv_insts_base_%.sail
-	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $(RV_PROJECT) model/$*.sail_project -o $(basename $@) riscv_$*
+generated_%.sv: $(RV_PROJECT) model/riscv_insts_base_%.sail Makefile
+	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $< model/$*.sail_project -o $(basename $@) riscv_$*
 	$(PYTHON) sv_rewriter.py -f $@
+
+model/%.json: model/riscv_insts_base_%.sail model/configure_from_sail.py
+	cd model && $(PYTHON) configure_from_sail.py $(<F)
 
 %_wrapper.sv: model/%.json insn_wrapper.py
 	$(PYTHON) insn_wrapper.py $< -f

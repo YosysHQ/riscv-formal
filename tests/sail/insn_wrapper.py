@@ -13,6 +13,7 @@ XLEN = 32
 def wrap(force: bool, cfg: Path):
     """main function"""
     # load cfg
+    click.echo(f"Loading from {cfg}")
     with open(cfg, 'r', encoding='utf-8') as f:
         cfg_json: dict[str] = json.load(f)
 
@@ -28,9 +29,9 @@ def wrap(force: bool, cfg: Path):
     r_bits: int = cfg_json.pop('r_bits', None)
     extra_sig1: list[tuple[str, str, str]] = cfg_json.pop('extra_sig1', [])
     extra_sig2: list[tuple[str, str, str]] = cfg_json.pop('extra_sig2', [])
-    op_name: str = cfg_json.pop('op_name', "op")
-    op_type_enum: str = cfg_json.pop('op_type_enum', None)
-    op_values: list[tuple[str, str]] | dict[str, str] = cfg_json.pop('op_values')
+    op_name: str | list[str] = cfg_json.pop('op_name', "op")
+    op_type_enum: str | list[str] = cfg_json.pop('op_type_enum', None)
+    op_values: list[tuple[str, str | list[str], str | list[str]]] | dict[str, str] = cfg_json.pop('op_values')
     op_value_switch: str = cfg_json.pop('op_value_switch', None)
     checker_module: str = cfg_json.pop('checker_module', None)
     opcode: str = cfg_json.pop('opcode')
@@ -135,8 +136,10 @@ def wrap(force: bool, cfg: Path):
     # extra signals
     if extra_sig1 or extra_sig2:
         extra_signals = "// extra signals\n"
-        op_default = op_values[0][1] if len(op_values) == 1 else None
-        extra_signal_decls = extra_sig1 + extra_sig2 + [(op_type_enum, f"{op_name}_0", op_default)]
+        extra_signal_decls = extra_sig1 + extra_sig2
+        if isinstance(op_name, str):
+            op_default = op_values[0][1] if len(op_values) == 1 else None
+            extra_signal_decls.append((op_type_enum, f"{op_name}_0", op_default))
         for t, n, v in extra_signal_decls:
             extra_signals += f"{t} {n};\n" if v == None else f"{t} {n} = {v};\n"
     else:
@@ -145,7 +148,14 @@ def wrap(force: bool, cfg: Path):
     # combined instruction checking
     insn_check = "// insn check\n"
     if isinstance(op_values, list):
-        op_value_keys = op_value_switch.split()
+        if isinstance(op_name, list):
+            for name, type_enum in zip(op_name, op_type_enum):
+                insn_check += f"{type_enum} {name}_0;\n"
+            
+            op_value_keys = op_name
+        else:
+            op_value_keys = op_value_switch.split()
+
         if len(op_value_keys) == 1:
             case_switch = f"insn_{op_value_switch}"
         else:
@@ -160,8 +170,19 @@ def wrap(force: bool, cfg: Path):
                     illinsn <= 0;
                     case ({case_switch})
             """)
-            for bin, enum in op_values:
-                insn_check += f"        {op_value_bits}'b {bin}: {op_name}_0 <= {enum};\n"
+            click.echo("Found instructions: ", nl=False)
+            if isinstance(op_name, list):
+                for mnemonic, part_type_values, part_values in op_values:
+                    click.echo(f"{mnemonic} ", nl=False)
+                    var_name = '{' + ', '.join(f"{name}_0" for name in op_name) + '}'
+                    value = ''.join(part_values)
+                    enum = '{' + ', '.join(part_type_values) + '}'
+                    insn_check += f"        {op_value_bits}'b {value}: {var_name} <= {enum};\n"
+            else:
+                for mnemonic, enum, value in op_values:
+                    click.echo(f"{mnemonic} ", nl=False)
+                    insn_check += f"        {op_value_bits}'b {value}: {op_name}_0 <= {enum};\n"
+            click.echo("")
             insn_check += dedent(f"""\
                         default: illinsn <= 1;
                     endcase
@@ -182,10 +203,11 @@ def wrap(force: bool, cfg: Path):
         instantiation = f"// {name} instance\n"
         checker_args: list[str] = []
         for inst_arg in inst_args:
-            if inst_arg in used_regs:
+            if (inst_arg in used_regs
+                or isinstance(op_name, str) and inst_arg == op_name
+                or isinstance(op_name, list) and inst_arg in op_name
+                ):
                 checker_arg = f"{inst_arg}_0"
-            elif inst_arg == op_name:
-                checker_arg = f"{op_name}_0"
             elif " " in inst_arg:
                 arg_parts = [k if k[0].isdigit() else f"insn_{k}" for k in inst_arg.split()]
                 checker_arg = '{' + ', '.join(arg_parts) + '}'

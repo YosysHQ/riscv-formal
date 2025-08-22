@@ -1,5 +1,5 @@
 {
-    "name": "rtype",
+    "name": "mul",
     "insn_parts": [
         [
             "part_0",
@@ -30,7 +30,7 @@
         "rs2",
         "rs1",
         "rd",
-        "op"
+        "mul_op"
     ],
     "wrap_x_in": true,
     "wrap_x_out": true,
@@ -58,61 +58,31 @@
             null
         ]
     ],
-    "op_name": "op",
-    "op_type_enum": "t_rop",
+    "op_name": "mul_op",
+    "op_type_enum": "t_mul_op",
     "op_values": [
         [
-            "add",
-            "ADD",
-            "0000000_000"
+            "mul",
+            "{0, 0, 0}",
+            "000"
         ],
         [
-            "slt",
-            "SLT",
-            "0000000_010"
+            "mulh",
+            "{0, 0, 1}",
+            "001"
         ],
         [
-            "sltu",
-            "SLTU",
-            "0000000_011"
+            "mulhsu",
+            "{0, 1, 0}",
+            "010"
         ],
         [
-            "and",
-            "AND",
-            "0000000_111"
-        ],
-        [
-            "or",
-            "OR",
-            "0000000_110"
-        ],
-        [
-            "xor",
-            "XOR",
-            "0000000_100"
-        ],
-        [
-            "sll",
-            "SLL",
-            "0000000_001"
-        ],
-        [
-            "srl",
-            "SRL",
-            "0000000_101"
-        ],
-        [
-            "sub",
-            "SUB",
-            "0100000_000"
-        ],
-        [
-            "sra",
-            "SRA",
-            "0100000_101"
+            "mulhu",
+            "{0, 1, 1}",
+            "011"
         ]
     ],
-    "op_value_switch": "part_0 part_1",
-    "checker_module": "execute_RTYPE",
+    "op_value_switch": "part_0",
+    "checker_module": "execute_MUL",
     "opcode": "0110011"
 }

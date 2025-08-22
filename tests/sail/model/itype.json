@@ -54,31 +54,38 @@
             null
         ]
     ],
+    "op_name": "op",
     "op_type_enum": "t_iop",
     "op_values": [
         [
-            "000",
-            "ADDI"
+            "addi",
+            "ADDI",
+            "000"
         ],
         [
-            "010",
-            "SLTI"
+            "slti",
+            "SLTI",
+            "010"
         ],
         [
-            "011",
-            "SLTIU"
+            "sltiu",
+            "SLTIU",
+            "011"
         ],
         [
-            "111",
-            "ANDI"
+            "xori",
+            "XORI",
+            "100"
         ],
         [
-            "110",
-            "ORI"
+            "ori",
+            "ORI",
+            "110"
         ],
         [
-            "100",
-            "XORI"
+            "andi",
+            "ANDI",
+            "111"
         ]
     ],
     "op_value_switch": "part_0",

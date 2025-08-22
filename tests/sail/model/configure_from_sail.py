@@ -1,4 +1,5 @@
 """configure_from_sail"""
+from itertools import product
 import json
 from pathlib import Path
 import re
@@ -28,7 +29,8 @@ def configure(sail: Path):
     ]
     op_name: str = ""
     op_type_enum: str = ""
-    op_values: list[tuple[str, str]] = []
+    # [mnemonic, enum_value, op_value]
+    op_values: list[tuple[str, str, str]] = []
     op_value_switch: str = ""
     checker_module: str = ""
     opcode: str = ""
@@ -41,6 +43,9 @@ def configure(sail: Path):
     op_bits: int
     op_type: str = ""
     arg_remap: set[str] = set()
+    enum_value_map: dict[str, str] = {}
+    in_mnemonic = False
+    in_assembly = False
     with open(sail, 'rt', encoding='utf-8') as f:
         for line in f:
             # instruction type def
@@ -60,12 +65,12 @@ def configure(sail: Path):
                 op_type_enum = f"t_{op_type}"
                 op_bits = int(d['op_bits'])
             if in_encdec_op:
-                m = re.match(r"\s+(\w+)\s+<-> 0b([01]+),?", line)
+                m = re.match(r"\s+(.*?)\s+<-> 0b([01]+),?", line)
                 if line == "}":
                     in_encdec_op = False
                 elif m:
                     x, y = m.groups()
-                    op_values.append((y, x))
+                    enum_value_map[x] = y
 
             # instruction decoding
             m = re.match(r"mapping clause encdec = (?P<insn>\w+)\((?P<args>.*)\)(?:$|\s+<-> (?P<mapping>.*))", line)
@@ -96,8 +101,9 @@ def configure(sail: Path):
                 binary_parts: list[str] = []
                 binary_part_names: list[str] = []
                 for part in parts:
-                    m = re.match(r"encdec_reg\((\w+)\)", part)
-                    if m: part = m.group(1)
+                    known_funcs = ["encdec_reg", "bool_bits", "width_enc"]
+                    m = re.match(r"(\w+)\((\w+)\)", part)
+                    if m and m.group(1) in known_funcs: part = m.group(2)
                     try:
                         idx = maybe_args.index(part)
                     except ValueError:
@@ -126,6 +132,10 @@ def configure(sail: Path):
                             part_size = 5
                         elif arg_type.startswith("bits("):
                             part_size = int(arg_type[5:-1])
+                        elif arg_type == "bool":
+                            part_size = 1
+                        elif arg_type == "word_width":
+                            part_size = 2
                         else:
                             assert False
                     insn_part = (part, part_size)
@@ -135,7 +145,7 @@ def configure(sail: Path):
                         insn_parts.append(insn_part)
                 if binary_parts:
                     # assumes the op is the last arg
-                    op_values.append(("_".join(binary_parts), maybe_args[-1]))
+                    enum_value_map[maybe_args[-1]] = "_".join(binary_parts)
                     op_value_switch = " ".join(binary_part_names)
                     op_type = arg_types[-1]
                     op_type_enum = f"t_{op_type}"
@@ -167,6 +177,77 @@ def configure(sail: Path):
             ml = re.findall(r"\b(PC\b|get_arch_pc\(\))", line)
             if ml:
                 wrap_pc = True
+
+            # mnemonic mapping
+            m = re.match(r"mapping (\w+)_mnemonic : (\w+) <-> string = {", line)
+            if m and m.group(2) in arg_types:
+                in_mnemonic = True
+            if in_mnemonic:
+                m = re.match(r"\s+(.*?)\s+<-> \"(\w+)\",?", line)
+                if line == "}":
+                    in_mnemonic = False
+                elif m:
+                    enum_value, mnemonic = m.groups()
+                    value = enum_value_map[enum_value]
+                    # convert mul_op to verilog struct
+                    # e.g. struct { high = false, signed_rs1 = true,  signed_rs2 = true  }
+                    # becomes {0, 1, 1}
+                    if enum_value.startswith("struct"):
+                        enum_value = "{" + ", ".join(value) + "}"
+                    op_values.append([mnemonic, enum_value, value])
+
+            # assembly mapping as backup for mnemonic
+            m = re.match(r"mapping clause assembly = (?P<insn>\w+)\s?\((?P<args>.*)\)", line)
+            if m and len(op_values) == 0:
+                in_assembly = True
+            if in_assembly:
+                m = re.match(r"\s+<-> (?P<mapping>.*?) \^ spc\(\)", line)
+                if m:
+                    known_funcs = {
+                        "width_mnemonic": ("logic [63:0]", [
+                            ("b", "1", "00"),
+                            ("h", "2", "01"),
+                            ("w", "4", "10"),
+                            ("d", "8", "11"),
+                        ]),
+                        "maybe_u": ("bit", [
+                            ("", "0", "0"),
+                            ("u", "1", "1"),
+                        ]),
+                    }
+                    mnemonic_parts: list[str | tuple[str, str]] = []
+                    mnemonic_keys: list[str] = []
+                    mnemonic_types: list[str] = []
+                    for part in m.group(1).split(" ^ "):
+                        if re.match(r"\"(\w+)\"", part):
+                            mnemonic_parts.append(part[1:-1])
+                        else:
+                            m = re.match(r"(\w+)\((\w+)\)", part)
+                            if m and m.group(1) in known_funcs:
+                                func, key = m.groups()
+                                mnemonic_type, mnemonic_part = known_funcs[func]
+                                mnemonic_parts.append(mnemonic_part)
+                                mnemonic_keys.append(key)
+                                mnemonic_types.append(mnemonic_type)
+                            else:
+                                raise NotImplementedError(f"assembly part {part}")
+                    for prod in product(*mnemonic_parts):
+                        mnemonic = ""
+                        args = []
+                        bits = []
+                        for val in prod:
+                            if isinstance(val, str):
+                                mnemonic += val
+                            else:
+                                mnem, arg, bit = val
+                                mnemonic += mnem
+                                args.append(arg)
+                                bits.append(bit)
+                        op_values.append((mnemonic, args, bits))
+                    op_name = mnemonic_keys
+                    op_type_enum = mnemonic_types
+                    op_value_switch = None
+                    in_assembly = False
 
     # write json
     if name:
