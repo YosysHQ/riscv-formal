@@ -19,6 +19,10 @@ def wrap(force: bool, cfg: Path):
 
     name: str = cfg_json.pop('name')
     insn_parts: list[tuple[str, int]] = cfg_json.pop('insn_parts')
+    extension: str = cfg_json.pop('extension', "I")
+    xlen_min: int = cfg_json.pop('xlen_min', 32)
+    xlen_max: int = cfg_json.pop('xlen_max', 128)
+    xlen: int = cfg_json.pop('xlen', None)
     inst_args: list[str] = cfg_json.pop('inst_args', None)
     wrap_x_in: bool = cfg_json.pop('wrap_x_in', False)
     wrap_x_out: bool = cfg_json.pop('wrap_x_out', False)
@@ -37,11 +41,21 @@ def wrap(force: bool, cfg: Path):
     opcode: str = cfg_json.pop('opcode')
     raw_code: list[str] = cfg_json.pop('raw_code', [])
     result: str = cfg_json.pop('result', None)
+    alt_add: str = cfg_json.pop('alt_add', None)
+    alt_sub: str = cfg_json.pop('alt_sub', None)
     spec_map: dict[str, str] = cfg_json.pop('spec_map', {})
 
     for key in cfg_json.keys():
-        click.echo(f"Unhandled config key {key!r}")
-    assert (len(cfg_json) == 0)
+        raise NotImplementedError(key)
+
+    # combined min/max
+    if xlen:
+        xlen_min = xlen
+        xlen_max = xlen
+
+    # check valid xlen
+    if XLEN < xlen_min or XLEN > xlen_max:
+        raise NotImplementedError(f"{XLEN} not in range ({xlen_min}, {xlen_max})")
 
     # get output file
     out_file = Path(f"{name}_wrapper.sv")
@@ -236,6 +250,16 @@ def wrap(force: bool, cfg: Path):
         instantiation += ");\n"
     else:
         instantiation = ""
+
+    # altops injection
+    if alt_add:
+        alt_mask = int(alt_add, base=16)
+        alt_op = "+"
+    elif alt_sub:
+        alt_mask = int(alt_sub, base=16)
+        alt_op = "-"
+    if alt_mask:
+        result = f"(rvfi_rs1_rdata {alt_op} rvfi_rs2_rdata) ^ 64'h{alt_mask:016x}"
 
     # raw code injection
     if raw_code:

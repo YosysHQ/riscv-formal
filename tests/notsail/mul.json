@@ -1,0 +1,85 @@
+{
+    "insn_parts": [
+        ["funct7", 7],
+        ["rs2", 5],
+        ["rs1", 5],
+        ["funct3", 3],
+        ["rd", 5],
+        ["opcode", 7]
+    ],
+    "extension": "M",
+    "xlen_max": 64,
+    "instructions": {
+        "mul": {
+            "funct7": "0000001",
+            "funct3": "000",
+            "alt_add": "0x2cdf52a55876063e"
+        },
+        "mulh": {
+            "funct7": "0000001",
+            "funct3": "001",
+            "alt_add": "0x15d01651f6583fb7"
+        },
+        "mulhsu": {
+            "funct7": "0000001",
+            "funct3": "010",
+            "alt_sub": "0xea3969edecfbe137"
+        },
+        "mulhu": {
+            "funct7": "0000001",
+            "funct3": "011",
+            "alt_add": "0xd13db50d949ce5e8"
+        },
+        "div": {
+            "funct7": "0000001",
+            "funct3": "100",
+            "alt_sub": "0x29bbf66f7f8529ec"
+        },
+        "divu": {
+            "funct7": "0000001",
+            "funct3": "101",
+            "alt_sub": "0x8c629acb10e8fd70"
+        },
+        "rem": {
+            "funct7": "0000001",
+            "funct3": "110",
+            "alt_sub": "0xf5b7d8538da68fa5"
+        },
+        "remu": {
+            "funct7": "0000001",
+            "funct3": "111",
+            "alt_sub": "0xbc4402413138d0e1"
+        },
+        "mulw": {
+            "funct7": "0000001",
+            "funct3": "000",
+            "alt_add": "0x2cdf52a55876063e",
+            "xlen_min": 64
+        },
+        "divw": {
+            "funct7": "0000001",
+            "funct3": "100",
+            "alt_sub": "0x29bbf66f7f8529ec",
+            "xlen_min": 64
+        },
+        "divuw": {
+            "funct7": "0000001",
+            "funct3": "101",
+            "alt_sub": "0x8c629acb10e8fd70",
+            "xlen_min": 64
+        },
+        "remw": {
+            "funct7": "0000001",
+            "funct3": "110",
+            "alt_sub": "0xf5b7d8538da68fa5",
+            "xlen_min": 64
+        },
+        "remuw": {
+            "funct7": "0000001",
+            "funct3": "111",
+            "alt_sub": "0xbc4402413138d0e1",
+            "xlen_min": 64
+        }
+    },
+    "opcode": "0110011"
+}
