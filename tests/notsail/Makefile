@@ -1,16 +1,17 @@
 PYTHON ?= python3
 SBY ?= sby
-INPUT ?= rtype.json
 INSN ?= add
 
 INSN_SV := $(INSN)_wrapper.sv
 
-insn_%.json: insn_config_generator.py $(INPUT)
-	$(PYTHON) $< $(INPUT) -f
+RISCV_ROOT ?= ../..
+# WRAPPER := insns.wrapper
+# %_wrapper.sv: insn_%.json $(RISCV_ROOT)/insns/wrapper.py
+# 	cd $(RISCV_ROOT) && $(PYTHON) -m $(WRAPPER) $(abspath $< $@) -f
 
-WRAPPER := ../sail/insn_wrapper.py
-%_wrapper.sv: insn_%.json $(WRAPPER)
-	$(PYTHON) $(WRAPPER) $< -f
+GENERATOR := insns.new_generate
+%_wrapper.sv: $(RISCV_ROOT)/insns/new_generate.py
+	cd $(RISCV_ROOT) && $(PYTHON) -m $(GENERATOR) $(abspath $@) $*
 
 .PHONY: insn_wrapper.sv
 insn_wrapper.sv: $(INSN_SV) Makefile
