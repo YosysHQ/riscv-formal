@@ -82,21 +82,27 @@ def generate(ilen: int, xlen: int, out_file: Path, insn: str):
     insns["or"] = insn_alu("or",   "0000000", "110", "rvfi_rs1_rdata | rvfi_rs2_rdata")
     insns["and"] = insn_alu("and",  "0000000", "111", "rvfi_rs1_rdata & rvfi_rs2_rdata")
 
+    insns["addw"] = insn_alu("addw", "0000000", "000", "rvfi_rs1_rdata[31:0] + rvfi_rs2_rdata[31:0]", wmode=True)
+    insns["subw"] = insn_alu("subw", "0100000", "000", "rvfi_rs1_rdata[31:0] - rvfi_rs2_rdata[31:0]", wmode=True)
+    insns["sllw"] = insn_alu("sllw", "0000000", "001", "rvfi_rs1_rdata[31:0] << shamt", shamt=True, wmode=True)
+    insns["srlw"] = insn_alu("srlw", "0000000", "101", "rvfi_rs1_rdata[31:0] >> shamt", shamt=True, wmode=True)
+    insns["sraw"] = insn_alu("sraw", "0100000", "101", "$signed(rvfi_rs1_rdata[31:0]) >>> shamt", shamt=True, wmode=True)
+
     if insn and insn not in insns:
         raise NotImplementedError(f"{insn} instruction")
 
-    with open(out_file, 'wt', encoding='utf-8') as f:
-        if insn:
-            instruction = insns[insn]
-            if out_file.suffix == ".json":
-                data = instruction.to_json(skip_empty=True, indent=2)
-            elif out_file.suffix in [".v", ".sv"]:
-                data = instruction.to_verilog(xlen, ilen)
-            else:
-                raise NotImplementedError(f"{out_file.suffix!r} not supported")
-            click.echo(data, f)
+    if insn:
+        instruction = insns[insn]
+        if out_file.suffix == ".json":
+            data = instruction.to_json(skip_empty=True, indent=2)
+        elif out_file.suffix in [".v", ".sv"]:
+            data = instruction.to_verilog(xlen, ilen)
         else:
-            json.dump(insns, f)
+            raise NotImplementedError(f"{out_file.suffix!r} not supported")
+    else:
+        data = json.dumps(insns)
+    with open(out_file, 'wt', encoding='utf-8') as f:
+        click.echo(data, f)
 
 
 if __name__ == "__main__":

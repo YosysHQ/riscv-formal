@@ -75,6 +75,9 @@ class Instruction:
             if maybe_reg in self.inst_args:
                 self._used_regs.append(maybe_reg)
 
+    def _config_widths(self):
+        self._result_width = self.sign_extend_from or self.zero_extend_from
+
     def _inject_altops(self):
         # altops injection
         if self.alt_add:
@@ -91,6 +94,7 @@ class Instruction:
     def __post_init__(self):
         self._process_insn_parts()
         self._config_used_regs()
+        self._config_widths()
         self._inject_altops()
 
     @classmethod
@@ -210,13 +214,20 @@ class Instruction:
             return ""
 
 
-    def _v_insn_map(self) -> str:
-        # combined instruction checking
-        insn_check = "// insn check\n"
+    def _v_insn_map(self, xlen: int) -> str:
+        # combined instruction mapping
+        insn_map = "// insn map\n"
+
+        # shamt
+        if self.shamt:
+            result_width = self._result_width or xlen
+            shift_width = (result_width-1).bit_length()
+            insn_map += f"wire [{shift_width-1}:0] shamt = rvfi_rs2_rdata[{shift_width-1}:0];\n"
+
         if isinstance(self.op_values, list):
             if isinstance(self.op_name, list):
                 for name, type_enum in zip(self.op_name, self.op_type_enum):
-                    insn_check += f"{type_enum} {name}_0;\n"
+                    insn_map += f"{type_enum} {name}_0;\n"
                 
                 op_value_keys = self.op_name
             else:
@@ -228,9 +239,9 @@ class Instruction:
                 case_switch = '{' + ', '.join([f"insn_{k}" for k in op_value_keys]) + '}'
             op_value_bits = sum([self._insn_part_dict[k] for k in op_value_keys])
             if len(self.op_values) == 1:
-                insn_check += f"wire illinsn = {case_switch} != {op_value_bits}'b {self.op_values[0][0]};\n"
+                insn_map += f"wire illinsn = {case_switch} != {op_value_bits}'b {self.op_values[0][0]};\n"
             else:
-                insn_check += textwrap.dedent(f"""\
+                insn_map += textwrap.dedent(f"""\
                     reg illinsn;
                     always @* begin
                         illinsn <= 0;
@@ -243,28 +254,28 @@ class Instruction:
                         var_name = '{' + ', '.join(f"{name}_0" for name in self.op_name) + '}'
                         value = ''.join(part_values)
                         enum = '{' + ', '.join(part_type_values) + '}'
-                        insn_check += f"        {op_value_bits}'b {value}: {var_name} <= {enum};\n"
+                        insn_map += f"        {op_value_bits}'b {value}: {var_name} <= {enum};\n"
                 else:
                     for mnemonic, enum, value in self.op_values:
                         # click.echo(f"{mnemonic} ", nl=False)
-                        insn_check += f"        {op_value_bits}'b {value}: {self.op_name}_0 <= {enum};\n"
+                        insn_map += f"        {op_value_bits}'b {value}: {self.op_name}_0 <= {enum};\n"
                 # click.echo("")
-                insn_check += textwrap.dedent(f"""\
+                insn_map += textwrap.dedent(f"""\
                             default: illinsn <= 1;
                         endcase
                     end
                 """)
         elif isinstance(self.op_values, dict):
-            insn_check += f"wire illinsn = "
+            insn_map += f"wire illinsn = "
             op_value_checks = []
             for key, bin in self.op_values.items():
                 op_value_bits = self._insn_part_dict[key]
                 op_value_checks.append(f"(insn_{key} != {op_value_bits}'b {bin})")
-            insn_check += " || ".join(op_value_checks) + ";"
+            insn_map += " || ".join(op_value_checks) + ";"
         else:
             raise NotImplementedError(type(self.op_values))
 
-        return insn_check
+        return insn_map
 
     def _v_instantiation(self, xlen) -> str:
         # wrapped checker
@@ -310,7 +321,7 @@ class Instruction:
         if self.raw_code:
             instantiation += "\n".join(self.raw_code) + "\n"
         if self.result:
-            instantiation += f"wire [{xlen-1}:0] result = {self.result};\n"
+            instantiation += f"wire [{(self._result_width or xlen)-1}:0] result = {self.result};\n"
 
         return instantiation
 
@@ -369,7 +380,7 @@ class Instruction:
         if reg_wrap: v_str += self._v_format_block(reg_wrap)
         extra_signals = self._v_extra_sigs()
         if extra_signals: v_str += self._v_format_block(extra_signals)
-        v_str += self._v_format_block(self._v_insn_map())
+        v_str += self._v_format_block(self._v_insn_map(xlen))
         v_str += self._v_format_block(self._v_instantiation(xlen))
         v_str += self._v_format_block(self._v_spec_mapping())
         v_str += "endmodule"

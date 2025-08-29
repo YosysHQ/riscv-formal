@@ -1,6 +1,7 @@
 PYTHON ?= python3
 SBY ?= sby
 INSN ?= add
+XLEN ?= 32
 
 INSN_SV := $(INSN)_wrapper.sv
 
@@ -10,8 +11,8 @@ RISCV_ROOT ?= ../..
 # 	cd $(RISCV_ROOT) && $(PYTHON) -m $(WRAPPER) $(abspath $< $@) -f
 
 GENERATOR := insns.new_generate
-%_wrapper.sv: $(RISCV_ROOT)/insns/new_generate.py
-	cd $(RISCV_ROOT) && $(PYTHON) -m $(GENERATOR) $(abspath $@) $*
+%_wrapper.sv: $(addprefix $(RISCV_ROOT)/insns/,new_generate.py model.py)
+	cd $(RISCV_ROOT) && $(PYTHON) -m $(GENERATOR) -x $(XLEN) $(abspath $@) $*
 
 .PHONY: insn_wrapper.sv
 insn_wrapper.sv: $(INSN_SV) Makefile

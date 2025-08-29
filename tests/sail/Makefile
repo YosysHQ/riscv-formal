@@ -36,7 +36,7 @@ model/%.json: model/riscv_insts_base_%.sail model/configure_from_sail.py
 
 RISCV_ROOT ?= ../..
 WRAPPER := insns.wrapper
-%_wrapper.sv: model/%.json $(RISCV_ROOT)/insns/wrapper.py
+%_wrapper.sv: model/%.json$(addprefix $(RISCV_ROOT)/insns/,wrapper.py model.py)
 	cd $(RISCV_ROOT) && $(PYTHON) -m $(WRAPPER) $(abspath $< $@) -f
 
 nerv_%: %_wrapper.sv generated_%.sv rvf_sail.sby
