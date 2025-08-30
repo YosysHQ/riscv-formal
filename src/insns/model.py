@@ -177,10 +177,12 @@ class Instruction(GenericChecker):
             result = self.result
 
         # raw code injection
-        if self.raw_code:
-            instantiation += "\n".join(self.raw_code) + "\n"
+        result_width = self._result_width or xlen
+        for code_line in self.raw_code:
+            code_line = code_line.replace("%RESULT_WIDTH%", str(result_width))
+            instantiation += code_line + "\n"
         if result:
-            instantiation += f"wire [{(self._result_width or xlen)-1}:0] result = {result};\n"
+            instantiation += f"wire [{result_width-1}:0] result = {result};\n"
 
         return instantiation
 

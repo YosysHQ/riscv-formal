@@ -14,6 +14,7 @@
 
 import json
 from pathlib import Path
+from textwrap import dedent
 import click
 
 from .model import Instruction, Instruction_format
@@ -175,6 +176,48 @@ def insn_shimm(insn, funct6, funct3, expr, wmode=False, uwmode=False, extension 
 
     return instr
 
+def insn_count(insn, funct5, trailing=False, pop=False, wmode=False, extension = "B"):
+    if pop and trailing:
+        raise NotImplementedError("Got both pop and trailing")
+    elif pop: # count all ones
+        result_body = """
+                    result = result + rvfi_rs1_rdata[i];"""
+    elif trailing: # count trailing zeros
+        result_body = """
+                    found = found | rvfi_rs1_rdata[i];
+                    result = result + !(rvfi_rs1_rdata[i] | found);"""
+    else: # count leading zeros
+        result_body = """
+                    if (rvfi_rs1_rdata[i] == 1'b1)
+                        result = 0;
+                    else
+                        result = result + 1;"""
+
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_I,
+        opcode = "0011011" if wmode else "0010011",
+        extension = extension, 
+        xlen_min = 64 if wmode else 32,
+        op_values = {
+            "imm12": "0110000" + funct5,
+            "funct3": "001",
+        },
+        raw_code = dedent(f"""\
+            integer i;
+            reg [%RESULT_WIDTH%-1:0] result;
+            reg found;
+
+            always @(rvfi_rs1_rdata)
+            begin
+                result = 0;
+                found = 0;
+                for (i=0; i<%RESULT_WIDTH%; i=i+1)
+                begin{result_body}
+                end
+            end""").splitlines()
+    )
+
 def insn_bit(insn, funct6, funct3, expr, imode=False, extension = "B"):
     index = "insn_shamt" if imode else "rvfi_rs2_rdata"
 
@@ -302,6 +345,9 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
 
     ## Zbb: Basic bit-manipulation
 
+    insns["clz"] =  insn_count("clz",   "00000", extension="Zbb")
+    insns["ctz"] =  insn_count("ctz",   "00001", trailing=True, extension="Zbb")
+    insns["cpop"] = insn_count("cpop",  "00010", pop=True, extension="Zbb")
     insns["max"] =  insn_alu("max",     "0000101", "110", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb")
     insns["maxu"] = insn_alu("maxu",    "0000101", "111", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb")
     insns["min"] =  insn_alu("min",     "0000101", "100", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb")
@@ -313,6 +359,10 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns["rol"] =  insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, extension="Zbb Zbkb")
     insns["ror"] =  insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, extension="Zbb Zbkb")
     insns["rori"] = insn_shimm("rori",  "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt))", extension="Zbb Zbkb")
+
+    insns["clzw"] =  insn_count("clzw",  "00000", wmode=True, extension = "Zbb")
+    insns["ctzw"] =  insn_count("ctzw",  "00001", trailing=True, wmode=True, extension = "Zbb")
+    insns["cpopw"] = insn_count("cpopw", "00010", pop=True, wmode=True, extension = "Zbb")
 
     insns["rolw"] =  insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
     insns["rorw"] =  insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
