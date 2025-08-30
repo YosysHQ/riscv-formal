@@ -20,11 +20,15 @@ class GenericChecker:
     def _v_format_block(self, s: str) -> str:
         return indent(s, '    ') + '\n'
 
+    def _v_checks(self, **kwargs) -> None:
+        pass
+
     def _v_body(self) -> str:
         # module body
         return self._v_format_block(self.body)
 
     def to_verilog(self, **kwargs) -> str:
+        self._v_checks(**kwargs)
         v_str = f"module {self._v_modname()} (\n{self._v_format_block(self._v_io())});\n\n"
         v_str += self._v_body(**kwargs)
         v_str += "endmodule"

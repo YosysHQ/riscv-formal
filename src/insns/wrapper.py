@@ -4,6 +4,7 @@ from pathlib import Path
 import click
 
 from .model import Instruction
+from .wrapped_model import WrappedInstruction
 
 @click.command()
 @click.option('-f', '--force', is_flag=True)
@@ -16,7 +17,14 @@ def wrap(force: bool, ilen: int, xlen: int, cfg: Path, out_file: Path = None):
     # load cfg
     click.echo(f"Loading from {cfg}")
     with open(cfg, 'r', encoding='utf-8') as f:
-        insn = Instruction.from_json(f.read())
+        cfg_content = f.read()
+
+    if "checker_module" in cfg_content:
+        insn_class = WrappedInstruction
+    else:
+        insn_class = Instruction
+
+    insn = insn_class.from_json(cfg_content)
 
     # get output file
     if out_file is None:

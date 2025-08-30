@@ -38,27 +38,14 @@ class Instruction(GenericChecker):
     sign_extend_from: Optional[int] = None
     zero_extend_from: Optional[int] = None
     
-    op_values: dict[str, str] | list[tuple[str, str | list[str], str | list[str]]] = field(default_factory=dict)
+    op_values: dict[str, str] = field(default_factory=dict)
     raw_code: list[str] = field(default_factory=list)
     spec_map: dict[str, str] = field(default_factory=dict)
     xlen_min: int = 32
     xlen_max: int = 128
 
-    # sail fields
     inst_args: Optional[list[str]] = None
-    wrap_x_in: Optional[bool] = None
-    wrap_x_out: Optional[bool] = None
-    wrap_pc: Optional[bool] = None
     wrap_next_pc: Optional[bool] = None
-    x_upper: Optional[int] = None
-    x_lower: Optional[int] = None
-    r_bits: Optional[int] = None
-    extra_sig1: list[tuple[str, str, str]] = field(default_factory=list)
-    extra_sig2: list[tuple[str, str, str]] = field(default_factory=list)
-    op_name: str | list[str] = "op"
-    op_type_enum: Optional[str | list[str]] = None
-    op_value_switch: Optional[str] = None
-    checker_module: Optional[str] = None
 
     def _process_insn_parts(self):
         self._insn_part_dict = dict(self.insn_parts)
@@ -150,65 +137,6 @@ class Instruction(GenericChecker):
 
         return insn_format
 
-    def _v_inst_check(self) -> None:
-        # check instance map
-        inst_args_avail = self._insn_part_keys + [self.op_name]
-        for inst_arg in self.inst_args:
-            for arg_part in inst_arg.split():
-                if arg_part not in inst_args_avail and not arg_part[0].isdigit():
-                    raise NotImplementedError()
-
-    def _v_reg_wrap(self, xlen: int) -> str:
-        # wrap registers
-        if self.x_upper and self.x_lower:
-            x_type = f"logic [{xlen-1}:0]"
-            x_range = f"[{self.x_upper}:{self.x_lower}]"
-            reg_wrap = "// register wrapping\n"
-            for x_inout, do_wrap in [("x_in", self.wrap_x_in), ("x_out", self.wrap_x_out)]:
-                if do_wrap:
-                    reg_wrap += f"{x_type} {x_inout}{x_range};\n"
-
-            # address fixing
-            localparams = []
-            x_assigns = []
-            #todo: multiple destination regs
-            result_decl = ""
-            for idx, used_reg in enumerate(self._used_regs, start=1):
-                raddr = f"{used_reg}_0"
-                localparams.append(f"{raddr} = {self.r_bits}'d{idx}")
-                if used_reg in self._maybe_sources and self.wrap_x_in:
-                    x_assigns.append(f"assign x_in[{raddr}] = rvfi_{used_reg}_rdata;")
-                if used_reg in self._maybe_dests and self.wrap_x_out:
-                    result_decl = f"wire [{xlen-1}:0] result = x_out[{raddr}];\n"
-            if localparams:
-                localparams = ", ".join(localparams)
-                reg_wrap += f"localparam {localparams};\n"
-            if x_assigns:
-                reg_wrap += "\n".join(x_assigns) + "\n"
-            reg_wrap += result_decl
-
-            if self.wrap_next_pc:
-                reg_wrap += f"wire [{xlen-1}:0] next_pc = rvfi_pc_rdata + 4;\n"
-            return reg_wrap
-        else:
-            return ""
-
-
-    def _v_extra_sigs(self) -> str:
-        # extra signals
-        if self.extra_sig1 or self.extra_sig2:
-            extra_signals = "// extra signals\n"
-            extra_signal_decls = self.extra_sig1 + self.extra_sig2
-            if isinstance(self.op_name, str):
-                op_default = self.op_values[0][1] if len(self.op_values) == 1 else None
-                extra_signal_decls.append((self.op_type_enum, f"{self.op_name}_0", op_default))
-            for t, n, v in extra_signal_decls:
-                extra_signals += f"{t} {n};\n" if v == None else f"{t} {n} = {v};\n"
-            return extra_signals
-        else:
-            return ""
-
-
     def _v_insn_map(self, xlen: int) -> str:
         # combined instruction mapping
         insn_map = "// insn map\n"
@@ -219,98 +147,17 @@ class Instruction(GenericChecker):
             shift_width = (result_width-1).bit_length()
             insn_map += f"wire [{shift_width-1}:0] shamt = rvfi_rs2_rdata[{shift_width-1}:0];\n"
 
-        if isinstance(self.op_values, list):
-            if isinstance(self.op_name, list):
-                for name, type_enum in zip(self.op_name, self.op_type_enum):
-                    insn_map += f"{type_enum} {name}_0;\n"
-                
-                op_value_keys = self.op_name
-            else:
-                op_value_keys = self.op_value_switch.split()
-
-            if len(op_value_keys) == 1:
-                case_switch = f"insn_{self.op_value_switch}"
-            else:
-                case_switch = '{' + ', '.join([f"insn_{k}" for k in op_value_keys]) + '}'
-            op_value_bits = sum([self._insn_part_dict[k] for k in op_value_keys])
-            if len(self.op_values) == 1:
-                insn_map += f"wire illinsn = {case_switch} != {op_value_bits}'b {self.op_values[0][0]};\n"
-            else:
-                insn_map += dedent(f"""\
-                    reg illinsn;
-                    always @* begin
-                        illinsn <= 0;
-                        case ({case_switch})
-                """)
-                # click.echo("Found instructions: ", nl=False)
-                if isinstance(self.op_name, list):
-                    for mnemonic, part_type_values, part_values in self.op_values:
-                        # click.echo(f"{mnemonic} ", nl=False)
-                        var_name = '{' + ', '.join(f"{name}_0" for name in self.op_name) + '}'
-                        value = ''.join(part_values)
-                        enum = '{' + ', '.join(part_type_values) + '}'
-                        insn_map += f"        {op_value_bits}'b {value}: {var_name} <= {enum};\n"
-                else:
-                    for mnemonic, enum, value in self.op_values:
-                        # click.echo(f"{mnemonic} ", nl=False)
-                        insn_map += f"        {op_value_bits}'b {value}: {self.op_name}_0 <= {enum};\n"
-                # click.echo("")
-                insn_map += dedent(f"""\
-                            default: illinsn <= 1;
-                        endcase
-                    end
-                """)
-        elif isinstance(self.op_values, dict):
-            insn_map += f"wire illinsn = "
-            op_value_checks = []
-            for key, bin in self.op_values.items():
-                op_value_bits = self._insn_part_dict[key]
-                op_value_checks.append(f"(insn_{key} != {op_value_bits}'b {bin})")
-            insn_map += " || ".join(op_value_checks) + ";"
-        else:
-            raise NotImplementedError(type(self.op_values))
+        insn_map += f"wire illinsn = "
+        op_value_checks = []
+        for key, bin in self.op_values.items():
+            op_value_bits = self._insn_part_dict[key]
+            op_value_checks.append(f"(insn_{key} != {op_value_bits}'b {bin})")
+        insn_map += " || ".join(op_value_checks) + ";"
 
         return insn_map
 
     def _v_instantiation(self, xlen) -> str:
-        # wrapped checker
-        if self.checker_module:
-            instantiation = f"// {self.name} instance\n"
-            checker_args: list[str] = []
-            for inst_arg in self.inst_args:
-                if (inst_arg in self._used_regs
-                    or isinstance(self.op_name, str) and inst_arg == self.op_name
-                    or isinstance(self.op_name, list) and inst_arg in self.op_name
-                    ):
-                    checker_arg = f"{inst_arg}_0"
-                elif " " in inst_arg:
-                    arg_parts = [k if k[0].isdigit() else f"insn_{k}" for k in inst_arg.split()]
-                    checker_arg = '{' + ', '.join(arg_parts) + '}'
-                else:
-                    checker_arg = f"insn_{inst_arg}"
-                if checker_arg: checker_args.append(checker_arg)
-            if self.wrap_pc:
-                checker_args.append(f"rvfi_pc_rdata")
-            if self.wrap_next_pc:
-                checker_args.append(f"next_pc")
-            if self.wrap_x_in:
-                for idx in range(self.x_lower, self.x_upper + 1):
-                    checker_args.append(f"x_in[{idx}]")
-            for _, extra_sig, _ in self.extra_sig1:
-                checker_args.append(extra_sig)
-            if self.wrap_x_out:
-                for idx in range(self.x_lower, self.x_upper + 1):
-                    checker_args.append(f"x_out[{idx}]")
-            if self.wrap_next_pc:
-                checker_args.append("spec_pc_wdata")
-            for _, extra_sig, _ in self.extra_sig2:
-                checker_args.append(extra_sig)
-
-            instantiation += f"{self.checker_module} wrapped_checker("
-            instantiation += ", ".join(checker_args)
-            instantiation += ");\n"
-        else:
-            instantiation = ""
+        instantiation = ""
 
         # raw code injection
         if self.raw_code:
@@ -363,19 +210,16 @@ class Instruction(GenericChecker):
 
         return spec_mapping
 
-    def _v_body(self, xlen: int, ilen: int):
+    def _v_checks(self, xlen: int, ilen: int) -> None:
+        super()._v_checks()
+        self._v_xlen_check(xlen)
+
+    def _v_body(self, xlen: int, ilen: int) -> str:
         v_str = self._v_format_block(self._v_insn_fmt(ilen))
-        reg_wrap = self._v_reg_wrap(xlen)
-        if reg_wrap: v_str += self._v_format_block(reg_wrap)
-        extra_signals = self._v_extra_sigs()
-        if extra_signals: v_str += self._v_format_block(extra_signals)
         v_str += self._v_format_block(self._v_insn_map(xlen))
         v_str += self._v_format_block(self._v_instantiation(xlen))
         v_str += self._v_format_block(self._v_spec_mapping())
         return v_str
 
-    def to_verilog(self, xlen: int = 32, ilen: int = 32) -> str:
-        self._v_xlen_check(xlen)
-        self._v_inst_check()
-        v_str = super().to_verilog(xlen=xlen, ilen=ilen)
-        return v_str
+    def to_verilog(self, xlen: int, ilen: int):
+        return super().to_verilog(xlen=xlen, ilen=ilen)
