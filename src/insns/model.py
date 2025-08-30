@@ -41,11 +41,16 @@ class Instruction(GenericChecker):
     op_values: dict[str, str] = field(default_factory=dict)
     raw_code: list[str] = field(default_factory=list)
     spec_map: dict[str, str] = field(default_factory=dict)
+    check_valid: list[str] = field(default_factory=list)
     xlen_min: int = 32
     xlen_max: int = 128
 
     inst_args: Optional[list[str]] = None
     wrap_next_pc: Optional[bool] = None
+
+    def _insn_fixup(self):
+        if isinstance(self.insn_parts, Instruction_format):
+            self.insn_parts = self.insn_parts.insn_parts
 
     def _process_insn_parts(self):
         self._insn_part_dict = dict(self.insn_parts)
@@ -71,6 +76,7 @@ class Instruction(GenericChecker):
                 self.__dict__[alt_var] = hex(alt_val)
 
     def __post_init__(self):
+        self._insn_fixup()
         self._process_insn_parts()
         self._config_used_regs()
         self._config_widths()
@@ -209,6 +215,8 @@ class Instruction(GenericChecker):
                     val = "rvfi_pc_rdata + 4"
                 elif spec_sig == "valid":
                     val = f"rvfi_valid && !illinsn && insn_opcode == 7'b {self.opcode}"
+                    for check in self.check_valid:
+                        val += f" && ({check})"
                 else:
                     val = "0"
                 self.spec_map[spec_sig] = val
