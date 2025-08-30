@@ -1,40 +1,32 @@
-"""configure_from_sail"""
+"""configure instruction checker from sail"""
 from itertools import product
 import json
 from pathlib import Path
 import re
 import click
 
+from .wrapped_model import WrappedInstruction
+
 @click.command()
 @click.argument('sail', type=click.Path(exists=True, path_type=Path))
-def configure(sail: Path):
+@click.argument('out_file', type=click.Path(path_type=Path))
+def configure(sail: Path, out_file: Path):
     """main function"""
 
-    name: str = ""
-    insn_parts: list[tuple[str, int]] = []
-    inst_args: list[str] = []
-    wrap_x_in: bool = False
-    wrap_x_out: bool = False
-    wrap_pc: bool = False
-    wrap_next_pc: bool = False
-    x_upper: int = 31
-    x_lower: int = 1
-    r_bits: int = 5
-    extra_sig1: list[tuple[str, str, str]] = [
-        ("t_ExecutionResult", "sail_return_2", None),
-    ]
-    extra_sig2: list[tuple[str, str, str]] = [
-        ("bit", "sail_have_exception_2", None),
-        ("t_exception", "sail_current_exception_2", None),
-    ]
-    op_name: str = ""
-    op_type_enum: str = ""
-    # [mnemonic, enum_value, op_value]
-    op_values: list[tuple[str, str, str]] = []
-    op_value_switch: str = ""
-    checker_module: str = ""
-    opcode: str = ""
-    
+    insn = WrappedInstruction(
+        name = "",
+        insn_parts = [],
+        opcode = "",
+        checker_module = "",   
+        extra_sig1 = [
+            ("t_ExecutionResult", "sail_return_2", None),
+        ],
+        extra_sig2 = [
+            ("bit", "sail_have_exception_2", None),
+            ("t_exception", "sail_current_exception_2", None),
+        ],
+    )
+
     # load sail
     arg_types: list[str]
     maybe_args: list[str]
@@ -52,8 +44,8 @@ def configure(sail: Path):
             m = re.match(r"union clause instruction = (?P<insn>\w+) : \((?P<arg_types>.*)\)", line)
             if m:
                 d = m.groupdict()
-                name = d['insn'].lower()
-                checker_module = f"execute_{d['insn']}"
+                insn.name = d['insn'].lower()
+                insn.checker_module = f"execute_{d['insn']}"
                 arg_types = d['arg_types'].split(", ")
 
             # op encoding
@@ -62,7 +54,7 @@ def configure(sail: Path):
                 d = m.groupdict()
                 in_encdec_op = True
                 op_type = d['op_type']
-                op_type_enum = f"t_{op_type}"
+                insn.op_type_enum = f"t_{op_type}"
                 op_bits = int(d['op_bits'])
             if in_encdec_op:
                 m = re.match(r"\s+(.*?)\s+<-> 0b([01]+),?", line)
@@ -75,7 +67,7 @@ def configure(sail: Path):
             # instruction decoding
             m = re.match(r"mapping clause encdec = (?P<insn>\w+)\((?P<args>.*)\)(?:$|\s+<-> (?P<mapping>.*))", line)
             mapping = None
-            if m and m.group(1) == name.upper():
+            if m and m.group(1) == insn.name.upper():
                 maybe_args = []
                 for maybe_arg in m.group(2).split(", "):
                     if "@" in maybe_arg:
@@ -94,10 +86,10 @@ def configure(sail: Path):
                 parts = mapping.split(" @ ")
                 maybe_opcode = parts[-1]
                 if maybe_opcode.startswith("0b") and len(maybe_opcode) == 9:
-                    opcode = maybe_opcode[2:]
+                    insn.opcode = maybe_opcode[2:]
                     parts[-1] = "opcode"
                 part_idx = 0
-                has_insn_parts = len(insn_parts) != 0
+                has_insn_parts = len(insn.insn_parts) != 0
                 binary_parts: list[str] = []
                 binary_part_names: list[str] = []
                 for part in parts:
@@ -120,7 +112,7 @@ def configure(sail: Path):
                             part_size = op_bits
                             part = f"part_{part_idx}"
                             part_idx += 1
-                            op_value_switch = part
+                            insn.op_value_switch = part
                         else:
                             m = re.match(r"((\w+?)_?[\d_]+) : bits\((\d+)\)", part)
                             part, arg_name, part_size = m.groups()
@@ -137,24 +129,25 @@ def configure(sail: Path):
                         elif arg_type == "word_width":
                             part_size = 2
                         else:
-                            assert False
+                            raise NotImplementedError(arg_type)
                     insn_part = (part, part_size)
                     if has_insn_parts:
-                        assert insn_part in insn_parts
+                        if insn_part not in insn.insn_parts:
+                            raise NotImplementedError
                     else:
-                        insn_parts.append(insn_part)
+                        insn.insn_parts.append(insn_part)
                 if binary_parts:
                     # assumes the op is the last arg
                     enum_value_map[maybe_args[-1]] = "_".join(binary_parts)
-                    op_value_switch = " ".join(binary_part_names)
+                    insn.op_value_switch = " ".join(binary_part_names)
                     op_type = arg_types[-1]
-                    op_type_enum = f"t_{op_type}"
+                    insn.op_type_enum = f"t_{op_type}"
 
             # instruction args
             m = re.match(r"function clause execute \((?P<insn>\w+)\s?\((?P<args>.*)\)\) = {", line)
-            if m and m.group(1) == name.upper():
+            if m and m.group(1) == insn.name.upper():
                 d = m.groupdict()
-                inst_args = []
+                insn.inst_args = []
                 for idx, inst_arg in enumerate(d['args'].split(', ')):
                     if inst_arg in arg_remap:
                         inst_arg = []
@@ -165,18 +158,18 @@ def configure(sail: Path):
                             inst_arg.append(inst_arg_part)
                         inst_arg = " ".join(inst_arg)
                     elif op_type == arg_types[idx]:
-                            op_name = inst_arg
-                    inst_args.append(inst_arg)
-                wrap_x_in = "rs2" in inst_args or "rs1" in inst_args
-                wrap_x_out = "rd" in inst_args
+                            insn.op_name = inst_arg
+                    insn.inst_args.append(inst_arg)
+                insn.wrap_x_in = "rs2" in insn.inst_args or "rs1" in insn.inst_args
+                insn.wrap_x_out = "rd" in insn.inst_args
 
             # jump check
             ml = re.findall(r"\b(jump_to|set_next_pc|get_next_pc)\(.*\)", line)
             if ml:
-                wrap_next_pc = True
+                insn.wrap_next_pc = True
             ml = re.findall(r"\b(PC\b|get_arch_pc\(\))", line)
             if ml:
-                wrap_pc = True
+                insn.wrap_pc = True
 
             # mnemonic mapping
             m = re.match(r"mapping (\w+)_mnemonic : (\w+) <-> string = {", line)
@@ -194,11 +187,11 @@ def configure(sail: Path):
                     # becomes {0, 1, 1}
                     if enum_value.startswith("struct"):
                         enum_value = "{" + ", ".join(value) + "}"
-                    op_values.append([mnemonic, enum_value, value])
+                    insn.op_values.append([mnemonic, enum_value, value])
 
             # assembly mapping as backup for mnemonic
             m = re.match(r"mapping clause assembly = (?P<insn>\w+)\s?\((?P<args>.*)\)", line)
-            if m and len(op_values) == 0:
+            if m and len(insn.op_values) == 0:
                 in_assembly = True
             if in_assembly:
                 m = re.match(r"\s+<-> (?P<mapping>.*?) \^ spc\(\)", line)
@@ -243,36 +236,16 @@ def configure(sail: Path):
                                 mnemonic += mnem
                                 args.append(arg)
                                 bits.append(bit)
-                        op_values.append((mnemonic, args, bits))
-                    op_name = mnemonic_keys
-                    op_type_enum = mnemonic_types
-                    op_value_switch = None
+                        insn.op_values.append((mnemonic, args, bits))
+                    insn.op_name = mnemonic_keys
+                    insn.op_type_enum = mnemonic_types
+                    insn.op_value_switch = None
                     in_assembly = False
 
     # write json
-    if name:
-        click.echo(f"Writing to {name}.json")
-        with open(f"{name}.json", 'wt', encoding='utf-8') as f:
-            json.dump({
-                "name": name,
-                "insn_parts": insn_parts,
-                "inst_args": inst_args,
-                "wrap_x_in": wrap_x_in,
-                "wrap_x_out": wrap_x_out,
-                "wrap_pc": wrap_pc,
-                "wrap_next_pc": wrap_next_pc,
-                "x_upper": x_upper,
-                "x_lower": x_lower,
-                "r_bits": r_bits,
-                "extra_sig1": extra_sig1,
-                "extra_sig2": extra_sig2,
-                "op_name": op_name,
-                "op_type_enum": op_type_enum,
-                "op_values": op_values,
-                "op_value_switch": op_value_switch,
-                "checker_module": checker_module,
-                "opcode": opcode,
-            }, f, indent=4)
+    click.echo(f"Writing to {out_file}")
+    with open(out_file, 'wt', encoding='utf-8') as f:
+        json.dump(insn, f, indent=4)
 
 if __name__ == "__main__":
     configure()

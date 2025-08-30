@@ -12,13 +12,14 @@ class WrappedInstruction(Instruction):
     wrap_x_out: bool = False
     wrap_pc: bool = False
     wrap_next_pc: bool = False
-    x_upper: int = 32
+    x_upper: int = 31
     x_lower: int = 1
     r_bits: int = 5
 
     extra_sig1: list[tuple[str, str, str]] = field(default_factory=list)
     extra_sig2: list[tuple[str, str, str]] = field(default_factory=list)
     op_name: str | list[str] = "op"
+    # [mnemonic, enum_value, op_value]
     op_values: list[tuple[str, str | list[str], str | list[str]]] = field(default_factory=list)
 
     op_type_enum: Optional[str | list[str]] = None

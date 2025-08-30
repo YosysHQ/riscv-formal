@@ -31,10 +31,11 @@ generated_%.sv: $(RV_PROJECT) model/riscv_insts_base_%.sail Makefile
 	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $< model/$*.sail_project -o $(basename $@) riscv_$*
 	$(PYTHON) sv_rewriter.py -f $@
 
-model/%.json: model/riscv_insts_base_%.sail model/configure_from_sail.py
-	cd model && $(PYTHON) configure_from_sail.py $(<F)
-
 RISCV_ROOT ?= ../..
+CONFIGURATOR := src.insns.sail_configurator
+model/%.json: model/riscv_insts_base_%.sail $(addprefix $(RISCV_ROOT)/src/insns/,sail_configurator.py wrapped_model.py)
+	cd $(RISCV_ROOT) && $(PYTHON) -m $(CONFIGURATOR) $(abspath $< $@)
+
 WRAPPER := src.insns.wrapper
 %_wrapper.sv: model/%.json $(addprefix $(RISCV_ROOT)/src/insns/,wrapper.py wrapped_model.py)
 	cd $(RISCV_ROOT) && $(PYTHON) -m $(WRAPPER) $(abspath $< $@) -f
