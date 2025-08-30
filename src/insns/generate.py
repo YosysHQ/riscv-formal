@@ -18,7 +18,6 @@ import click
 
 from .model import Instruction, Instruction_format
 
-
 FORMAT_R = Instruction_format(
     "R-type", [
         ("funct7", 7),
@@ -51,6 +50,69 @@ FORMAT_I_SHIFT = Instruction_format(
     ]
 )
 
+FORMAT_S = Instruction_format(
+    "S-type", [
+        ("imm11_5", 7),
+        ("rs2", 5),
+        ("rs1", 5),
+        ("funct3", 3),
+        ("imm4_0", 5),
+        ("opcode", 7),
+    ]
+)
+
+FORMAT_B = Instruction_format(
+    "B-type", [
+        ("imm12", 1),
+        ("imm10_5", 6),
+        ("rs2", 5),
+        ("rs1", 5),
+        ("funct3", 3),
+        ("imm4_1", 4),
+        ("imm11", 1),
+        ("opcode", 7),
+    ]
+)
+
+FORMAT_U = Instruction_format(
+    "U-type", [
+        ("imm20", 20),
+        ("rd", 5),
+        ("opcode", 7),
+    ]
+)
+
+FORMAT_J = Instruction_format(
+    "J-type", [
+        ("imm20", 1),
+        ("imm10_1", 10),
+        ("imm11", 1),
+        ("imm19_12", 8),
+        ("rd", 5),
+        ("opcode", 7),
+    ]
+)
+
+
+def insn_b(insn, funct3, expr, extension = "I"):
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_B,
+        opcode = "1100011",
+        extension = extension,
+        op_values = {
+            "funct3": funct3,
+        },
+        raw_code = [
+            "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({{insn_imm12, insn_imm11, insn_imm10_5, insn_imm4_1, 1'b0}});",
+            f"wire cond = {expr};",
+            f"wire [`RISCV_FORMAL_XLEN-1:0] next_pc = cond ? rvfi_pc_rdata + insn_imm : rvfi_pc_rdata + 4;",
+        ],
+        spec_map = {
+            "pc_wdata": "next_pc",
+            "trap": "next_pc[1:0] != 0"
+        }
+    )
 
 def insn_alu(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=False, wmode=False, uwmode=False, extension="I"):
     if wmode and uwmode:
@@ -113,6 +175,30 @@ def insn_shimm(insn, funct6, funct3, expr, wmode=False, uwmode=False, extension 
 
     return instr
 
+def insn_bit(insn, funct6, funct3, expr, imode=False, extension = "B"):
+    index = "insn_shamt" if imode else "rvfi_rs2_rdata"
+
+    instr = Instruction(
+        name = insn,
+        insn_parts = FORMAT_I_SHIFT if imode else FORMAT_R,
+        opcode = "0010011" if imode else "0110011",
+        result = expr,
+        extension = extension,
+        op_values = {"funct3": funct3},
+        xlen_max = 64 if imode else 128,
+        raw_code = [
+            f"wire [`RISCV_FORMAL_XLEN-1:0] index = {index} & (`RISCV_FORMAL_XLEN - 1);"
+        ],
+    )
+
+    if imode:
+        instr.op_values["funct6"] = funct6
+        instr.check_valid.append("!insn_shamt[5] || `RISCV_FORMAL_XLEN == 64")
+    else:
+        instr.op_values["funct7"] = funct6 + "0"
+
+    return instr
+
 @click.command()
 @click.option('-i', '--ilen', type=int, default=32)
 @click.option('-x', '--xlen', type=int, default=32)
@@ -123,6 +209,13 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns: dict[str, Instruction] = {}
 
     # Base Integer ISA (I)
+
+    insns["beq"] =  insn_b("beq",  "000", "rvfi_rs1_rdata == rvfi_rs2_rdata")
+    insns["bne"] =  insn_b("bne",  "001", "rvfi_rs1_rdata != rvfi_rs2_rdata")
+    insns["blt"] =  insn_b("blt",  "100", "$signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)")
+    insns["bge"] =  insn_b("bge",  "101", "$signed(rvfi_rs1_rdata) >= $signed(rvfi_rs2_rdata)")
+    insns["bltu"] = insn_b("bltu", "110", "rvfi_rs1_rdata < rvfi_rs2_rdata")
+    insns["bgeu"] = insn_b("bgeu", "111", "rvfi_rs1_rdata >= rvfi_rs2_rdata")
 
     insns["add"] =  insn_alu("add",  "0000000", "000", "rvfi_rs1_rdata + rvfi_rs2_rdata")
     insns["sub"] =  insn_alu("sub",  "0100000", "000", "rvfi_rs1_rdata - rvfi_rs2_rdata")
@@ -224,6 +317,17 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns["rolw"] =  insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
     insns["rorw"] =  insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
     insns["roriw"] = insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rvfi_rs1_rdata[31:0] << (32 - insn_shamt))", wmode=True, extension="Zbb Zbkb")
+
+    ## Zbs: Single-bit instructions
+
+    insns["bclr"] =   insn_bit("bclr",    "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", extension = "Zbs")
+    insns["bclri"] =  insn_bit("bclri",   "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", imode=True, extension = "Zbs")
+    insns["bext"] =   insn_bit("bext",    "010010", "101", "(rvfi_rs1_rdata >> index) & 1",  extension = "Zbs")
+    insns["bexti"] =  insn_bit("bexti",   "010010", "101", "(rvfi_rs1_rdata >> index) & 1",  imode=True, extension = "Zbs")
+    insns["binv"] =   insn_bit("binv",    "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  extension = "Zbs")
+    insns["binvi"] =  insn_bit("binvi",   "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  imode=True, extension = "Zbs")
+    insns["bset"] =   insn_bit("bset",    "001010", "001", "rvfi_rs1_rdata | (1 << index)",  extension = "Zbs")
+    insns["bseti"] =  insn_bit("bseti",   "001010", "001", "rvfi_rs1_rdata | (1 << index)",  imode=True, extension = "Zbs")
 
     if insn and insn not in insns:
         raise NotImplementedError(f"{insn} instruction")
