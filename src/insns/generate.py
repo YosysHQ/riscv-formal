@@ -61,9 +61,10 @@ def insn_alu(mnemonic, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=F
 @click.command()
 @click.option('-i', '--ilen', type=int, default=32)
 @click.option('-x', '--xlen', type=int, default=32)
+@click.option('--format', type=click.Choice(['json', 'verilog', 'auto']), default='auto')
 @click.argument('out_file', type=click.Path(path_type=Path))
 @click.argument('insn', type=str, default = "")
-def generate(ilen: int, xlen: int, out_file: Path, insn: str):
+def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns: dict[str, Instruction] = {}
 
     insns["add"] = insn_alu("add",  "0000000", "000", "rvfi_rs1_rdata + rvfi_rs2_rdata")
@@ -87,10 +88,16 @@ def generate(ilen: int, xlen: int, out_file: Path, insn: str):
         raise NotImplementedError(f"{insn} instruction")
 
     if insn:
+        if format == "auto":
+            if out_file.suffix == ".json":
+                format = "json"
+            elif out_file.suffix in [".v", ".sv"]:
+                format = "verilog"
+        
         instruction = insns[insn]
-        if out_file.suffix == ".json":
+        if format == "json":
             data = instruction.to_json(skip_empty=True, indent=2)
-        elif out_file.suffix in [".v", ".sv"]:
+        elif format == "verilog":
             data = instruction.to_verilog(xlen, ilen)
         else:
             raise NotImplementedError(f"{out_file.suffix!r} not supported")
