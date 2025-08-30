@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
-
 from dataclasses import dataclass, field, asdict
 import json
-import textwrap
+from textwrap import dedent
 from typing import Optional, Any
 
 import json_fix
+
+from ..checks import GenericChecker
 
 def skip_empty_factory(mapping: list[tuple[str, Any]]) -> dict:
     """dictionary factory which skips empty values"""
@@ -25,9 +25,8 @@ class Instruction_format:
     insn_parts: list[tuple[str, int]] = field(default_factory=list)
 
 
-@dataclass
-class Instruction:
-    name: str
+@dataclass(kw_only=True)
+class Instruction(GenericChecker):
     insn_parts: list[tuple[str, int]]
     opcode: str
     
@@ -116,13 +115,9 @@ class Instruction:
         if xlen < self.xlen_min or xlen > self.xlen_max:
             raise NotImplementedError(f"{xlen} not in range ({self.xlen_min}, {self.xlen_max})")
 
-    def _v_modname(self) -> str:
-        # module name
-        return f"rvfi_insn_{self.name}"
-
     def _v_io(self) -> str:
         # rvfi_insn_check.sv compliant io
-        return textwrap.dedent("""\
+        return dedent("""\
             input                                 rvfi_valid,
             input  [`RISCV_FORMAL_ILEN   - 1 : 0] rvfi_insn,
             input  [`RISCV_FORMAL_XLEN   - 1 : 0] rvfi_pc_rdata,
@@ -241,7 +236,7 @@ class Instruction:
             if len(self.op_values) == 1:
                 insn_map += f"wire illinsn = {case_switch} != {op_value_bits}'b {self.op_values[0][0]};\n"
             else:
-                insn_map += textwrap.dedent(f"""\
+                insn_map += dedent(f"""\
                     reg illinsn;
                     always @* begin
                         illinsn <= 0;
@@ -260,7 +255,7 @@ class Instruction:
                         # click.echo(f"{mnemonic} ", nl=False)
                         insn_map += f"        {op_value_bits}'b {value}: {self.op_name}_0 <= {enum};\n"
                 # click.echo("")
-                insn_map += textwrap.dedent(f"""\
+                insn_map += dedent(f"""\
                             default: illinsn <= 1;
                         endcase
                     end
@@ -368,14 +363,8 @@ class Instruction:
 
         return spec_mapping
 
-    def _v_format_block(self, s: str) -> str:
-        return textwrap.indent(s, '    ') + '\n'
-
-    def to_verilog(self, xlen: int = 32, ilen: int = 32) -> str:
-        self._v_xlen_check(xlen)
-        self._v_inst_check()
-        v_str = f"module {self._v_modname()} (\n{self._v_format_block(self._v_io())});\n\n"
-        v_str += self._v_format_block(self._v_insn_fmt(ilen))
+    def _v_body(self, xlen: int, ilen: int):
+        v_str = self._v_format_block(self._v_insn_fmt(ilen))
         reg_wrap = self._v_reg_wrap(xlen)
         if reg_wrap: v_str += self._v_format_block(reg_wrap)
         extra_signals = self._v_extra_sigs()
@@ -383,5 +372,10 @@ class Instruction:
         v_str += self._v_format_block(self._v_insn_map(xlen))
         v_str += self._v_format_block(self._v_instantiation(xlen))
         v_str += self._v_format_block(self._v_spec_mapping())
-        v_str += "endmodule"
+        return v_str
+
+    def to_verilog(self, xlen: int = 32, ilen: int = 32) -> str:
+        self._v_xlen_check(xlen)
+        self._v_inst_check()
+        v_str = super().to_verilog(xlen=xlen, ilen=ilen)
         return v_str

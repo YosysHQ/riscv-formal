@@ -34,19 +34,20 @@ FORMAT_R = Instruction_format(
 def insn_alu(mnemonic, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=False, wmode=False, uwmode=False, extension="I"):
     if wmode and uwmode:
         raise NotImplementedError("Got both uwmode and umode")
-    elif uwmode:
-        result_range = "`RISCV_FORMAL_XLEN-1:0"
-        opcode = "0111011"
-    elif wmode:
-        result_range = "31:0"
+    elif uwmode or wmode:
         opcode = "0111011"
     else:
-        result_range = "`RISCV_FORMAL_XLEN-1:0"
         opcode = "0110011"
 
     insn = Instruction(
-        mnemonic, FORMAT_R.insn_parts, opcode,
-        expr, extension, alt_add, alt_sub, shamt,
+        name=mnemonic,
+        insn_parts=FORMAT_R.insn_parts,
+        opcode=opcode,
+        result=expr,
+        extension=extension,
+        alt_add=alt_add,
+        alt_sub=alt_sub,
+        shamt=shamt,
         sign_extend_from = 32 if wmode else None,
         xlen_min = 64 if wmode or uwmode else 32,
         op_values = {
@@ -54,12 +55,6 @@ def insn_alu(mnemonic, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=F
             "funct3": funct3,
         },
     )
-
-    # if shamt:
-        # if wmode:
-            # "wire [4:0] shamt = rvfi_rs2_rdata[4:0];"
-        # else:
-            # "wire [5:0] shamt = `RISCV_FORMAL_XLEN == 64 ? rvfi_rs2_rdata[5:0] : rvfi_rs2_rdata[4:0];"
 
     return insn
 

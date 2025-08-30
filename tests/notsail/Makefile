@@ -10,8 +10,8 @@ RISCV_ROOT ?= ../..
 # %_wrapper.sv: insn_%.json $(RISCV_ROOT)/insns/wrapper.py
 # 	cd $(RISCV_ROOT) && $(PYTHON) -m $(WRAPPER) $(abspath $< $@) -f
 
-GENERATOR := insns.new_generate
-%_wrapper.sv: $(addprefix $(RISCV_ROOT)/insns/,new_generate.py model.py)
+GENERATOR := src.insns.new_generate
+%_wrapper.sv: $(addprefix $(RISCV_ROOT)/src/insns/,new_generate.py model.py)
 	cd $(RISCV_ROOT) && $(PYTHON) -m $(GENERATOR) -x $(XLEN) $(abspath $@) $*
 
 .PHONY: insn_wrapper.sv
