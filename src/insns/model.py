@@ -64,24 +64,17 @@ class Instruction(GenericChecker):
     def _config_widths(self):
         self._result_width = self.sign_extend_from or self.zero_extend_from
 
-    def _inject_altops(self):
-        # altops injection
-        if self.alt_add:
-            alt_mask = int(self.alt_add, base=16)
-            alt_op = "+"
-        elif self.alt_sub:
-            alt_mask = int(self.alt_sub, base=16)
-            alt_op = "-"
-        else:
-            alt_mask = None
-        if alt_mask:
-            self.result = f"(rvfi_rs1_rdata {alt_op} rvfi_rs2_rdata) ^ 64'h{alt_mask:016x}"
+    def _altops_fixup(self):
+        for alt_var in ["alt_add", "alt_sub"]:
+            alt_val = self.__getattribute__(alt_var)
+            if isinstance(alt_val, int):
+                self.__dict__[alt_var] = hex(alt_val)
 
     def __post_init__(self):
         self._process_insn_parts()
         self._config_used_regs()
         self._config_widths()
-        self._inject_altops()
+        self._altops_fixup()
 
     @classmethod
     def from_json(cls, s: str):
@@ -159,11 +152,29 @@ class Instruction(GenericChecker):
     def _v_instantiation(self, xlen) -> str:
         instantiation = ""
 
+        # altops injection
+        if self.alt_add:
+            alt_mask = self.alt_add
+            alt_op = "+"
+        elif self.alt_sub:
+            alt_mask = self.alt_sub
+            alt_op = "-"
+        else:
+            alt_mask = None
+
+        if isinstance(alt_mask, str):
+            alt_mask = int(alt_mask, 16)
+
+        if alt_mask:
+            result = f"(rvfi_rs1_rdata {alt_op} rvfi_rs2_rdata) ^ 64'h{alt_mask:016x}"
+        else:
+            result = self.result
+
         # raw code injection
         if self.raw_code:
             instantiation += "\n".join(self.raw_code) + "\n"
-        if self.result:
-            instantiation += f"wire [{(self._result_width or xlen)-1}:0] result = {self.result};\n"
+        if result:
+            instantiation += f"wire [{(self._result_width or xlen)-1}:0] result = {result};\n"
 
         return instantiation
 
