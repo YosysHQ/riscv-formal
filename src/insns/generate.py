@@ -30,24 +30,41 @@ FORMAT_R = Instruction_format(
     ]
 )
 
+FORMAT_I = Instruction_format(
+    "I-type", [
+        ("imm12", 12),
+        ("rs1", 5),
+        ("funct3", 3),
+        ("rd", 5),
+        ("opcode", 7),
+    ]
+)
 
-def insn_alu(mnemonic, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=False, wmode=False, uwmode=False, extension="I"):
+FORMAT_I_SHIFT = Instruction_format(
+    "I-type (shift variation)", [
+        ("funct6", 6),
+        ("shamt", 6),
+        ("rs1", 5),
+        ("funct3", 3),
+        ("rd", 5),
+        ("opcode", 7),
+    ]
+)
+
+
+def insn_alu(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=False, wmode=False, uwmode=False, extension="I"):
     if wmode and uwmode:
         raise NotImplementedError("Got both uwmode and umode")
-    elif uwmode or wmode:
-        opcode = "0111011"
-    else:
-        opcode = "0110011"
 
-    insn = Instruction(
-        name=mnemonic,
-        insn_parts=FORMAT_R.insn_parts,
-        opcode=opcode,
-        result=expr,
-        extension=extension,
-        alt_add=alt_add,
-        alt_sub=alt_sub,
-        shamt=shamt,
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_R,
+        opcode = "0111011" if uwmode or wmode else "0110011",
+        result = expr,
+        extension = extension,
+        alt_add = alt_add,
+        alt_sub = alt_sub,
+        shamt = shamt,
         sign_extend_from = 32 if wmode else None,
         xlen_min = 64 if wmode or uwmode else 32,
         op_values = {
@@ -56,7 +73,45 @@ def insn_alu(mnemonic, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=F
         },
     )
 
-    return insn
+def insn_imm(insn, funct3, expr, wmode=False, extension = "I"):
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_I,
+        opcode = "0011011" if wmode else "0010011",
+        result = expr,
+        extension = extension,
+        sign_extend_from = 32 if wmode else None,
+        xlen_min = 64 if wmode else 32,
+        op_values = {
+            "funct3": funct3,
+        },
+        raw_code = ["wire [`RISCV_FORMAL_XLEN - 1 : 0] insn_imm = $signed(insn_imm12);"]
+    )
+
+def insn_shimm(insn, funct6, funct3, expr, wmode=False, uwmode=False, extension = "I"):
+    if wmode and uwmode:
+        raise NotImplementedError("Got both uwmode and umode")
+
+    instr = Instruction(
+        name = insn,
+        insn_parts = FORMAT_I_SHIFT,
+        opcode = "0011011" if wmode or uwmode else "0010011",
+        result = expr,
+        extension = extension,
+        sign_extend_from = 32 if wmode else None,
+        xlen_min = 64 if wmode else 32,
+        op_values = {
+          "funct6": funct6,
+          "funct3": funct3,
+        },
+    )
+
+    if wmode:
+        instr.check_valid.append("!insn_shamt[5]")
+    elif not uwmode:
+        instr.check_valid.append("!insn_shamt[5] || `RISCV_FORMAL_XLEN == 64")
+
+    return instr
 
 @click.command()
 @click.option('-i', '--ilen', type=int, default=32)
@@ -79,6 +134,23 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns["sra"] =  insn_alu("sra",  "0100000", "101", "$signed(rvfi_rs1_rdata) >>> shamt", shamt=True)
     insns["or"] =   insn_alu("or",   "0000000", "110", "rvfi_rs1_rdata | rvfi_rs2_rdata")
     insns["and"] =  insn_alu("and",  "0000000", "111", "rvfi_rs1_rdata & rvfi_rs2_rdata")
+
+    insns["addi"] =  insn_imm("addi",  "000", "rvfi_rs1_rdata + insn_imm")
+    insns["slti"] =  insn_imm("slti",  "010", "$signed(rvfi_rs1_rdata) < $signed(insn_imm)")
+    insns["sltiu"] = insn_imm("sltiu", "011", "rvfi_rs1_rdata < insn_imm")
+    insns["xori"] =  insn_imm("xori",  "100", "rvfi_rs1_rdata ^ insn_imm")
+    insns["ori"] =   insn_imm("ori",   "110", "rvfi_rs1_rdata | insn_imm")
+    insns["andi"] =  insn_imm("andi",  "111", "rvfi_rs1_rdata & insn_imm")
+
+    insns["slli"] = insn_shimm("slli", "000000", "001", "rvfi_rs1_rdata << insn_shamt")
+    insns["srli"] = insn_shimm("srli", "000000", "101", "rvfi_rs1_rdata >> insn_shamt")
+    insns["srai"] = insn_shimm("srai", "010000", "101", "$signed(rvfi_rs1_rdata) >>> insn_shamt")
+
+    insns["addiw"] = insn_imm("addiw",  "000", "rvfi_rs1_rdata[31:0] + insn_imm[31:0]", wmode=True)
+
+    insns["slliw"] = insn_shimm("slliw", "000000", "001", "rvfi_rs1_rdata[31:0] << insn_shamt", wmode=True)
+    insns["srliw"] = insn_shimm("srliw", "000000", "101", "rvfi_rs1_rdata[31:0] >> insn_shamt", wmode=True)
+    insns["sraiw"] = insn_shimm("sraiw", "010000", "101", "$signed(rvfi_rs1_rdata[31:0]) >>> insn_shamt", wmode=True)
 
     insns["addw"] = insn_alu("addw", "0000000", "000", "rvfi_rs1_rdata[31:0] + rvfi_rs2_rdata[31:0]", wmode=True)
     insns["subw"] = insn_alu("subw", "0100000", "000", "rvfi_rs1_rdata[31:0] - rvfi_rs2_rdata[31:0]", wmode=True)
@@ -133,7 +205,7 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns["sh1add_uw"] = insn_alu("sh1add_uw",   "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 1)",   uwmode=True, extension="Zba")
     insns["sh2add_uw"] = insn_alu("sh2add_uw",   "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 2)",   uwmode=True, extension="Zba")
     insns["sh3add_uw"] = insn_alu("sh3add_uw",   "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 3)",   uwmode=True, extension="Zba")
-    # insns["slli_uw"] =   insn_shimm("slli_uw",   "000010",  "001", "rvfi_rs1_rdata[31:0] << insn_shamt",             uwmode=True, extension="Zba")
+    insns["slli_uw"] =   insn_shimm("slli_uw",   "000010",  "001", "rvfi_rs1_rdata[31:0] << insn_shamt",             uwmode=True, extension="Zba")
 
     ## Zbb: Basic bit-manipulation
 
@@ -147,9 +219,11 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns["xnor"] = insn_alu("xnor",    "0100000", "100", "~(rvfi_rs1_rdata ^ rvfi_rs2_rdata)", extension="Zbb Zbkb")
     insns["rol"] =  insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, extension="Zbb Zbkb")
     insns["ror"] =  insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, extension="Zbb Zbkb")
+    insns["rori"] = insn_shimm("rori",  "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt))", extension="Zbb Zbkb")
 
-    insns["rolw"] = insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
-    insns["rorw"] = insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
+    insns["rolw"] =  insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
+    insns["rorw"] =  insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
+    insns["roriw"] = insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rvfi_rs1_rdata[31:0] << (32 - insn_shamt))", wmode=True, extension="Zbb Zbkb")
 
     if insn and insn not in insns:
         raise NotImplementedError(f"{insn} instruction")
