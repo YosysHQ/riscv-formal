@@ -155,7 +155,7 @@ class Instruction(GenericChecker):
 
         return insn_map
 
-    def _v_instantiation(self, xlen) -> str:
+    def _v_instantiation(self, xlen: int) -> str:
         instantiation = ""
 
         # altops injection
@@ -186,7 +186,7 @@ class Instruction(GenericChecker):
 
         return instantiation
 
-    def _v_spec_mapping(self) -> str:
+    def _v_spec_mapping(self, xlen: int) -> str:
         # map spec values
         spec_mapping = "// spec mapping\n"
         spec_sigs = [
@@ -209,14 +209,25 @@ class Instruction(GenericChecker):
         for used_reg in self._used_regs:
             self.spec_map[f"{used_reg}_addr"] = f"insn_{used_reg}"
             if used_reg in self._maybe_dests:
-                self.spec_map[f"{used_reg}_wdata"] = f"spec_{used_reg}_addr ? result : 0"
+                extend_from = self.sign_extend_from or self.zero_extend_from or 0
+                if extend_from:
+                    funct = "signed" if self.sign_extend_from else "unsigned"
+                    result = f"${funct}(result[0+:{extend_from}])"
+                else:
+                    result = "result"
+                self.spec_map[f"{used_reg}_wdata"] = f"spec_{used_reg}_addr ? {result} : 0"
 
         for spec_sig in spec_sigs:
             if spec_sig not in self.spec_map:
                 if spec_sig == "pc_wdata":
                     val = "rvfi_pc_rdata + 4"
                 elif spec_sig == "valid":
-                    val = f"rvfi_valid && !illinsn && insn_opcode == 7'b {self.opcode}"
+                    try:
+                        int(self.opcode, 2)
+                        opcode = f"7'b {self.opcode}"
+                    except ValueError:
+                        opcode = self.opcode
+                    val = f"rvfi_valid && !illinsn && insn_opcode == {opcode}"
                     for check in self.check_valid:
                         val += f" && ({check})"
                 else:
@@ -239,7 +250,7 @@ class Instruction(GenericChecker):
         v_str = self._v_format_block(self._v_insn_fmt(ilen))
         v_str += self._v_format_block(self._v_insn_map(xlen))
         v_str += self._v_format_block(self._v_instantiation(xlen))
-        v_str += self._v_format_block(self._v_spec_mapping())
+        v_str += self._v_format_block(self._v_spec_mapping(xlen))
         return v_str
 
     def to_verilog(self, xlen: int, ilen: int):

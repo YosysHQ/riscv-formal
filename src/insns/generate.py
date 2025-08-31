@@ -218,6 +218,22 @@ def insn_count(insn, funct5, trailing=False, pop=False, wmode=False, extension =
             end""").splitlines()
     )
 
+def insn_ext(insn, funct5, signed=False, bmode=False, extension = "B"):
+    extend_from = 8 if bmode else 16
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_I,
+        opcode = "0010011" if signed else "{3'b 011, `RISCV_FORMAL_XLEN != 32, 3'b 011}",
+        result = "rvfi_rs1_rdata",
+        extension = extension,
+        sign_extend_from = extend_from if signed else None,
+        zero_extend_from = extend_from if not signed else None,
+        op_values = {
+            "imm12": ("0110000" if signed else "0000100") + funct5,
+            "funct3": "001" if  signed else "100",
+        }
+    )
+
 def insn_bit(insn, funct6, funct3, expr, imode=False, extension = "B"):
     index = "insn_shamt" if imode else "rvfi_rs2_rdata"
 
@@ -345,13 +361,16 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
 
     ## Zbb: Basic bit-manipulation
 
-    insns["clz"] =  insn_count("clz",   "00000", extension="Zbb")
-    insns["ctz"] =  insn_count("ctz",   "00001", trailing=True, extension="Zbb")
-    insns["cpop"] = insn_count("cpop",  "00010", pop=True, extension="Zbb")
-    insns["max"] =  insn_alu("max",     "0000101", "110", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb")
-    insns["maxu"] = insn_alu("maxu",    "0000101", "111", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb")
-    insns["min"] =  insn_alu("min",     "0000101", "100", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb")
-    insns["minu"] = insn_alu("minu",    "0000101", "101", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb")
+    insns["clz"] =    insn_count("clz",   "00000", extension="Zbb")
+    insns["ctz"] =    insn_count("ctz",   "00001", trailing=True, extension="Zbb")
+    insns["cpop"] =   insn_count("cpop",  "00010", pop=True, extension="Zbb")
+    insns["max"] =    insn_alu("max",     "0000101", "110", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb")
+    insns["maxu"] =   insn_alu("maxu",    "0000101", "111", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb")
+    insns["min"] =    insn_alu("min",     "0000101", "100", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb")
+    insns["minu"] =   insn_alu("minu",    "0000101", "101", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb")
+    insns["sext_b"] = insn_ext("sext_b",  "00100", signed=True, bmode=True, extension = "Zbb")
+    insns["sext_h"] = insn_ext("sext_h",  "00101", signed=True, extension = "Zbb")
+    insns["zext_h"] = insn_ext("zext_h",  "00000", extension = "Zbb")
 
     insns["andn"] = insn_alu("andn",    "0100000", "111", "rvfi_rs1_rdata & ~rvfi_rs2_rdata",   extension="Zbb Zbkb")
     insns["orn"] =  insn_alu("orn",     "0100000", "110", "rvfi_rs1_rdata | ~rvfi_rs2_rdata",   extension="Zbb Zbkb")
