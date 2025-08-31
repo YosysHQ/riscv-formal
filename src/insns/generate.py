@@ -15,6 +15,7 @@
 import json
 from pathlib import Path
 from textwrap import dedent
+from typing import Optional
 import click
 
 from .model import Instruction, Instruction_format
@@ -200,7 +201,7 @@ def insn_count(insn, funct5, trailing=False, pop=False, wmode=False, extension =
         extension = extension, 
         xlen_min = 64 if wmode else 32,
         op_values = {
-            "imm12": "0110000" + funct5,
+            "imm12": "0110000_" + funct5,
             "funct3": "001",
         },
         raw_code = dedent(f"""\
@@ -229,9 +230,9 @@ def insn_ext(insn, funct5, signed=False, bmode=False, extension = "B"):
         sign_extend_from = extend_from if signed else None,
         zero_extend_from = extend_from if not signed else None,
         op_values = {
-            "imm12": ("0110000" if signed else "0000100") + funct5,
+            "imm12": ("0110000_" if signed else "0000100_") + funct5,
             "funct3": "001" if  signed else "100",
-        }
+        },
     )
 
 def insn_bit(insn, funct6, funct3, expr, imode=False, extension = "B"):
@@ -257,6 +258,89 @@ def insn_bit(insn, funct6, funct3, expr, imode=False, extension = "B"):
         instr.op_values["funct7"] = funct6 + "0"
 
     return instr
+
+def insn_bytes(insn, funct12, funct3, expr, bitwise=False, extension = "B"):
+    if bitwise:
+        loop_int = "integer i, j"
+        inner_loop = f"""
+                    for (j=0; j<8; j=j+1)
+                    begin
+                        result[i*8+j] = {expr};
+                    end"""
+    else:
+        loop_int = "integer i"
+        inner_loop = f"""
+                    result[i*8+:8] = {expr};"""
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_I,
+        opcode = "0010011",
+        extension = extension,
+        op_values = {
+            "imm12": funct12,
+            "funct3": funct3,
+        },
+        raw_code = dedent(f"""\
+            reg [%RESULT_WIDTH%-1:0] result;
+            {loop_int};
+            localparam integer nbytes = %RESULT_WIDTH% / 8;
+            always @(rvfi_rs1_rdata)
+            begin
+                result = 0;
+                for (i=0; i<nbytes; i=i+1)
+                begin{inner_loop}
+                end
+            end""").splitlines()
+    )
+
+def insn_pack(insn="pack", funct3="100", result_width: Optional[int] = None, signed=False, extension = "B"):
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_R,
+        opcode = "0111011" if signed else "0110011",
+        extension = extension,
+        raw_code = ["localparam INPUT_WIDTH = %RESULT_WIDTH%/2;"],
+        result = f"{{rvfi_rs2_rdata[0+:INPUT_WIDTH], rvfi_rs1_rdata[0+:INPUT_WIDTH]}}",
+        sign_extend_from = result_width if signed else None,
+        zero_extend_from = result_width if not signed else None,
+        op_values = {
+            "funct7": "0000100",
+            "funct3": funct3,
+        },
+    )
+
+def insn_zip(insn, funct3, unzip=False, extension = "B"):
+    if unzip:
+        inner_loop = """
+                    result[i] = rvfi_rs1_rdata[2*i];
+                    result[i + %RESULT_WIDTH%/2] = rvfi_rs1_rdata[2*i + 1];"""
+    else:
+        inner_loop = """
+                    result[2*i] = rvfi_rs1_rdata[i];
+                    result[2*i + 1] = rvfi_rs1_rdata[i + %RESULT_WIDTH%/2];"""
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_I,
+        opcode = "0010011",
+        extension = extension,
+        op_values = {
+            "imm12": "0000100_01111",
+            "funct3": funct3,
+        },
+        xlen_max = 32,
+        raw_code = dedent(f"""\
+            reg [%RESULT_WIDTH%-1:0] result;
+            integer i;
+
+            always @(rvfi_rs1_rdata)
+            begin
+                result = 0;
+                for (i=0; i<(%RESULT_WIDTH%/2); i=i+1)
+                begin{inner_loop}
+                end
+            end
+            """).splitlines()
+    )
 
 @click.command()
 @click.option('-i', '--ilen', type=int, default=32)
@@ -368,9 +452,10 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns["maxu"] =   insn_alu("maxu",    "0000101", "111", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb")
     insns["min"] =    insn_alu("min",     "0000101", "100", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb")
     insns["minu"] =   insn_alu("minu",    "0000101", "101", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb")
-    insns["sext_b"] = insn_ext("sext_b",  "00100", signed=True, bmode=True, extension = "Zbb")
-    insns["sext_h"] = insn_ext("sext_h",  "00101", signed=True, extension = "Zbb")
-    insns["zext_h"] = insn_ext("zext_h",  "00000", extension = "Zbb")
+    insns["sext_b"] = insn_ext("sext_b",  "00100", signed=True, bmode=True, extension="Zbb")
+    insns["sext_h"] = insn_ext("sext_h",  "00101", signed=True, extension="Zbb")
+    insns["zext_h"] = insn_ext("zext_h",  "00000", extension="Zbb")
+    insns["orc_b"] =  insn_bytes("orc_b", "12'b 0010100_00111", "101", "{8{|rvfi_rs1_rdata[i*8+:8]}}", extension="Zbb")
 
     insns["andn"] = insn_alu("andn",    "0100000", "111", "rvfi_rs1_rdata & ~rvfi_rs2_rdata",   extension="Zbb Zbkb")
     insns["orn"] =  insn_alu("orn",     "0100000", "110", "rvfi_rs1_rdata | ~rvfi_rs2_rdata",   extension="Zbb Zbkb")
@@ -378,6 +463,13 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns["rol"] =  insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, extension="Zbb Zbkb")
     insns["ror"] =  insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, extension="Zbb Zbkb")
     insns["rori"] = insn_shimm("rori",  "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt))", extension="Zbb Zbkb")
+    insns["rev8"] = insn_bytes("rev8",  "{6'b 011010, `RISCV_FORMAL_XLEN == 64, 5'b 11000}", "101", "rvfi_rs1_rdata[((nbytes-i)*8)-1-:8]", extension="Zbb Zbkb")
+
+    insns["pack"] =  insn_pack(extension = "Zbkb")
+    insns["packh"] = insn_pack("packh", "111", result_width=16, extension = "Zbkb")
+    insns["brev8"] = insn_bytes("brev8", "12'b 0110100_00111", "101", "rvfi_rs1_rdata[(i+1)*8-(j+1)]", bitwise=True, extension="Zbkb")
+    insns["zip"] =   insn_zip("zip",   "001", extension = "Zbkb")
+    insns["unzip"] = insn_zip("unzip", "101", unzip=True, extension = "Zbkb")
 
     insns["clzw"] =  insn_count("clzw",  "00000", wmode=True, extension = "Zbb")
     insns["ctzw"] =  insn_count("ctzw",  "00001", trailing=True, wmode=True, extension = "Zbb")
@@ -386,6 +478,8 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns["rolw"] =  insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
     insns["rorw"] =  insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
     insns["roriw"] = insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rvfi_rs1_rdata[31:0] << (32 - insn_shamt))", wmode=True, extension="Zbb Zbkb")
+
+    insns["packw"] = insn_pack("packw", "100", result_width=32, signed=True, extension = "Zbkb")
 
     ## Zbs: Single-bit instructions
 

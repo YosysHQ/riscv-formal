@@ -150,7 +150,12 @@ class Instruction(GenericChecker):
         op_value_checks = []
         for key, bin in self.op_values.items():
             op_value_bits = self._insn_part_dict[key]
-            op_value_checks.append(f"(insn_{key} != {op_value_bits}'b {bin})")
+            try:
+                int(bin, 2)
+                bin_str = f"{op_value_bits}'b {bin}"
+            except ValueError:
+                bin_str = bin
+            op_value_checks.append(f"(insn_{key} != {bin_str})")
         insn_map += " || ".join(op_value_checks) + ";"
 
         return insn_map
