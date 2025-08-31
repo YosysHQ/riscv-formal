@@ -342,6 +342,63 @@ def insn_zip(insn, funct3, unzip=False, extension = "B"):
             """).splitlines()
     )
 
+def insn_clmul(insn, funct3, expr, index1=False, extension = "B"):
+    if index1:
+        i_first = "1"
+        i_last = "%RESULT_WIDTH%+1"
+    else:
+        i_first = "0"
+        i_last = "%RESULT_WIDTH%"
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_R,
+        opcode = "0110011",
+        extension = extension,
+        op_values = {
+            "funct7": "0000101",
+            "funct3": funct3,
+        },
+        raw_code = dedent(f"""\
+            reg [%RESULT_WIDTH%-1:0] result;
+            integer i;
+
+            always @(rvfi_rs1_rdata, rvfi_rs2_rdata)
+            begin
+                result = 0;
+                for (i={i_first}; i<{i_last}; i=i+1)
+                begin
+                    if ((rvfi_rs2_rdata >> i) & 1)
+                        result = result ^ ({expr});
+                    else
+                        result = result;
+                end
+            end""").splitlines()
+    )
+
+def insn_xperm(insn, funct3, width, extension = "zbkx"):
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_R,
+        opcode = "0110011",
+        extension = extension,
+        op_values = {
+            "funct7": "0010100",
+            "funct3": funct3,
+        },
+        raw_code = dedent(f"""\
+            reg [%RESULT_WIDTH%-1:0] result;
+            integer i;
+
+            always @(rvfi_rs1_rdata, rvfi_rs2_rdata)
+            begin
+                result = 0;
+                for (i=0; i<%RESULT_WIDTH%; i=i+{width})
+                begin
+                    result[i+:{width}] = (rvfi_rs1_rdata >> rvfi_rs2_rdata[i+:{width}]) & {{{width}{{1'b1}}}};
+                end
+            end""").splitlines()
+    )
+
 @click.command()
 @click.option('-i', '--ilen', type=int, default=32)
 @click.option('-x', '--xlen', type=int, default=32)
@@ -481,6 +538,13 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
 
     insns["packw"] = insn_pack("packw", "100", result_width=32, signed=True, extension = "Zbkb")
 
+    ## Zbc: Carry-less multiplication
+
+    insns["clmul"] =  insn_clmul("clmul",  "001", "rvfi_rs1_rdata << i", extension="Zbc Zbkc")
+    insns["clmulh"] = insn_clmul("clmulh", "011", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i)", index1=True, extension="Zbc Zbkc")
+
+    insns["clmulr"] = insn_clmul("clmulr", "010", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i - 1)", extension="Zbc")
+
     ## Zbs: Single-bit instructions
 
     insns["bclr"] =   insn_bit("bclr",    "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", extension = "Zbs")
@@ -491,6 +555,11 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns["binvi"] =  insn_bit("binvi",   "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  imode=True, extension = "Zbs")
     insns["bset"] =   insn_bit("bset",    "001010", "001", "rvfi_rs1_rdata | (1 << index)",  extension = "Zbs")
     insns["bseti"] =  insn_bit("bseti",   "001010", "001", "rvfi_rs1_rdata | (1 << index)",  imode=True, extension = "Zbs")
+
+    ## Zbkx: Crossbar permutations
+
+    insns["xperm4"] = insn_xperm("xperm4", "010", 4)
+    insns["xperm8"] = insn_xperm("xperm8", "100", 8)
 
     if insn and insn not in insns:
         raise NotImplementedError(f"{insn} instruction")
