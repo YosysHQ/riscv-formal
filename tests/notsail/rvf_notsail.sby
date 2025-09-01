@@ -52,6 +52,7 @@ nerv:
 `define NERV_RVFI
 `define NERV_FAULT
 `define RISCV_FORMAL_ALIGNED_MEM
+`define RISCV_FORMAL_MEM_FAULT
 --
 picorv:
 `define RISCV_FORMAL_CHECK_CYCLE 20

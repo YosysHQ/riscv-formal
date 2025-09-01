@@ -29,7 +29,10 @@ class Instruction_format:
 class Instruction(GenericChecker):
     insn_parts: list[tuple[str, int]]
     opcode: str
-    
+
+    mem_addr: Optional[str] = None
+    mem_bytes: Optional[int] = None
+    mem_wdata: Optional[str] = None
     result: Optional[str] = None
     extension: Optional[str] = None
     alt_add: Optional[str] = None
@@ -162,6 +165,29 @@ class Instruction(GenericChecker):
 
     def _v_instantiation(self, xlen: int) -> str:
         instantiation = ""
+        result_width = self._result_width or xlen
+
+        # memory alignment
+        if self.mem_addr:
+            instantiation += "`ifdef RISCV_FORMAL_ALIGNED_MEM\n"
+            instantiation += f"wire [{xlen-1}:0] addr = {self.mem_addr};\n"
+            instantiation += f"wire [{xlen-1}:0] spec_addr = addr & ~({xlen}/8-1);\n"
+            instantiation += f"wire [{int(xlen/8)-1}:0] spec_mem_mask = ((1 << {self.mem_bytes})-1) << (addr-spec_addr);\n"
+            instantiation += f"wire trap = (addr & ({self.mem_bytes}-1)) != 0;\n"
+            if self.mem_wdata:
+                instantiation += f"wire [{xlen-1}:0] mem_wdata = {self.mem_wdata} << (8*(addr-spec_addr));\n"
+            else:
+                instantiation += f"wire [{result_width-1}:0] mem_rdata = rvfi_mem_rdata >> (8*(addr-spec_addr));\n"
+            instantiation += "`else\n"
+            instantiation += f"wire [{xlen-1}:0] addr = {self.mem_addr};\n"
+            instantiation += f"wire [{xlen-1}:0] spec_addr = addr;\n"
+            instantiation += f"wire [{int(xlen/8)-1}:0] spec_mem_mask = ((1 << {self.mem_bytes})-1);\n"
+            instantiation += f"wire trap = 0;\n"
+            if self.mem_wdata:
+                instantiation += f"wire [{self.mem_bytes*8-1}:0] mem_wdata = {self.mem_wdata};\n"
+            else:
+                instantiation += f"wire [{result_width-1}:0] mem_rdata = rvfi_mem_rdata;\n"
+            instantiation += "`endif\n"
 
         # altops injection
         if self.alt_add:
@@ -182,7 +208,6 @@ class Instruction(GenericChecker):
             result = self.result
 
         # raw code injection
-        result_width = self._result_width or xlen
         for code_line in self.raw_code:
             code_line = code_line.replace("%RESULT_WIDTH%", str(result_width))
             instantiation += code_line + "\n"
@@ -235,6 +260,16 @@ class Instruction(GenericChecker):
                     val = f"rvfi_valid && !illinsn && insn_opcode == {opcode}"
                     for check in self.check_valid:
                         val += f" && ({check})"
+                elif spec_sig == "mem_addr" and self.mem_addr:
+                    val = "spec_addr"
+                elif spec_sig == "trap" and self.mem_addr:
+                    val = "trap"
+                elif spec_sig == "mem_rmask" and self.mem_addr and not self.mem_wdata:
+                    val = "spec_mem_mask"
+                elif spec_sig == "mem_wmask" and self.mem_wdata:
+                    val = "spec_mem_mask"
+                elif spec_sig == "mem_wdata" and self.mem_wdata:
+                    val = "mem_wdata"
                 else:
                     val = "0"
                 self.spec_map[spec_sig] = val

@@ -116,6 +116,38 @@ def insn_b(insn, funct3, expr, extension = "I"):
         }
     )
 
+def insn_l(insn, funct3, numbytes, signext, extension = "I"):
+    result_width = numbytes*8
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_I,
+        opcode = "0000011",
+        mem_addr = "rvfi_rs1_rdata + insn_imm",
+        mem_bytes = numbytes,
+        result = "mem_rdata",
+        extension = extension,
+        op_values = { "funct3": funct3 },
+        raw_code = ["wire [`RISCV_FORMAL_XLEN - 1 : 0] insn_imm = $signed(insn_imm12);"],
+        sign_extend_from = result_width if signext else None,
+        zero_extend_from = result_width if not signext else None,
+        xlen_min = max(32, result_width if signext else result_width*2),
+    )
+
+def insn_s(insn, funct3, numbytes, extension = "I"):
+    result_width = numbytes*8
+    return Instruction(
+        name = insn,
+        insn_parts = FORMAT_S,
+        opcode = "0100011",
+        mem_addr = "rvfi_rs1_rdata + insn_imm",
+        mem_bytes = numbytes,
+        mem_wdata = "rvfi_rs2_rdata",
+        extension = extension,
+        op_values = { "funct3": funct3 },
+        raw_code = ["wire [`RISCV_FORMAL_XLEN - 1 : 0] insn_imm = $signed({insn_imm11_5, insn_imm4_0});"],
+        xlen_min = max(32, result_width),
+    )
+
 def insn_alu(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=False, wmode=False, uwmode=False, extension="I"):
     if wmode and uwmode:
         raise NotImplementedError("Got both uwmode and umode")
@@ -416,6 +448,19 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     insns["bge"] =  insn_b("bge",  "101", "$signed(rvfi_rs1_rdata) >= $signed(rvfi_rs2_rdata)")
     insns["bltu"] = insn_b("bltu", "110", "rvfi_rs1_rdata < rvfi_rs2_rdata")
     insns["bgeu"] = insn_b("bgeu", "111", "rvfi_rs1_rdata >= rvfi_rs2_rdata")
+
+    insns["lb"] =  insn_l("lb",  "000",  1, True)
+    insns["lh"] =  insn_l("lh",  "001",  2, True)
+    insns["lw"] =  insn_l("lw",  "010",  4, True)
+    insns["lbu"] = insn_l("lbu", "100",  1, False)
+    insns["lhu"] = insn_l("lhu", "101",  2, False)
+    insns["lwu"] = insn_l("lwu", "110",  4, False)
+    insns["ld"] =  insn_l("ld",  "011",  8, True)
+
+    insns["sb"] =  insn_s("sb",  "000", 1)
+    insns["sh"] =  insn_s("sh",  "001", 2)
+    insns["sw"] =  insn_s("sw",  "010", 4)
+    insns["sd"] =  insn_s("sd",  "011", 8)
 
     insns["add"] =  insn_alu("add",  "0000000", "000", "rvfi_rs1_rdata + rvfi_rs2_rdata")
     insns["sub"] =  insn_alu("sub",  "0100000", "000", "rvfi_rs1_rdata - rvfi_rs2_rdata")
