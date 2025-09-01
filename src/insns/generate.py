@@ -105,15 +105,8 @@ def insn_b(insn, funct3, expr, extension = "I"):
         op_values = {
             "funct3": funct3,
         },
-        raw_code = [
-            "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({{insn_imm12, insn_imm11, insn_imm10_5, insn_imm4_1, 1'b0}});",
-            f"wire cond = {expr};",
-            f"wire [`RISCV_FORMAL_XLEN-1:0] next_pc = cond ? rvfi_pc_rdata + insn_imm : rvfi_pc_rdata + 4;",
-        ],
-        spec_map = {
-            "pc_wdata": "next_pc",
-            "trap": "next_pc[1:0] != 0"
-        }
+        next_pc = f"{expr} ? rvfi_pc_rdata + insn_imm : rvfi_pc_rdata + 4",
+        raw_code = [ "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({insn_imm12, insn_imm11, insn_imm10_5, insn_imm4_1, 1'b0});" ],
     )
 
 def insn_l(insn, funct3, numbytes, signext, extension = "I"):
@@ -454,27 +447,13 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
     )
     insns["jal"] = Instruction(
         name = "jal", insn_parts = FORMAT_J, opcode = "1101111", extension = "I",
-        result = "rvfi_pc_rdata + 4",
-        raw_code = [
-            "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({insn_imm20, insn_imm19_12, insn_imm11, insn_imm10_1, 1'b0});",
-            "wire [`RISCV_FORMAL_XLEN-1:0] next_pc = rvfi_pc_rdata + insn_imm;",
-        ],
-        spec_map = {
-            "pc_wdata": "next_pc",
-            "trap": "next_pc[1:0] != 0"
-        }
+        result = "rvfi_pc_rdata + 4", next_pc = "rvfi_pc_rdata + insn_imm",
+        raw_code = [ "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({insn_imm20, insn_imm19_12, insn_imm11, insn_imm10_1, 1'b0});" ],
     )
     insns["jalr"] = Instruction(
         name = "jalr", insn_parts = FORMAT_I, opcode = "1100111", extension = "I", op_values = { "funct3": "000" },
-        result = "rvfi_pc_rdata + 4",
-        raw_code = [
-            "wire [`RISCV_FORMAL_XLEN-1 : 0] insn_imm = $signed(insn_imm12);",
-            "wire [`RISCV_FORMAL_XLEN-1:0] next_pc = (rvfi_rs1_rdata + insn_imm) & ~1;",
-        ],
-        spec_map = {
-            "pc_wdata": "next_pc",
-            "trap": "next_pc[1:0] != 0"
-        }
+        result = "rvfi_pc_rdata + 4", next_pc = "(rvfi_rs1_rdata + insn_imm) & ~1",
+        raw_code = [ "wire [`RISCV_FORMAL_XLEN-1 : 0] insn_imm = $signed(insn_imm12);" ],
     )
 
     insns["beq"] =  insn_b("beq",  "000", "rvfi_rs1_rdata == rvfi_rs2_rdata")

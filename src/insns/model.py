@@ -34,6 +34,7 @@ class Instruction(GenericChecker):
     mem_bytes: Optional[int] = None
     mem_wdata: Optional[str] = None
     result: Optional[str] = None
+    next_pc: Optional[str] = None
     extension: Optional[str] = None
     alt_add: Optional[str] = None
     alt_sub: Optional[str] = None
@@ -216,6 +217,8 @@ class Instruction(GenericChecker):
             instantiation += code_line + "\n"
         if result:
             instantiation += f"wire [{result_width-1}:0] result = {result};\n"
+        if self.next_pc:
+            instantiation += f"wire [{xlen-1}:0] next_pc = {self.next_pc};\n"
 
         return instantiation
 
@@ -253,7 +256,10 @@ class Instruction(GenericChecker):
         for spec_sig in spec_sigs:
             if spec_sig not in self.spec_map:
                 if spec_sig == "pc_wdata":
-                    val = "rvfi_pc_rdata + 4"
+                    if self.next_pc:
+                        val = "next_pc"
+                    else:
+                        val = "rvfi_pc_rdata + 4"
                 elif spec_sig == "valid":
                     try:
                         int(self.opcode, 2)
@@ -263,10 +269,15 @@ class Instruction(GenericChecker):
                     val = f"rvfi_valid && !illinsn && insn_opcode == {opcode}"
                     for check in self.check_valid:
                         val += f" && ({check})"
+                elif spec_sig == "trap":
+                    if self.mem_addr:
+                        val = "trap"
+                    elif self.next_pc:
+                        val = "next_pc[1:0] != 0"
+                    else:
+                        val = "0"
                 elif spec_sig == "mem_addr" and self.mem_addr:
                     val = "spec_addr"
-                elif spec_sig == "trap" and self.mem_addr:
-                    val = "trap"
                 elif spec_sig == "mem_rmask" and self.mem_addr and not self.mem_wdata:
                     val = "spec_mem_mask"
                 elif spec_sig == "mem_wmask" and self.mem_wdata:
