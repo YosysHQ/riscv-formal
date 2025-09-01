@@ -159,7 +159,10 @@ class Instruction(GenericChecker):
             except ValueError:
                 bin_str = bin
             op_value_checks.append(f"(insn_{key} != {bin_str})")
-        insn_map += " || ".join(op_value_checks) + ";"
+        if len(op_value_checks):
+            insn_map += " || ".join(op_value_checks) + ";"
+        else:
+            insn_map += "0;"
 
         return insn_map
 

@@ -442,6 +442,41 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
 
     # Base Integer ISA (I)
 
+    insns["lui"] = Instruction(
+        name = "lui", insn_parts = FORMAT_U, opcode = "0110111", extension = "I",
+        result = "insn_imm",
+        raw_code = [ "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({insn_imm20, 12'b0});" ],
+    )
+    insns["auipc"] = Instruction(
+        name = "auipc", insn_parts = FORMAT_U, opcode = "0010111", extension = "I",
+        result = "rvfi_pc_rdata + insn_imm",
+        raw_code = [ "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({insn_imm20, 12'b0});" ],
+    )
+    insns["jal"] = Instruction(
+        name = "jal", insn_parts = FORMAT_J, opcode = "1101111", extension = "I",
+        result = "rvfi_pc_rdata + 4",
+        raw_code = [
+            "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({insn_imm20, insn_imm19_12, insn_imm11, insn_imm10_1, 1'b0});",
+            "wire [`RISCV_FORMAL_XLEN-1:0] next_pc = rvfi_pc_rdata + insn_imm;",
+        ],
+        spec_map = {
+            "pc_wdata": "next_pc",
+            "trap": "next_pc[1:0] != 0"
+        }
+    )
+    insns["jalr"] = Instruction(
+        name = "jalr", insn_parts = FORMAT_I, opcode = "1100111", extension = "I", op_values = { "funct3": "000" },
+        result = "rvfi_pc_rdata + 4",
+        raw_code = [
+            "wire [`RISCV_FORMAL_XLEN-1 : 0] insn_imm = $signed(insn_imm12);",
+            "wire [`RISCV_FORMAL_XLEN-1:0] next_pc = (rvfi_rs1_rdata + insn_imm) & ~1;",
+        ],
+        spec_map = {
+            "pc_wdata": "next_pc",
+            "trap": "next_pc[1:0] != 0"
+        }
+    )
+
     insns["beq"] =  insn_b("beq",  "000", "rvfi_rs1_rdata == rvfi_rs2_rdata")
     insns["bne"] =  insn_b("bne",  "001", "rvfi_rs1_rdata != rvfi_rs2_rdata")
     insns["blt"] =  insn_b("blt",  "100", "$signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)")
