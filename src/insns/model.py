@@ -23,6 +23,7 @@ def skip_empty_factory(mapping: list[tuple[str, Any]]) -> dict:
 class Instruction_format:
     name: Optional[str] = None
     insn_parts: list[tuple[str, int]] = field(default_factory=list)
+    imm: Optional[str] = None
 
 
 @dataclass(kw_only=True)
@@ -46,6 +47,7 @@ class Instruction(GenericChecker):
     raw_code: list[str] = field(default_factory=list)
     spec_map: dict[str, str] = field(default_factory=dict)
     check_valid: list[str] = field(default_factory=list)
+    imm: Optional[bool | str] = None
     xlen_min: int = 32
     xlen_max: int = 128
 
@@ -54,6 +56,8 @@ class Instruction(GenericChecker):
 
     def _insn_fixup(self):
         if isinstance(self.insn_parts, Instruction_format):
+            if isinstance(self.imm, bool):
+                self.imm = self.insn_parts.imm
             self.insn_parts = self.insn_parts.insn_parts
 
     def _process_insn_parts(self):
@@ -81,6 +85,8 @@ class Instruction(GenericChecker):
 
     def __post_init__(self):
         self._insn_fixup()
+        if isinstance(self.imm, bool):
+            raise NotImplementedError()
         self._process_insn_parts()
         self._config_used_regs()
         self._config_widths()
@@ -149,6 +155,10 @@ class Instruction(GenericChecker):
             result_width = self._result_width or xlen
             shift_width = (result_width-1).bit_length()
             insn_map += f"wire [{shift_width-1}:0] shamt = rvfi_rs2_rdata[{shift_width-1}:0];\n"
+
+        # imm
+        if self.imm:
+            insn_map += f"wire [{xlen-1}:0] insn_imm = {self.imm};\n"
 
         insn_map += f"wire illinsn = "
         op_value_checks = []

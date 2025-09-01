@@ -28,7 +28,7 @@ FORMAT_R = Instruction_format(
         ("funct3", 3),
         ("rd", 5),
         ("opcode", 7),
-    ]
+    ],
 )
 
 FORMAT_I = Instruction_format(
@@ -38,7 +38,8 @@ FORMAT_I = Instruction_format(
         ("funct3", 3),
         ("rd", 5),
         ("opcode", 7),
-    ]
+    ],
+    imm = "$signed(insn_imm12)",
 )
 
 FORMAT_I_SHIFT = Instruction_format(
@@ -49,7 +50,7 @@ FORMAT_I_SHIFT = Instruction_format(
         ("funct3", 3),
         ("rd", 5),
         ("opcode", 7),
-    ]
+    ],
 )
 
 FORMAT_S = Instruction_format(
@@ -60,7 +61,8 @@ FORMAT_S = Instruction_format(
         ("funct3", 3),
         ("imm4_0", 5),
         ("opcode", 7),
-    ]
+    ],
+    imm = "$signed({insn_imm11_5, insn_imm4_0})",
 )
 
 FORMAT_B = Instruction_format(
@@ -73,7 +75,8 @@ FORMAT_B = Instruction_format(
         ("imm4_1", 4),
         ("imm11", 1),
         ("opcode", 7),
-    ]
+    ],
+    imm = "$signed({insn_imm12, insn_imm11, insn_imm10_5, insn_imm4_1, 1'b0})",
 )
 
 FORMAT_U = Instruction_format(
@@ -81,7 +84,8 @@ FORMAT_U = Instruction_format(
         ("imm20", 20),
         ("rd", 5),
         ("opcode", 7),
-    ]
+    ],
+    imm = "$signed({insn_imm20, 12'b0})",
 )
 
 FORMAT_J = Instruction_format(
@@ -92,7 +96,8 @@ FORMAT_J = Instruction_format(
         ("imm19_12", 8),
         ("rd", 5),
         ("opcode", 7),
-    ]
+    ],
+    imm = "$signed({insn_imm20, insn_imm19_12, insn_imm11, insn_imm10_1, 1'b0})",
 )
 
 
@@ -106,7 +111,7 @@ def insn_b(insn, funct3, expr, extension = "I"):
             "funct3": funct3,
         },
         next_pc = f"{expr} ? rvfi_pc_rdata + insn_imm : rvfi_pc_rdata + 4",
-        raw_code = [ "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({insn_imm12, insn_imm11, insn_imm10_5, insn_imm4_1, 1'b0});" ],
+        imm = True,
     )
 
 def insn_l(insn, funct3, numbytes, signext, extension = "I"):
@@ -119,8 +124,10 @@ def insn_l(insn, funct3, numbytes, signext, extension = "I"):
         mem_bytes = numbytes,
         result = "mem_rdata",
         extension = extension,
-        op_values = { "funct3": funct3 },
-        raw_code = ["wire [`RISCV_FORMAL_XLEN - 1 : 0] insn_imm = $signed(insn_imm12);"],
+        op_values = {
+            "funct3": funct3,
+        },
+        imm = True,
         sign_extend_from = result_width if signext else None,
         zero_extend_from = result_width if not signext else None,
         xlen_min = max(32, result_width if signext else result_width*2),
@@ -136,8 +143,10 @@ def insn_s(insn, funct3, numbytes, extension = "I"):
         mem_bytes = numbytes,
         mem_wdata = "rvfi_rs2_rdata",
         extension = extension,
-        op_values = { "funct3": funct3 },
-        raw_code = ["wire [`RISCV_FORMAL_XLEN - 1 : 0] insn_imm = $signed({insn_imm11_5, insn_imm4_0});"],
+        op_values = {
+            "funct3": funct3,
+        },
+        imm = True,
         xlen_min = max(32, result_width),
     )
 
@@ -174,7 +183,7 @@ def insn_imm(insn, funct3, expr, wmode=False, extension = "I"):
         op_values = {
             "funct3": funct3,
         },
-        raw_code = ["wire [`RISCV_FORMAL_XLEN - 1 : 0] insn_imm = $signed(insn_imm12);"]
+        imm = True,
     )
 
 def insn_shimm(insn, funct6, funct3, expr, wmode=False, uwmode=False, extension = "I"):
@@ -437,23 +446,19 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
 
     insns["lui"] = Instruction(
         name = "lui", insn_parts = FORMAT_U, opcode = "0110111", extension = "I",
-        result = "insn_imm",
-        raw_code = [ "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({insn_imm20, 12'b0});" ],
+        result = "insn_imm", imm = True,
     )
     insns["auipc"] = Instruction(
         name = "auipc", insn_parts = FORMAT_U, opcode = "0010111", extension = "I",
-        result = "rvfi_pc_rdata + insn_imm",
-        raw_code = [ "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({insn_imm20, 12'b0});" ],
+        result = "rvfi_pc_rdata + insn_imm", imm = True,
     )
     insns["jal"] = Instruction(
         name = "jal", insn_parts = FORMAT_J, opcode = "1101111", extension = "I",
-        result = "rvfi_pc_rdata + 4", next_pc = "rvfi_pc_rdata + insn_imm",
-        raw_code = [ "wire [`RISCV_FORMAL_XLEN-1:0] insn_imm = $signed({insn_imm20, insn_imm19_12, insn_imm11, insn_imm10_1, 1'b0});" ],
+        result = "rvfi_pc_rdata + 4", next_pc = "rvfi_pc_rdata + insn_imm", imm = True,
     )
     insns["jalr"] = Instruction(
         name = "jalr", insn_parts = FORMAT_I, opcode = "1100111", extension = "I", op_values = { "funct3": "000" },
-        result = "rvfi_pc_rdata + 4", next_pc = "(rvfi_rs1_rdata + insn_imm) & ~1",
-        raw_code = [ "wire [`RISCV_FORMAL_XLEN-1 : 0] insn_imm = $signed(insn_imm12);" ],
+        result = "rvfi_pc_rdata + 4", next_pc = "(rvfi_rs1_rdata + insn_imm) & ~1", imm = True,
     )
 
     insns["beq"] =  insn_b("beq",  "000", "rvfi_rs1_rdata == rvfi_rs2_rdata")
