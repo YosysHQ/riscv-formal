@@ -8,11 +8,10 @@ from .wrapped_model import WrappedInstruction
 
 @click.command()
 @click.option('-f', '--force', is_flag=True)
-@click.option('-i', '--ilen', type=int, default=32)
 @click.option('-x', '--xlen', type=int, default=32)
 @click.argument('cfg', type=click.Path(exists=True, path_type=Path))
 @click.argument('out_file', type=click.Path(path_type=Path))
-def wrap(force: bool, ilen: int, xlen: int, cfg: Path, out_file: Path = None):
+def wrap(force: bool, xlen: int, cfg: Path, out_file: Path = None):
     """main function"""
     # load cfg
     click.echo(f"Loading from {cfg}")
@@ -32,7 +31,7 @@ def wrap(force: bool, ilen: int, xlen: int, cfg: Path, out_file: Path = None):
     if out_file.exists() and not force:
         raise FileExistsError(out_file)
 
-    v_str = insn.to_verilog(xlen, ilen)
+    v_str = insn.to_verilog(xlen)
 
     # write out to file
     with open(out_file, 'wt', encoding='utf-8') as f:

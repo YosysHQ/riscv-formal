@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field, asdict
 import json
 from textwrap import dedent
-from typing import Optional, Any
+from typing import Optional, Any, ClassVar, Callable
 
 import json_fix
 
@@ -50,9 +50,24 @@ class Instruction(GenericChecker):
     imm: Optional[bool | str] = None
     xlen_min: int = 32
     xlen_max: int = 128
+    ilen: int = 32
+    opcode_width: int = 7
+
+    _default_pc_increment: str = "rvfi_pc_rdata + 4"
 
     inst_args: Optional[list[str]] = None
     wrap_next_pc: Optional[bool] = None
+
+    registered_assigns: ClassVar[dict[str, Callable[['Instruction'], str]]] = {}
+    registered_checks: ClassVar[set[str]] = set()
+
+    @classmethod
+    def register_assign(cls, name: str, method: Callable[['Instruction'], str]):
+        cls.registered_assigns[name] = method
+
+    @classmethod
+    def register_check(cls, check: str):
+        cls.registered_checks.add(check)
 
     def _insn_fixup(self):
         if isinstance(self.insn_parts, Instruction_format):
@@ -133,9 +148,9 @@ class Instruction(GenericChecker):
             output [`RISCV_FORMAL_XLEN/8 - 1 : 0] spec_mem_wmask,
             output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_mem_wdata""")
 
-    def _v_insn_fmt(self, ilen: int) -> str:
+    def _v_insn_fmt(self) -> str:
         # insn decode
-        upper = ilen
+        upper = self.ilen
         insn_format = "// instruction format\n"
         for part, width in self.insn_parts:
             lower = upper - width
@@ -263,21 +278,26 @@ class Instruction(GenericChecker):
                     result = "result"
                 self.spec_map[f"{used_reg}_wdata"] = f"spec_{used_reg}_addr ? {result} : 0"
 
+        for assign in self.registered_assigns.values():
+            spec_mapping += f"{assign(self)}\n"
+
         for spec_sig in spec_sigs:
             if spec_sig not in self.spec_map:
                 if spec_sig == "pc_wdata":
                     if self.next_pc:
                         val = "next_pc"
                     else:
-                        val = "rvfi_pc_rdata + 4"
+                        val = self._default_pc_increment
                 elif spec_sig == "valid":
                     try:
                         int(self.opcode, 2)
-                        opcode = f"7'b {self.opcode}"
+                        opcode = f"{self.opcode_width}'b {self.opcode}"
                     except ValueError:
                         opcode = self.opcode
                     val = f"rvfi_valid && !illinsn && insn_opcode == {opcode}"
                     for check in self.check_valid:
+                        val += f" && ({check})"
+                    for check in self.registered_checks:
                         val += f" && ({check})"
                 elif spec_sig == "trap":
                     if self.mem_addr:
@@ -306,16 +326,16 @@ class Instruction(GenericChecker):
 
         return spec_mapping
 
-    def _v_checks(self, xlen: int, ilen: int) -> None:
+    def _v_checks(self, xlen: int) -> None:
         super()._v_checks()
         self._v_xlen_check(xlen)
 
-    def _v_body(self, xlen: int, ilen: int) -> str:
-        v_str = self._v_format_block(self._v_insn_fmt(ilen))
+    def _v_body(self, xlen: int) -> str:
+        v_str = self._v_format_block(self._v_insn_fmt())
         v_str += self._v_format_block(self._v_insn_map(xlen))
         v_str += self._v_format_block(self._v_instantiation(xlen))
         v_str += self._v_format_block(self._v_spec_mapping(xlen))
         return v_str
 
-    def to_verilog(self, xlen: int, ilen: int):
-        return super().to_verilog(xlen=xlen, ilen=ilen)
+    def to_verilog(self, xlen: int):
+        return super().to_verilog(xlen=xlen)

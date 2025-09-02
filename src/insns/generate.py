@@ -5,13 +5,17 @@ import click
 from .builtins import builtins
 
 @click.command()
-@click.option('-i', '--ilen', type=int, default=32)
+@click.option('-c', '--with_C', is_flag=True)
 @click.option('-x', '--xlen', type=int, default=32)
 @click.option('--format', type=click.Choice(['json', 'verilog', 'isa', 'auto']), default='auto')
 @click.argument('out_file', type=click.Path(path_type=Path))
 @click.argument('insn', type=str, default = "")
-def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
+def generate(with_c: bool, xlen: int, format: str, out_file: Path, insn: str):
     insns = builtins()
+    if with_c:
+        from .cext import cext
+        insns.update(cext())
+
     extensions = set()
     for instr in insns.values():
         extensions.update(instr.extension.split(" "))
@@ -30,7 +34,7 @@ def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
         if format == "json":
             data = instruction.to_json(skip_empty=True, indent=2)
         elif format == "verilog":
-            data = instruction.to_verilog(xlen, ilen)
+            data = instruction.to_verilog(xlen)
         else:
             raise NotImplementedError(f"{out_file.suffix!r} not supported")
     else:

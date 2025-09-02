@@ -162,6 +162,6 @@ class WrappedInstruction(Instruction):
 
         return instantiation
 
-    def _v_checks(self, xlen: int, ilen: int):
-        super()._v_checks(xlen, ilen)
+    def _v_checks(self, xlen: int):
+        super()._v_checks(xlen)
         self._v_inst_check()
