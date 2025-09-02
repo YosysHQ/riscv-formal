@@ -433,6 +433,194 @@ def insn_xperm(insn, funct3, width, extension = "zbkx"):
             end""").splitlines()
     )
 
+def builtins():
+    return {i.name: i for i in [
+        # Base Integer ISA (I)
+
+        Instruction(
+            name = "lui", insn_parts = FORMAT_U, opcode = "0110111", extension = "I",
+            result = "insn_imm", imm = True,
+        ),
+        Instruction(
+            name = "auipc", insn_parts = FORMAT_U, opcode = "0010111", extension = "I",
+            result = "rvfi_pc_rdata + insn_imm", imm = True,
+        ),
+        Instruction(
+            name = "jal", insn_parts = FORMAT_J, opcode = "1101111", extension = "I",
+            result = "rvfi_pc_rdata + 4", next_pc = "rvfi_pc_rdata + insn_imm", imm = True,
+        ),
+        Instruction(
+            name = "jalr", insn_parts = FORMAT_I, opcode = "1100111", extension = "I", op_values = { "funct3": "000" },
+            result = "rvfi_pc_rdata + 4", next_pc = "(rvfi_rs1_rdata + insn_imm) & ~1", imm = True,
+        ),
+
+        insn_b("beq",  "000", "rvfi_rs1_rdata == rvfi_rs2_rdata"),
+        insn_b("bne",  "001", "rvfi_rs1_rdata != rvfi_rs2_rdata"),
+        insn_b("blt",  "100", "$signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)"),
+        insn_b("bge",  "101", "$signed(rvfi_rs1_rdata) >= $signed(rvfi_rs2_rdata)"),
+        insn_b("bltu", "110", "rvfi_rs1_rdata < rvfi_rs2_rdata"),
+        insn_b("bgeu", "111", "rvfi_rs1_rdata >= rvfi_rs2_rdata"),
+
+        insn_l("lb",  "000",  1, True),
+        insn_l("lh",  "001",  2, True),
+        insn_l("lw",  "010",  4, True),
+        insn_l("lbu", "100",  1, False),
+        insn_l("lhu", "101",  2, False),
+        insn_l("lwu", "110",  4, False),
+        insn_l("ld",  "011",  8, True),
+
+        insn_s("sb",  "000", 1),
+        insn_s("sh",  "001", 2),
+        insn_s("sw",  "010", 4),
+        insn_s("sd",  "011", 8),
+
+        insn_alu("add",  "0000000", "000", "rvfi_rs1_rdata + rvfi_rs2_rdata"),
+        insn_alu("sub",  "0100000", "000", "rvfi_rs1_rdata - rvfi_rs2_rdata"),
+        insn_alu("sll",  "0000000", "001", "rvfi_rs1_rdata << shamt", shamt=True),
+        insn_alu("slt",  "0000000", "010", "$signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)"),
+        insn_alu("sltu", "0000000", "011", "rvfi_rs1_rdata < rvfi_rs2_rdata"),
+        insn_alu("xor",  "0000000", "100", "rvfi_rs1_rdata ^ rvfi_rs2_rdata"),
+        insn_alu("srl",  "0000000", "101", "rvfi_rs1_rdata >> shamt", shamt=True),
+        insn_alu("sra",  "0100000", "101", "$signed(rvfi_rs1_rdata) >>> shamt", shamt=True),
+        insn_alu("or",   "0000000", "110", "rvfi_rs1_rdata | rvfi_rs2_rdata"),
+        insn_alu("and",  "0000000", "111", "rvfi_rs1_rdata & rvfi_rs2_rdata"),
+
+        insn_imm("addi",  "000", "rvfi_rs1_rdata + insn_imm"),
+        insn_imm("slti",  "010", "$signed(rvfi_rs1_rdata) < $signed(insn_imm)"),
+        insn_imm("sltiu", "011", "rvfi_rs1_rdata < insn_imm"),
+        insn_imm("xori",  "100", "rvfi_rs1_rdata ^ insn_imm"),
+        insn_imm("ori",   "110", "rvfi_rs1_rdata | insn_imm"),
+        insn_imm("andi",  "111", "rvfi_rs1_rdata & insn_imm"),
+
+        insn_shimm("slli", "000000", "001", "rvfi_rs1_rdata << insn_shamt"),
+        insn_shimm("srli", "000000", "101", "rvfi_rs1_rdata >> insn_shamt"),
+        insn_shimm("srai", "010000", "101", "$signed(rvfi_rs1_rdata) >>> insn_shamt"),
+
+        insn_imm("addiw",  "000", "rvfi_rs1_rdata[31:0] + insn_imm[31:0]", wmode=True),
+
+        insn_shimm("slliw", "000000", "001", "rvfi_rs1_rdata[31:0] << insn_shamt", wmode=True),
+        insn_shimm("srliw", "000000", "101", "rvfi_rs1_rdata[31:0] >> insn_shamt", wmode=True),
+        insn_shimm("sraiw", "010000", "101", "$signed(rvfi_rs1_rdata[31:0]) >>> insn_shamt", wmode=True),
+
+        insn_alu("addw", "0000000", "000", "rvfi_rs1_rdata[31:0] + rvfi_rs2_rdata[31:0]", wmode=True),
+        insn_alu("subw", "0100000", "000", "rvfi_rs1_rdata[31:0] - rvfi_rs2_rdata[31:0]", wmode=True),
+        insn_alu("sllw", "0000000", "001", "rvfi_rs1_rdata[31:0] << shamt", shamt=True, wmode=True),
+        insn_alu("srlw", "0000000", "101", "rvfi_rs1_rdata[31:0] >> shamt", shamt=True, wmode=True),
+        insn_alu("sraw", "0100000", "101", "$signed(rvfi_rs1_rdata[31:0]) >>> shamt", shamt=True, wmode=True),
+
+        # Multiply/Divide ISA (M)
+
+        insn_alu("mul",    "0000001", "000", "rvfi_rs1_rdata * rvfi_rs2_rdata", alt_add=0x2cdf52a55876063e, extension="M"),
+        insn_alu("mulh",   "0000001", "001", "({{`RISCV_FORMAL_XLEN{rvfi_rs1_rdata[`RISCV_FORMAL_XLEN-1]}}, rvfi_rs1_rdata} *\n" +
+                "\t\t{{`RISCV_FORMAL_XLEN{rvfi_rs2_rdata[`RISCV_FORMAL_XLEN-1]}}, rvfi_rs2_rdata}) >> `RISCV_FORMAL_XLEN", alt_add=0x15d01651f6583fb7, extension="M"),
+        insn_alu("mulhsu", "0000001", "010", "({{`RISCV_FORMAL_XLEN{rvfi_rs1_rdata[`RISCV_FORMAL_XLEN-1]}}, rvfi_rs1_rdata} *\n" +
+                "\t\t{`RISCV_FORMAL_XLEN'b0, rvfi_rs2_rdata}) >> `RISCV_FORMAL_XLEN", alt_sub=0xea3969edecfbe137, extension="M"),
+        insn_alu("mulhu",  "0000001", "011", "({`RISCV_FORMAL_XLEN'b0, rvfi_rs1_rdata} * {`RISCV_FORMAL_XLEN'b0, rvfi_rs2_rdata}) >> `RISCV_FORMAL_XLEN", alt_add=0xd13db50d949ce5e8, extension="M"),
+
+        insn_alu("div",    "0000001", "100", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? {`RISCV_FORMAL_XLEN{1'b1}} :
+                                                rvfi_rs1_rdata == {1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}} && rvfi_rs2_rdata == {`RISCV_FORMAL_XLEN{1'b1}} ? {1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}} :
+                                                $signed(rvfi_rs1_rdata) / $signed(rvfi_rs2_rdata)""", alt_sub=0x29bbf66f7f8529ec, extension="M"),
+        insn_alu("divu",   "0000001", "101", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? {`RISCV_FORMAL_XLEN{1'b1}} :
+                                                rvfi_rs1_rdata / rvfi_rs2_rdata""", alt_sub=0x8c629acb10e8fd70, extension="M"),
+
+        insn_alu("rem",    "0000001", "110", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? rvfi_rs1_rdata :
+                                                rvfi_rs1_rdata == {1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}} && rvfi_rs2_rdata == {`RISCV_FORMAL_XLEN{1'b1}} ? {`RISCV_FORMAL_XLEN{1'b0}} :
+                                                $signed(rvfi_rs1_rdata) % $signed(rvfi_rs2_rdata)""", alt_sub=0xf5b7d8538da68fa5, extension="M"),
+        insn_alu("remu",   "0000001", "111", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? rvfi_rs1_rdata :
+                                                rvfi_rs1_rdata % rvfi_rs2_rdata""", alt_sub=0xbc4402413138d0e1, extension="M"),
+
+        insn_alu("mulw",   "0000001", "000", "rvfi_rs1_rdata[31:0] * rvfi_rs2_rdata[31:0]", alt_add=0x2cdf52a55876063e, wmode=True, extension="M"),
+
+        insn_alu("divw",   "0000001", "100", """rvfi_rs2_rdata[31:0] == 32'b0 ? {32{1'b1}} :
+                                                rvfi_rs1_rdata == {1'b1, {31{1'b0}}} && rvfi_rs2_rdata == {32{1'b1}} ? {1'b1, {31{1'b0}}} :
+                                                $signed(rvfi_rs1_rdata[31:0]) / $signed(rvfi_rs2_rdata[31:0])""", alt_sub=0x29bbf66f7f8529ec, wmode=True, extension="M"),
+        insn_alu("divuw",  "0000001", "101", """rvfi_rs2_rdata[31:0] == 32'b0 ? {32{1'b1}} :
+                                                rvfi_rs1_rdata[31:0] / rvfi_rs2_rdata[31:0]""", alt_sub=0x8c629acb10e8fd70, wmode=True, extension="M"),
+
+        insn_alu("remw",   "0000001", "110", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdata :
+                                                rvfi_rs1_rdata == {1'b1, {31{1'b0}}} && rvfi_rs2_rdata == {32{1'b1}} ? {32{1'b0}} :
+                                                $signed(rvfi_rs1_rdata[31:0]) % $signed(rvfi_rs2_rdata[31:0])""", alt_sub=0xf5b7d8538da68fa5, wmode=True, extension="M"),
+        insn_alu("remuw",  "0000001", "111", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdata :
+                                                rvfi_rs1_rdata[31:0] % rvfi_rs2_rdata[31:0]""", alt_sub=0xbc4402413138d0e1, wmode=True, extension="M"),
+
+        # Bit Manipulation ISA (B)
+
+        ## Zba: Address generation
+
+        insn_alu("sh1add",  "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 1)", extension="Zba"),
+        insn_alu("sh2add",  "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 2)", extension="Zba"),
+        insn_alu("sh3add",  "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 3)", extension="Zba"),
+
+        insn_alu("add_uw",      "0000100", "000", "rvfi_rs2_rdata + rvfi_rs1_rdata[31:0]",          uwmode=True, extension="Zba"),
+        insn_alu("sh1add_uw",   "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 1)",   uwmode=True, extension="Zba"),
+        insn_alu("sh2add_uw",   "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 2)",   uwmode=True, extension="Zba"),
+        insn_alu("sh3add_uw",   "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 3)",   uwmode=True, extension="Zba"),
+        insn_shimm("slli_uw",   "000010",  "001", "rvfi_rs1_rdata[31:0] << insn_shamt",             uwmode=True, extension="Zba"),
+
+        ## Zbb: Basic bit-manipulation
+
+        insn_count("clz",   "00000", extension="Zbb"),
+        insn_count("ctz",   "00001", trailing=True, extension="Zbb"),
+        insn_count("cpop",  "00010", pop=True, extension="Zbb"),
+        insn_alu("max",     "0000101", "110", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb"),
+        insn_alu("maxu",    "0000101", "111", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb"),
+        insn_alu("min",     "0000101", "100", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb"),
+        insn_alu("minu",    "0000101", "101", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb"),
+        insn_ext("sext_b",  "00100", signed=True, bmode=True, extension="Zbb"),
+        insn_ext("sext_h",  "00101", signed=True, extension="Zbb"),
+        insn_ext("zext_h",  "00000", extension="Zbb"),
+        insn_bytes("orc_b", "12'b 0010100_00111", "101", "{8{|rvfi_rs1_rdata[i*8+:8]}}", extension="Zbb"),
+
+        insn_alu("andn",    "0100000", "111", "rvfi_rs1_rdata & ~rvfi_rs2_rdata",   extension="Zbb Zbkb"),
+        insn_alu("orn",     "0100000", "110", "rvfi_rs1_rdata | ~rvfi_rs2_rdata",   extension="Zbb Zbkb"),
+        insn_alu("xnor",    "0100000", "100", "~(rvfi_rs1_rdata ^ rvfi_rs2_rdata)", extension="Zbb Zbkb"),
+        insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, extension="Zbb Zbkb"),
+        insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, extension="Zbb Zbkb"),
+        insn_shimm("rori",  "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt))", extension="Zbb Zbkb"),
+        insn_bytes("rev8",  "{6'b 011010, `RISCV_FORMAL_XLEN == 64, 5'b 11000}", "101", "rvfi_rs1_rdata[((nbytes-i)*8)-1-:8]", extension="Zbb Zbkb"),
+
+        insn_pack(extension = "Zbkb"),
+        insn_pack("packh", "111", result_width=16, extension = "Zbkb"),
+        insn_bytes("brev8", "12'b 0110100_00111", "101", "rvfi_rs1_rdata[(i+1)*8-(j+1)]", bitwise=True, extension="Zbkb"),
+        insn_zip("zip",   "001", extension = "Zbkb"),
+        insn_zip("unzip", "101", unzip=True, extension = "Zbkb"),
+
+        insn_count("clzw",  "00000", wmode=True, extension = "Zbb"),
+        insn_count("ctzw",  "00001", trailing=True, wmode=True, extension = "Zbb"),
+        insn_count("cpopw", "00010", pop=True, wmode=True, extension = "Zbb"),
+
+        insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb"),
+        insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb"),
+        insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rvfi_rs1_rdata[31:0] << (32 - insn_shamt))", wmode=True, extension="Zbb Zbkb"),
+
+        insn_pack("packw", "100", result_width=32, signed=True, extension = "Zbkb"),
+
+        ## Zbc: Carry-less multiplication
+
+        insn_clmul("clmul",  "001", "rvfi_rs1_rdata << i", extension="Zbc Zbkc"),
+        insn_clmul("clmulh", "011", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i)", index1=True, extension="Zbc Zbkc"),
+
+        insn_clmul("clmulr", "010", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i - 1)", extension="Zbc"),
+
+        ## Zbs: Single-bit instructions
+
+        insn_bit("bclr",    "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", extension = "Zbs"),
+        insn_bit("bclri",   "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", imode=True, extension = "Zbs"),
+        insn_bit("bext",    "010010", "101", "(rvfi_rs1_rdata >> index) & 1",  extension = "Zbs"),
+        insn_bit("bexti",   "010010", "101", "(rvfi_rs1_rdata >> index) & 1",  imode=True, extension = "Zbs"),
+        insn_bit("binv",    "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  extension = "Zbs"),
+        insn_bit("binvi",   "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  imode=True, extension = "Zbs"),
+        insn_bit("bset",    "001010", "001", "rvfi_rs1_rdata | (1 << index)",  extension = "Zbs"),
+        insn_bit("bseti",   "001010", "001", "rvfi_rs1_rdata | (1 << index)",  imode=True, extension = "Zbs"),
+
+        ## Zbkx: Crossbar permutations
+
+        insn_xperm("xperm4", "010", 4),
+        insn_xperm("xperm8", "100", 8),
+
+    ]}
+
+
 @click.command()
 @click.option('-i', '--ilen', type=int, default=32)
 @click.option('-x', '--xlen', type=int, default=32)
@@ -440,190 +628,7 @@ def insn_xperm(insn, funct3, width, extension = "zbkx"):
 @click.argument('out_file', type=click.Path(path_type=Path))
 @click.argument('insn', type=str, default = "")
 def generate(ilen: int, xlen: int, format: str, out_file: Path, insn: str):
-    insns: dict[str, Instruction] = {}
-
-    # Base Integer ISA (I)
-
-    insns["lui"] = Instruction(
-        name = "lui", insn_parts = FORMAT_U, opcode = "0110111", extension = "I",
-        result = "insn_imm", imm = True,
-    )
-    insns["auipc"] = Instruction(
-        name = "auipc", insn_parts = FORMAT_U, opcode = "0010111", extension = "I",
-        result = "rvfi_pc_rdata + insn_imm", imm = True,
-    )
-    insns["jal"] = Instruction(
-        name = "jal", insn_parts = FORMAT_J, opcode = "1101111", extension = "I",
-        result = "rvfi_pc_rdata + 4", next_pc = "rvfi_pc_rdata + insn_imm", imm = True,
-    )
-    insns["jalr"] = Instruction(
-        name = "jalr", insn_parts = FORMAT_I, opcode = "1100111", extension = "I", op_values = { "funct3": "000" },
-        result = "rvfi_pc_rdata + 4", next_pc = "(rvfi_rs1_rdata + insn_imm) & ~1", imm = True,
-    )
-
-    insns["beq"] =  insn_b("beq",  "000", "rvfi_rs1_rdata == rvfi_rs2_rdata")
-    insns["bne"] =  insn_b("bne",  "001", "rvfi_rs1_rdata != rvfi_rs2_rdata")
-    insns["blt"] =  insn_b("blt",  "100", "$signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)")
-    insns["bge"] =  insn_b("bge",  "101", "$signed(rvfi_rs1_rdata) >= $signed(rvfi_rs2_rdata)")
-    insns["bltu"] = insn_b("bltu", "110", "rvfi_rs1_rdata < rvfi_rs2_rdata")
-    insns["bgeu"] = insn_b("bgeu", "111", "rvfi_rs1_rdata >= rvfi_rs2_rdata")
-
-    insns["lb"] =  insn_l("lb",  "000",  1, True)
-    insns["lh"] =  insn_l("lh",  "001",  2, True)
-    insns["lw"] =  insn_l("lw",  "010",  4, True)
-    insns["lbu"] = insn_l("lbu", "100",  1, False)
-    insns["lhu"] = insn_l("lhu", "101",  2, False)
-    insns["lwu"] = insn_l("lwu", "110",  4, False)
-    insns["ld"] =  insn_l("ld",  "011",  8, True)
-
-    insns["sb"] =  insn_s("sb",  "000", 1)
-    insns["sh"] =  insn_s("sh",  "001", 2)
-    insns["sw"] =  insn_s("sw",  "010", 4)
-    insns["sd"] =  insn_s("sd",  "011", 8)
-
-    insns["add"] =  insn_alu("add",  "0000000", "000", "rvfi_rs1_rdata + rvfi_rs2_rdata")
-    insns["sub"] =  insn_alu("sub",  "0100000", "000", "rvfi_rs1_rdata - rvfi_rs2_rdata")
-    insns["sll"] =  insn_alu("sll",  "0000000", "001", "rvfi_rs1_rdata << shamt", shamt=True)
-    insns["slt"] =  insn_alu("slt",  "0000000", "010", "$signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)")
-    insns["sltu"] = insn_alu("sltu", "0000000", "011", "rvfi_rs1_rdata < rvfi_rs2_rdata")
-    insns["xor"] =  insn_alu("xor",  "0000000", "100", "rvfi_rs1_rdata ^ rvfi_rs2_rdata")
-    insns["srl"] =  insn_alu("srl",  "0000000", "101", "rvfi_rs1_rdata >> shamt", shamt=True)
-    insns["sra"] =  insn_alu("sra",  "0100000", "101", "$signed(rvfi_rs1_rdata) >>> shamt", shamt=True)
-    insns["or"] =   insn_alu("or",   "0000000", "110", "rvfi_rs1_rdata | rvfi_rs2_rdata")
-    insns["and"] =  insn_alu("and",  "0000000", "111", "rvfi_rs1_rdata & rvfi_rs2_rdata")
-
-    insns["addi"] =  insn_imm("addi",  "000", "rvfi_rs1_rdata + insn_imm")
-    insns["slti"] =  insn_imm("slti",  "010", "$signed(rvfi_rs1_rdata) < $signed(insn_imm)")
-    insns["sltiu"] = insn_imm("sltiu", "011", "rvfi_rs1_rdata < insn_imm")
-    insns["xori"] =  insn_imm("xori",  "100", "rvfi_rs1_rdata ^ insn_imm")
-    insns["ori"] =   insn_imm("ori",   "110", "rvfi_rs1_rdata | insn_imm")
-    insns["andi"] =  insn_imm("andi",  "111", "rvfi_rs1_rdata & insn_imm")
-
-    insns["slli"] = insn_shimm("slli", "000000", "001", "rvfi_rs1_rdata << insn_shamt")
-    insns["srli"] = insn_shimm("srli", "000000", "101", "rvfi_rs1_rdata >> insn_shamt")
-    insns["srai"] = insn_shimm("srai", "010000", "101", "$signed(rvfi_rs1_rdata) >>> insn_shamt")
-
-    insns["addiw"] = insn_imm("addiw",  "000", "rvfi_rs1_rdata[31:0] + insn_imm[31:0]", wmode=True)
-
-    insns["slliw"] = insn_shimm("slliw", "000000", "001", "rvfi_rs1_rdata[31:0] << insn_shamt", wmode=True)
-    insns["srliw"] = insn_shimm("srliw", "000000", "101", "rvfi_rs1_rdata[31:0] >> insn_shamt", wmode=True)
-    insns["sraiw"] = insn_shimm("sraiw", "010000", "101", "$signed(rvfi_rs1_rdata[31:0]) >>> insn_shamt", wmode=True)
-
-    insns["addw"] = insn_alu("addw", "0000000", "000", "rvfi_rs1_rdata[31:0] + rvfi_rs2_rdata[31:0]", wmode=True)
-    insns["subw"] = insn_alu("subw", "0100000", "000", "rvfi_rs1_rdata[31:0] - rvfi_rs2_rdata[31:0]", wmode=True)
-    insns["sllw"] = insn_alu("sllw", "0000000", "001", "rvfi_rs1_rdata[31:0] << shamt", shamt=True, wmode=True)
-    insns["srlw"] = insn_alu("srlw", "0000000", "101", "rvfi_rs1_rdata[31:0] >> shamt", shamt=True, wmode=True)
-    insns["sraw"] = insn_alu("sraw", "0100000", "101", "$signed(rvfi_rs1_rdata[31:0]) >>> shamt", shamt=True, wmode=True)
-
-    # Multiply/Divide ISA (M)
-
-    insns["mul"] =    insn_alu("mul",    "0000001", "000", "rvfi_rs1_rdata * rvfi_rs2_rdata", alt_add=0x2cdf52a55876063e, extension="M")
-    insns["mulh"] =   insn_alu("mulh",   "0000001", "001", "({{`RISCV_FORMAL_XLEN{rvfi_rs1_rdata[`RISCV_FORMAL_XLEN-1]}}, rvfi_rs1_rdata} *\n" +
-            "\t\t{{`RISCV_FORMAL_XLEN{rvfi_rs2_rdata[`RISCV_FORMAL_XLEN-1]}}, rvfi_rs2_rdata}) >> `RISCV_FORMAL_XLEN", alt_add=0x15d01651f6583fb7, extension="M")
-    insns["mulhsu"] = insn_alu("mulhsu", "0000001", "010", "({{`RISCV_FORMAL_XLEN{rvfi_rs1_rdata[`RISCV_FORMAL_XLEN-1]}}, rvfi_rs1_rdata} *\n" +
-            "\t\t{`RISCV_FORMAL_XLEN'b0, rvfi_rs2_rdata}) >> `RISCV_FORMAL_XLEN", alt_sub=0xea3969edecfbe137, extension="M")
-    insns["mulhu"] =  insn_alu("mulhu",  "0000001", "011", "({`RISCV_FORMAL_XLEN'b0, rvfi_rs1_rdata} * {`RISCV_FORMAL_XLEN'b0, rvfi_rs2_rdata}) >> `RISCV_FORMAL_XLEN", alt_add=0xd13db50d949ce5e8, extension="M")
-
-    insns["div"] =    insn_alu("div",    "0000001", "100", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? {`RISCV_FORMAL_XLEN{1'b1}} :
-                                                              rvfi_rs1_rdata == {1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}} && rvfi_rs2_rdata == {`RISCV_FORMAL_XLEN{1'b1}} ? {1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}} :
-                                                              $signed(rvfi_rs1_rdata) / $signed(rvfi_rs2_rdata)""", alt_sub=0x29bbf66f7f8529ec, extension="M")
-    insns["divu"] =   insn_alu("divu",   "0000001", "101", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? {`RISCV_FORMAL_XLEN{1'b1}} :
-                                                              rvfi_rs1_rdata / rvfi_rs2_rdata""", alt_sub=0x8c629acb10e8fd70, extension="M")
-
-    insns["rem"] =    insn_alu("rem",    "0000001", "110", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? rvfi_rs1_rdata :
-                                                              rvfi_rs1_rdata == {1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}} && rvfi_rs2_rdata == {`RISCV_FORMAL_XLEN{1'b1}} ? {`RISCV_FORMAL_XLEN{1'b0}} :
-                                                              $signed(rvfi_rs1_rdata) % $signed(rvfi_rs2_rdata)""", alt_sub=0xf5b7d8538da68fa5, extension="M")
-    insns["remu"] =   insn_alu("remu",   "0000001", "111", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? rvfi_rs1_rdata :
-                                                              rvfi_rs1_rdata % rvfi_rs2_rdata""", alt_sub=0xbc4402413138d0e1, extension="M")
-
-    insns["mulw"] =   insn_alu("mulw",   "0000001", "000", "rvfi_rs1_rdata[31:0] * rvfi_rs2_rdata[31:0]", alt_add=0x2cdf52a55876063e, wmode=True, extension="M")
-
-    insns["divw"] =   insn_alu("divw",   "0000001", "100", """rvfi_rs2_rdata[31:0] == 32'b0 ? {32{1'b1}} :
-                                                               rvfi_rs1_rdata == {1'b1, {31{1'b0}}} && rvfi_rs2_rdata == {32{1'b1}} ? {1'b1, {31{1'b0}}} :
-                                                               $signed(rvfi_rs1_rdata[31:0]) / $signed(rvfi_rs2_rdata[31:0])""", alt_sub=0x29bbf66f7f8529ec, wmode=True, extension="M")
-    insns["divuw"] =  insn_alu("divuw",  "0000001", "101", """rvfi_rs2_rdata[31:0] == 32'b0 ? {32{1'b1}} :
-                                                               rvfi_rs1_rdata[31:0] / rvfi_rs2_rdata[31:0]""", alt_sub=0x8c629acb10e8fd70, wmode=True, extension="M")
-
-    insns["remw"] =   insn_alu("remw",   "0000001", "110", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdata :
-                                                               rvfi_rs1_rdata == {1'b1, {31{1'b0}}} && rvfi_rs2_rdata == {32{1'b1}} ? {32{1'b0}} :
-                                                               $signed(rvfi_rs1_rdata[31:0]) % $signed(rvfi_rs2_rdata[31:0])""", alt_sub=0xf5b7d8538da68fa5, wmode=True, extension="M")
-    insns["remuw"] =  insn_alu("remuw",  "0000001", "111", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdata :
-                                                               rvfi_rs1_rdata[31:0] % rvfi_rs2_rdata[31:0]""", alt_sub=0xbc4402413138d0e1, wmode=True, extension="M")
-
-    # Bit Manipulation ISA (B)
-
-    ## Zba: Address generation
-
-    insns["sh1add"] = insn_alu("sh1add",  "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 1)", extension="Zba")
-    insns["sh2add"] = insn_alu("sh2add",  "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 2)", extension="Zba")
-    insns["sh3add"] = insn_alu("sh3add",  "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata << 3)", extension="Zba")
-
-    insns["add_uw"] =    insn_alu("add_uw",      "0000100", "000", "rvfi_rs2_rdata + rvfi_rs1_rdata[31:0]",          uwmode=True, extension="Zba")
-    insns["sh1add_uw"] = insn_alu("sh1add_uw",   "0010000", "010", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 1)",   uwmode=True, extension="Zba")
-    insns["sh2add_uw"] = insn_alu("sh2add_uw",   "0010000", "100", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 2)",   uwmode=True, extension="Zba")
-    insns["sh3add_uw"] = insn_alu("sh3add_uw",   "0010000", "110", "rvfi_rs2_rdata + (rvfi_rs1_rdata[31:0] << 3)",   uwmode=True, extension="Zba")
-    insns["slli_uw"] =   insn_shimm("slli_uw",   "000010",  "001", "rvfi_rs1_rdata[31:0] << insn_shamt",             uwmode=True, extension="Zba")
-
-    ## Zbb: Basic bit-manipulation
-
-    insns["clz"] =    insn_count("clz",   "00000", extension="Zbb")
-    insns["ctz"] =    insn_count("ctz",   "00001", trailing=True, extension="Zbb")
-    insns["cpop"] =   insn_count("cpop",  "00010", pop=True, extension="Zbb")
-    insns["max"] =    insn_alu("max",     "0000101", "110", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb")
-    insns["maxu"] =   insn_alu("maxu",    "0000101", "111", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs2_rdata : rvfi_rs1_rdata", extension="Zbb")
-    insns["min"] =    insn_alu("min",     "0000101", "100", "($signed(rvfi_rs1_rdata) < $signed(rvfi_rs2_rdata)) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb")
-    insns["minu"] =   insn_alu("minu",    "0000101", "101", "(rvfi_rs1_rdata < rvfi_rs2_rdata) ? rvfi_rs1_rdata : rvfi_rs2_rdata", extension="Zbb")
-    insns["sext_b"] = insn_ext("sext_b",  "00100", signed=True, bmode=True, extension="Zbb")
-    insns["sext_h"] = insn_ext("sext_h",  "00101", signed=True, extension="Zbb")
-    insns["zext_h"] = insn_ext("zext_h",  "00000", extension="Zbb")
-    insns["orc_b"] =  insn_bytes("orc_b", "12'b 0010100_00111", "101", "{8{|rvfi_rs1_rdata[i*8+:8]}}", extension="Zbb")
-
-    insns["andn"] = insn_alu("andn",    "0100000", "111", "rvfi_rs1_rdata & ~rvfi_rs2_rdata",   extension="Zbb Zbkb")
-    insns["orn"] =  insn_alu("orn",     "0100000", "110", "rvfi_rs1_rdata | ~rvfi_rs2_rdata",   extension="Zbb Zbkb")
-    insns["xnor"] = insn_alu("xnor",    "0100000", "100", "~(rvfi_rs1_rdata ^ rvfi_rs2_rdata)", extension="Zbb Zbkb")
-    insns["rol"] =  insn_alu("rol",     "0110000", "001", "(rvfi_rs1_rdata << shamt) | (rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - shamt))", shamt=True, extension="Zbb Zbkb")
-    insns["ror"] =  insn_alu("ror",     "0110000", "101", "(rvfi_rs1_rdata >> shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - shamt))", shamt=True, extension="Zbb Zbkb")
-    insns["rori"] = insn_shimm("rori",  "011000", "101", "(rvfi_rs1_rdata >> insn_shamt) | (rvfi_rs1_rdata << (`RISCV_FORMAL_XLEN - insn_shamt))", extension="Zbb Zbkb")
-    insns["rev8"] = insn_bytes("rev8",  "{6'b 011010, `RISCV_FORMAL_XLEN == 64, 5'b 11000}", "101", "rvfi_rs1_rdata[((nbytes-i)*8)-1-:8]", extension="Zbb Zbkb")
-
-    insns["pack"] =  insn_pack(extension = "Zbkb")
-    insns["packh"] = insn_pack("packh", "111", result_width=16, extension = "Zbkb")
-    insns["brev8"] = insn_bytes("brev8", "12'b 0110100_00111", "101", "rvfi_rs1_rdata[(i+1)*8-(j+1)]", bitwise=True, extension="Zbkb")
-    insns["zip"] =   insn_zip("zip",   "001", extension = "Zbkb")
-    insns["unzip"] = insn_zip("unzip", "101", unzip=True, extension = "Zbkb")
-
-    insns["clzw"] =  insn_count("clzw",  "00000", wmode=True, extension = "Zbb")
-    insns["ctzw"] =  insn_count("ctzw",  "00001", trailing=True, wmode=True, extension = "Zbb")
-    insns["cpopw"] = insn_count("cpopw", "00010", pop=True, wmode=True, extension = "Zbb")
-
-    insns["rolw"] =  insn_alu("rolw",    "0110000", "001", "(rvfi_rs1_rdata[31:0] << shamt) | (rvfi_rs1_rdata[31:0] >> (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
-    insns["rorw"] =  insn_alu("rorw",    "0110000", "101", "(rvfi_rs1_rdata[31:0] >> shamt) | (rvfi_rs1_rdata[31:0] << (32 - shamt))", shamt=True, wmode=True, extension="Zbb Zbkb")
-    insns["roriw"] = insn_shimm("roriw", "011000", "101", "(rvfi_rs1_rdata[31:0] >> insn_shamt) | (rvfi_rs1_rdata[31:0] << (32 - insn_shamt))", wmode=True, extension="Zbb Zbkb")
-
-    insns["packw"] = insn_pack("packw", "100", result_width=32, signed=True, extension = "Zbkb")
-
-    ## Zbc: Carry-less multiplication
-
-    insns["clmul"] =  insn_clmul("clmul",  "001", "rvfi_rs1_rdata << i", extension="Zbc Zbkc")
-    insns["clmulh"] = insn_clmul("clmulh", "011", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i)", index1=True, extension="Zbc Zbkc")
-
-    insns["clmulr"] = insn_clmul("clmulr", "010", "rvfi_rs1_rdata >> (`RISCV_FORMAL_XLEN - i - 1)", extension="Zbc")
-
-    ## Zbs: Single-bit instructions
-
-    insns["bclr"] =   insn_bit("bclr",    "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", extension = "Zbs")
-    insns["bclri"] =  insn_bit("bclri",   "010010", "001", "rvfi_rs1_rdata & ~(1 << index)", imode=True, extension = "Zbs")
-    insns["bext"] =   insn_bit("bext",    "010010", "101", "(rvfi_rs1_rdata >> index) & 1",  extension = "Zbs")
-    insns["bexti"] =  insn_bit("bexti",   "010010", "101", "(rvfi_rs1_rdata >> index) & 1",  imode=True, extension = "Zbs")
-    insns["binv"] =   insn_bit("binv",    "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  extension = "Zbs")
-    insns["binvi"] =  insn_bit("binvi",   "011010", "001", "rvfi_rs1_rdata ^ (1 << index)",  imode=True, extension = "Zbs")
-    insns["bset"] =   insn_bit("bset",    "001010", "001", "rvfi_rs1_rdata | (1 << index)",  extension = "Zbs")
-    insns["bseti"] =  insn_bit("bseti",   "001010", "001", "rvfi_rs1_rdata | (1 << index)",  imode=True, extension = "Zbs")
-
-    ## Zbkx: Crossbar permutations
-
-    insns["xperm4"] = insn_xperm("xperm4", "010", 4)
-    insns["xperm8"] = insn_xperm("xperm8", "100", 8)
+    insns = builtins()
 
     if insn and insn not in insns:
         raise NotImplementedError(f"{insn} instruction")
