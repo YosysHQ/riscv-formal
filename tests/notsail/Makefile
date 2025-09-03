@@ -14,6 +14,9 @@ GENERATOR := src.insns.generate
 %_wrapper.sv: $(addprefix $(RISCV_ROOT)/src/insns/,generate.py model.py)
 	cd $(RISCV_ROOT) && $(PYTHON) -m $(GENERATOR) -x $(XLEN) $(abspath $@) $*
 
+c_%_wrapper.sv: $(addprefix $(RISCV_ROOT)/src/insns/,generate.py model.py cext.py)
+	cd $(RISCV_ROOT) && $(PYTHON) -m $(GENERATOR) -x $(XLEN) -c $(abspath $@) c_$*
+
 .PHONY: insn_wrapper.sv
 insn_wrapper.sv: $(INSN_SV) Makefile
 	@echo "module rvfi_insn_wrapper (" > $@
