@@ -452,9 +452,10 @@ def insn_c_alu(insn, funct6, funct2, expr, wmode = False, extension = "Zca"):
 
 def cext():
     return {i.name: i for i in [
-
         # Load and Store Instructions
+
         ## Stack-Pointer-Based
+
         insn_c_lsp("c_lwsp",  "010",  4),
         insn_c_lsp("c_ldsp",  "011",  8),
         insn_c_lsp("c_lqsp",  "001", 16),
@@ -468,6 +469,7 @@ def cext():
         insn_c_ssp("c_fsdsp", "101",  8, True, "Zcd"),
 
         ## Register-Based
+
         insn_c_l("c_lw",  "010",  4),
         insn_c_l("c_ld",  "011",  8),
         insn_c_l("c_lq",  "001", 16),
@@ -481,6 +483,7 @@ def cext():
         insn_c_s("c_fsd", "101",  8, True, "Zcd"),
 
         # Control Transfer Instructions
+
         insn_c_j("c_j",   "101", False),
         insn_c_j("c_jal", "001", True),
         insn_c_jr("c_jr",   "1000", False),
@@ -490,11 +493,14 @@ def cext():
         insn_c_b("c_bnez", "111", "rvfi_rs1_rdata != 0"),
 
         # Integer Computational Instructions
+
         ## Integer Constant-Generation
+
         insn_c_li("c_li", "010", False),
         insn_c_li("c_lui", "011", True),
 
         ## Integer Register-Immediate
+
         insn_c_addi("c_addi"),
         insn_c_addi("c_addiw", wmode=True),
         insn_c_addi("c_addi16sp", sp_mult=16),
@@ -507,6 +513,7 @@ def cext():
         insn_c_andi("c_andi"),
 
         ## Integer Register-Register
+
         insn_c_mvadd("c_mv",  "1000", False),
         insn_c_mvadd("c_add", "1001", True),
 
