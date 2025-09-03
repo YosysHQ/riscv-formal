@@ -54,6 +54,7 @@ class Instruction(GenericChecker):
     opcode_width: int = 7
 
     _default_pc_increment: str = "rvfi_pc_rdata + 4"
+    _next_pc_check: str = "next_pc[1:0] != 0"
 
     inst_args: Optional[list[str]] = None
     wrap_next_pc: Optional[bool] = None
@@ -303,7 +304,7 @@ class Instruction(GenericChecker):
                     if self.mem_addr:
                         val = "trap"
                     elif self.next_pc:
-                        val = "next_pc[1:0] != 0"
+                        val = self._next_pc_check
                     else:
                         val = "0"
                 elif spec_sig == "mem_addr" and self.mem_addr:

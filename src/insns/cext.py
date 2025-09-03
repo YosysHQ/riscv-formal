@@ -87,9 +87,10 @@ FORMAT_CB = Instruction_format(
 FORMAT_CJ = Instruction_format(
     "CJ-type", [
         ("funct3", 3),
-        ("target", 11),
+        ("imm11", 11),
         ("opcode", 2),
     ],
+    imm = "$signed({insn_imm11[10], insn_imm11[6], insn_imm11[8:7], insn_imm11[4], insn_imm11[5], insn_imm11[0], insn_imm11[9], insn_imm11[3:1], 1'b0})"
 )
 
 # Inject instruction padding checks
@@ -116,6 +117,7 @@ class C_Instruction(Instruction):
     rs1_reg: Optional[int] = None
 
     _default_pc_increment: str = "rvfi_pc_rdata + 2"
+    _next_pc_check: str = "next_pc[0] != 0"
 
     def _config_used_regs(self):
         super()._config_used_regs()
@@ -131,6 +133,8 @@ class C_Instruction(Instruction):
                 self._used_regs.append(inst_arg)
         if self.rs1_reg:
             self._used_regs.append("rs1")
+        if self.rd_reg:
+            self._used_regs.append("rd")
 
     def _v_insn_map(self, xlen):
         v_str = super()._v_insn_map(xlen) + '\n'
@@ -155,7 +159,7 @@ class C_Instruction(Instruction):
 def insn_c_l(insn, funct3, numbytes, is_float = False, extension = "C"):
     result_width = numbytes*8
     if numbytes == 4:
-        imm = "{insn_imm2[0], insn_imm3, insn_imm2[1], 2'b 00}"
+        imm = "{insn_imm2[0], insn_imm3, insn_imm2[1], 2'b00}"
     elif numbytes == 8:
         imm = "{insn_imm2, insn_imm3, 3'b000}"
     elif numbytes == 16:
@@ -179,11 +183,10 @@ def insn_c_l(insn, funct3, numbytes, is_float = False, extension = "C"):
         xlen_max = max(32, result_width) if is_float else 128,
     )
 
-
 def insn_c_s(insn, funct3, numbytes, is_float = False, extension = "C"):
     result_width = numbytes*8
     if numbytes == 4:
-        imm = "{insn_imm2[0], insn_imm3, insn_imm2[1], 2'b 00}"
+        imm = "{insn_imm2[0], insn_imm3, insn_imm2[1], 2'b00}"
     elif numbytes == 8:
         imm = "{insn_imm2, insn_imm3, 3'b000}"
     elif numbytes == 16:
@@ -202,31 +205,123 @@ def insn_c_s(insn, funct3, numbytes, is_float = False, extension = "C"):
         mem_bytes = numbytes,
         mem_wdata = "rvfi_rs2_rdata",
         imm = imm,
+        rs1_reg = 2,
         xlen_min = max(32, result_width) if not is_float else 32,
         xlen_max = max(32, result_width) if is_float else 128,
     )
 
-def insn_c_addi(insn = "c_addi", sp = None, wmode = False, extension = "C"):
+def insn_c_lsp(insn, funct3, numbytes, is_float = False, extension = "C"):
+    result_width = numbytes*8
+    if numbytes == 4:
+        imm = "{insn_imm5[1:0], insn_imm1, insn_imm5[4:2], 2'b00}"
+    elif numbytes == 8:
+        imm = "{insn_imm5[2:0], insn_imm1, insn_imm5[4:3], 3'b000}"
+    elif numbytes == 16:
+        imm = "{insn_imm5[3:0], insn_imm1, insn_imm5[4], 4'b000}"
+    else:
+        raise NotImplementedError(numbytes)
     instr = C_Instruction(
         name = insn,
-        insn_parts = FORMAT_CIW if sp == 4 else FORMAT_CI,
-        opcode = "00" if sp == 4 else "01",
+        insn_parts = FORMAT_CI,
+        opcode = "10",
         extension = extension,
         op_values = {
-            "funct3": "011" if sp == 16 else "001" if wmode else "000",
+            "funct3": funct3,
+        },
+        mem_addr = "rvfi_rs1_rdata + insn_imm",
+        mem_bytes = numbytes,
+        result = "mem_rdata",
+        imm = imm,
+        rs1_reg = 2,
+        sign_extend_from = result_width if not is_float else None,
+        xlen_min = max(32, result_width) if not is_float else 32,
+        xlen_max = max(32, result_width) if is_float else 128,
+    )
+
+    if not is_float:
+        instr.check_valid.append("insn_rd != 0")
+
+    return instr
+
+def insn_c_ssp(insn, funct3, numbytes, is_float = False, extension = "C"):
+    result_width = numbytes*8
+    if numbytes == 4:
+        imm = "{insn_imm6[1:0], insn_imm6[5:2], 2'b00}"
+    elif numbytes == 8:
+        imm = "{insn_imm6[2:0], insn_imm6[5:3], 3'b000}"
+    elif numbytes == 16:
+        imm = "{insn_imm6[3:0], insn_imm6[5:4], 4'b000}"
+    else:
+        raise NotImplementedError(numbytes)
+    return C_Instruction(
+        name = insn,
+        insn_parts = FORMAT_CSS,
+        opcode = "10",
+        extension = extension,
+        op_values = {
+            "funct3": funct3,
+        },
+        mem_addr = "rvfi_rs1_rdata + insn_imm",
+        mem_bytes = numbytes,
+        mem_wdata = "rvfi_rs2_rdata",
+        imm = imm,
+        xlen_min = max(32, result_width) if not is_float else 32,
+        xlen_max = max(32, result_width) if is_float else 128,
+    )
+
+def insn_c_j(insn, funct3, link = False, extension = "C"):
+    return C_Instruction(
+        name = insn,
+        insn_parts = FORMAT_CJ,
+        opcode = "01",
+        extension = extension,
+        op_values = {
+            "funct3": funct3,
+        },
+        next_pc = "rvfi_pc_rdata + insn_imm",
+        rd_reg = 1 if link else None,
+        result = "rvfi_pc_rdata + 2" if link else None,
+        imm = True,
+        xlen_max = 32 if link else 128,
+    )
+
+def insn_c_jr(insn, funct4, link = False, extension = "C"):
+    return C_Instruction(
+        name = insn,
+        insn_parts = FORMAT_CR,
+        opcode = "10",
+        extension = extension,
+        op_values = {
+            "funct4": funct4,
+        },
+        next_pc = "rvfi_rs1_rdata & ~1",
+        read_rsd = True,
+        rd_reg = 1 if link else None,
+        result = "rvfi_pc_rdata + 2" if link else None,
+        check_valid = ["insn_rs1 != 0", "insn_rs2 == 0"]
+    )
+
+def insn_c_addi(insn = "c_addi", sp_mult = None, wmode = False, extension = "C"):
+    instr = C_Instruction(
+        name = insn,
+        insn_parts = FORMAT_CIW if sp_mult == 4 else FORMAT_CI,
+        opcode = "00" if sp_mult == 4 else "01",
+        extension = extension,
+        op_values = {
+            "funct3": "011" if sp_mult == 16 else "001" if wmode else "000",
         },
         result = "rvfi_rs1_rdata + insn_imm",
-        imm = "$signed({insn_imm1, insn_imm5[2:1], insn_imm5[3], insn_imm5[0], insn_imm5[4], 4'b0})" if sp == 16 else True,
-        read_rsd = True if not sp else None,
-        rd_reg = 2 if sp == 16 else None,
-        rs1_reg = 2 if sp == 4 else None,
+        imm = "$signed({insn_imm1, insn_imm5[2:1], insn_imm5[3], insn_imm5[0], insn_imm5[4], 4'b0})" if sp_mult == 16 else True,
+        read_rsd = True if not sp_mult else None,
+        rd_reg = 2 if sp_mult == 16 else None,
+        rs1_reg = 2 if sp_mult == 4 else None,
         xlen_min = 64 if wmode else 32,
         sign_extend_from = 32 if wmode else None,
     )
 
-    if sp:
+    if sp_mult:
         instr.check_valid.append("insn_imm != 0")
-    if sp == 16:
+    if sp_mult == 16:
         instr.check_valid.append("insn_rs1 == insn_rd")
 
     return instr
@@ -254,8 +349,25 @@ def cext():
         insn_c_s("c_fsw", "111",  4, True, "C and F"),
         insn_c_s("c_fsd", "101",  8, True, "C and D"),
 
+        insn_c_lsp("c_lwsp",  "010",  4),
+        insn_c_lsp("c_ldsp",  "011",  8),
+        insn_c_lsp("c_lqsp",  "001", 16),
+        insn_c_lsp("c_flwsp", "011",  4, True, "C and F"),
+        insn_c_lsp("c_fldsp", "001",  8, True, "C and D"),
+
+        insn_c_ssp("c_swsp",  "110",  4),
+        insn_c_ssp("c_sdsp",  "111",  8),
+        insn_c_ssp("c_sqsp",  "101", 16),
+        insn_c_ssp("c_fswsp", "111",  4, True, "C and F"),
+        insn_c_ssp("c_fsdsp", "101",  8, True, "C and D"),
+
+        insn_c_j("c_j",   "101", False),
+        insn_c_j("c_jal", "001", True),
+        insn_c_jr("c_jr",   "1000", False),
+        insn_c_jr("c_jalr", "1001", True),
+
         insn_c_addi(),
         insn_c_addi("c_addiw", wmode=True),
-        insn_c_addi("c_addi4spn", sp=4),
-        insn_c_addi("c_addi16sp", sp=16),
+        insn_c_addi("c_addi4spn", sp_mult=4),
+        insn_c_addi("c_addi16sp", sp_mult=16),
     ]}
