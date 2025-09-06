@@ -109,6 +109,7 @@ def insn_b(insn, funct3, expr, extension = "I"):
         },
         next_pc = f"{expr} ? rvfi_pc_rdata + insn_imm : rvfi_pc_rdata + 4",
         imm = True,
+        read_pc = True,
     )
 
 def insn_l(insn, funct3, numbytes, signext, extension = "I"):
@@ -440,15 +441,15 @@ def builtins():
         ),
         Instruction(
             name = "auipc", insn_parts = FORMAT_U, opcode = "0010111", extension = "I",
-            result = "rvfi_pc_rdata + insn_imm", imm = True,
+            result = "rvfi_pc_rdata + insn_imm", imm = True, read_pc = True,
         ),
         Instruction(
             name = "jal", insn_parts = FORMAT_J, opcode = "1101111", extension = "I",
-            result = "rvfi_pc_rdata + 4", next_pc = "rvfi_pc_rdata + insn_imm", imm = True,
+            result = "rvfi_pc_rdata + 4", next_pc = "rvfi_pc_rdata + insn_imm", imm = True, read_pc = True,
         ),
         Instruction(
             name = "jalr", insn_parts = FORMAT_I, opcode = "1100111", extension = "I", op_values = { "funct3": "000" },
-            result = "rvfi_pc_rdata + 4", next_pc = "(rvfi_rs1_rdata + insn_imm) & ~1", imm = True,
+            result = "rvfi_pc_rdata + 4", next_pc = "(rvfi_rs1_rdata + insn_imm) & ~1", imm = True, read_pc = True,
         ),
 
         insn_b("beq",  "000", "rvfi_rs1_rdata == rvfi_rs2_rdata"),

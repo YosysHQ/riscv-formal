@@ -28,6 +28,7 @@ class Instruction(GenericChecker):
     shamt: Optional[bool] = None
     sign_extend_from: Optional[int] = None
     zero_extend_from: Optional[int] = None
+    read_pc: Optional[bool] = None
     
     op_values: dict[str, str] = field(default_factory=dict)
     raw_code: list[str] = field(default_factory=list)

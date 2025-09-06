@@ -300,6 +300,7 @@ def insn_c_j(insn, funct3, link = False, extension = "Zca"):
         rd_reg = 1 if link else None,
         result = "rvfi_pc_rdata + 2" if link else None,
         imm = True,
+        read_pc = True,
         xlen_max = 32 if link else 128,
     )
 
@@ -316,6 +317,7 @@ def insn_c_jr(insn, funct4, link = False, extension = "Zca"):
         read_rsd = True,
         rd_reg = 1 if link else None,
         result = "rvfi_pc_rdata + 2" if link else None,
+        read_pc = True,
         check_valid = ["insn_rs1 != 0", "insn_rs2 == 0"]
     )
 
@@ -330,6 +332,7 @@ def insn_c_b(insn, funct3, expr, extension = "Zca"):
         },
         next_pc = f"{expr} ? rvfi_pc_rdata + insn_imm : rvfi_pc_rdata + 2",
         imm = True,
+        read_pc = True,
         read_rsd = True,
     )
 
