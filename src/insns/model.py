@@ -1,22 +1,8 @@
-from dataclasses import dataclass, field, asdict
-import json
+from dataclasses import dataclass, field
 from textwrap import dedent
-from typing import Optional, Any, ClassVar, Callable
-
-import json_fix
+from typing import Optional, ClassVar, Callable
 
 from ..checks import GenericChecker
-
-def skip_empty_factory(mapping: list[tuple[str, Any]]) -> dict:
-    """dictionary factory which skips empty values"""
-    result = {}
-    for key, val in mapping:
-        if isinstance(val, bool):
-            result[key] = val
-        elif val:
-            # skip falsy non-boolean values
-            result[key] = val
-    return result
 
 
 @dataclass
@@ -108,24 +94,14 @@ class Instruction(GenericChecker):
         self._config_widths()
         self._altops_fixup()
 
-    @classmethod
-    def from_json(cls, s: str):
-        mapping = json.loads(s)
-        return cls(**mapping)
-
-    def __json__(self, skip_empty: bool = True) -> dict:
-        if skip_empty:
-            return asdict(self, dict_factory=skip_empty_factory)
-        else:
-            return asdict(self)
-
-    def to_json(self, skip_empty: bool = True, indent: int | str | None = None) -> str:
-        return json.dumps(self.__json__(skip_empty), indent=indent)
-
     def _v_xlen_check(self, xlen) -> None:
         # check valid xlen
         if xlen < self.xlen_min or xlen > self.xlen_max:
             raise NotImplementedError(f"{xlen} not in range ({self.xlen_min}, {self.xlen_max})")
+
+    def _v_modname(self) -> str:
+        # module name
+        return f"rvfi_insn_{self.name}"
 
     def _v_io(self) -> str:
         # rvfi_insn_check.sv compliant io
