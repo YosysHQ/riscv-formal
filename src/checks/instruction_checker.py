@@ -3,12 +3,19 @@ from textwrap import dedent, indent
 
 from . import GenericChecker
 from ..insns import Instruction
-from ..rvfi import Observer, SpeculativeObserver, ZeroedObserver
+from ..rvfi import (
+    Observer,
+    SpeculativeObserver,
+    ZeroedObserver,
+    SpeculativeEvaluation,
+)
 
 @dataclass(kw_only=True)
 class InstructionChecker(GenericChecker):
     instructions: dict[str, Instruction] = field(default_factory=dict)
     observers: dict[str, Observer] = field(default_factory=dict)
+
+    defined_checks: list[SpeculativeEvaluation] = field(default_factory=list)
 
     def configure_io(self):
         for insn in self.instructions.values():
@@ -85,24 +92,28 @@ class InstructionChecker(GenericChecker):
         return v_str
 
     def _v_spec_check(self) -> str:
-        spec_body: list[str] = []
+        handled_observers: set[str] = set(["valid", "trap"])
+        spec_pre_trap: list[str] = [
+            "assume (spec_valid);",
+            "assert (spec_trap == rvfi.trap);",
+        ]
+        spec_untrapped: list[str] = []
+        for spec in self.defined_checks:
+            handled_observers.update(spec.speculates_about)
+            if spec.ignore_trap:
+                spec_pre_trap.append(spec.evaluation)
+            else:
+                spec_untrapped.append(spec.evaluation)
+        pre_trap_str = "\n".join(spec_pre_trap)
         for name, obs in self.observers.items():
-            if isinstance(obs, SpeculativeObserver) and name not in ["valid", "trap"]:
-                #TODO: maskable memory/byte enables
-                #TODO: `rvformal_addr_eq addresses
-                spec_body.append(f"assert(spec_{name} == rvfi.{name});")
-        body_str = "\n".join(spec_body)
+            if isinstance(obs, SpeculativeObserver) and name not in handled_observers:
+                spec_untrapped.append(f"assert(spec_{name} == rvfi.{name});")
+        untrapped_str = "\n".join(spec_untrapped)
         v_str = dedent(f"""\
             integer i;
             always @* begin
-                if (!reset && check) begin
-                    assume(spec_valid);
-                    if (rvfi.rs1_addr == 0)
-                        assert(rvfi.rs1_rdata == 0);
-                    if (rvfi.rs2_addr == 0)
-                        assert(rvfi.rs2_rdata == 0);
-                    assert (spec_trap == rvfi.trap);
-                    if (!spec_trap) begin\n{indent(body_str, "                        ")}
+                if (!reset && check) begin\n{indent(pre_trap_str, "                    ")}
+                    if (!spec_trap) begin\n{indent(untrapped_str, "                        ")}
                     end
                 end
             end

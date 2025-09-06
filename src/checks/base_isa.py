@@ -1,9 +1,15 @@
 import json
+from textwrap import dedent
 import click
 
 from .instruction_checker import InstructionChecker
 from ..insns import Instruction, builtins
-from ..rvfi import Observer, SpeculativeObserver, ZeroedObserver
+from ..rvfi import (
+    Observer,
+    SpeculativeObserver,
+    ZeroedObserver,
+    SpeculativeEvaluation,
+)
 
 def dump_isa(name: str, insns: dict[str, Instruction], xlen: int, format: str):
     rvfi: dict[str, Observer] = {o.name: o for o in [
@@ -30,10 +36,47 @@ def dump_isa(name: str, insns: dict[str, Instruction], xlen: int, format: str):
         SpeculativeObserver("mem_wdata", "`RISCV_FORMAL_XLEN"),
     ]}
 
+    defined_checks: list[SpeculativeEvaluation] = [
+        SpeculativeEvaluation(
+            "if (rvfi.rs1_addr == 0) assert(rvfi.rs1_rdata == 0);",
+            ignore_trap = True,
+        ),
+        SpeculativeEvaluation(
+            "if (rvfi.rs2_addr == 0) assert(rvfi.rs2_rdata == 0);",
+            ignore_trap = True,
+        ),
+        SpeculativeEvaluation(
+            "assert(`rvformal_addr_eq(spec_pc_wdata, rvfi.pc_wdata));",
+            speculates_about = ["pc_wdata"],
+        ),
+        SpeculativeEvaluation(
+            "if (spec_mem_wmask || spec_mem_rmask) assert(`rvformal_addr_eq(spec_mem_addr, rvfi.mem_addr));",
+            speculates_about = ["mem_addr"],
+        ),
+        SpeculativeEvaluation(
+            dedent("""\
+                for (i = 0; i < `RISCV_FORMAL_XLEN/8; i = i+1) begin
+                    if (spec_mem_wmask[i]) begin
+                        assert(rvfi.mem_wmask[i]);
+                        assert(spec_mem_wdata[i*8 +: 8] == rvfi.mem_wdata[i*8 +: 8]);
+                    end else if (rvfi.mem_wmask[i]) begin
+                        assert(rvfi.mem_rmask[i]);
+                        assert(rvfi.mem_rdata[i*8 +: 8] == rvfi.mem_wdata[i*8 +: 8]);
+                    end
+                    if (spec_mem_rmask[i]) begin
+                        assert(rvfi.mem_rmask[i]);
+                    end
+                end"""
+            ),
+            speculates_about = ["mem_wmask", "mem_rmask", "mem_wdata"],
+        ),
+    ]
+
     isa_checker = InstructionChecker(
         name = name,
         instructions = insns,
         observers = rvfi,
+        defined_checks = defined_checks,
     )
 
     isa_checker.configure_io()
@@ -56,9 +99,6 @@ def base_isa(format: str):
             continue
         # skip M extension for NERV
         if "M" in val.extension:
-            continue
-        # skip memory related instructions because they're incomplete
-        if val.mem_addr:
             continue
 
         insns[key] = val
