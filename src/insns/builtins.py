@@ -195,7 +195,7 @@ def insn_shimm(insn, funct6, funct3, expr, wmode=False, uwmode=False, extension 
         result = expr,
         extension = extension,
         sign_extend_from = 32 if wmode else None,
-        xlen_min = 64 if wmode else 32,
+        xlen_min = 64 if wmode or uwmode else 32,
         op_values = {
           "funct6": funct6,
           "funct3": funct3,
@@ -326,6 +326,10 @@ def insn_bytes(insn, funct12, funct3, expr, bitwise=False, extension = "B"):
     )
 
 def insn_pack(insn="pack", funct3="100", result_width: Optional[int] = None, signed=False, extension = "B"):
+    if result_width:
+        xlen_min = max(32, result_width if not signed else result_width*2)
+    else:
+        xlen_min = 32
     return Instruction(
         name = insn,
         insn_parts = FORMAT_R,
@@ -339,6 +343,7 @@ def insn_pack(insn="pack", funct3="100", result_width: Optional[int] = None, sig
             "funct7": "0000100",
             "funct3": funct3,
         },
+        xlen_min = xlen_min,
     )
 
 def insn_zip(insn, funct3, unzip=False, extension = "B"):

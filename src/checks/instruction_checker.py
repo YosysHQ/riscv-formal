@@ -10,6 +10,11 @@ class InstructionChecker(GenericChecker):
     instructions: dict[str, Instruction] = field(default_factory=dict)
     observers: dict[str, Observer] = field(default_factory=dict)
 
+    def configure_io(self):
+        for insn in self.instructions.values():
+            insn.select_inputs(self.observers.values())
+            insn.select_outputs([o for o in self.observers.values() if isinstance(o, SpeculativeObserver)])
+
     def _v_io(self) -> str:
         # macro defined RVFI inputs
         return dedent("""\
@@ -31,25 +36,24 @@ class InstructionChecker(GenericChecker):
             spec_map[insn_prefix] = spec_list = []
 
             # map observers to signals
-            #TODO: only include used signals
-            inst_sig_map: dict[str, str] = {
-                "rvfi_valid": "rvfi.valid",
-                "rvfi_insn": "rvfi.insn",
-                "rvfi_pc_rdata": "rvfi.pc_rdata",
-                "rvfi_mem_rdata": "rvfi.mem_rdata",
-            }
+            inst_sig_map: dict[str, str] = {}
             inst_sig_decls: list[str] = []
-            for name, obs in self.observers.items():
+            for name, obs in insn.get_inputs().items():
+                if isinstance(obs, ZeroedObserver):
+                    #TODO: substitute insn specific signals in zero_condition
+                    inst_sig = f"{insn_prefix}_{name}_or_zero"
+                    inst_sig_map[f"rvfi_{name}"] = inst_sig
+                    inst_sig_decls.append(f"(* keep *) wire {obs.bitrange()} {inst_sig} = {obs.zero_condition} ? 0 : rvfi.{name};")
+                else:
+                    inst_sig_map[f"rvfi_{name}"] = f"rvfi.{name}"
+            for name, obs in insn.get_outputs().items():
                 if isinstance(obs, SpeculativeObserver):
                     if name != "valid": spec_list.append(name)
                     inst_sig = f"{insn_prefix}_spec_{name}"
                     inst_sig_map[f"spec_{name}"] = inst_sig
                     inst_sig_decls.append(f"(* keep *) wire {obs.bitrange()} {inst_sig};")
-                elif isinstance(obs, ZeroedObserver):
-                    #TODO: substitute insn specific signals in zero_condition
-                    inst_sig = f"{insn_prefix}_{name}_or_zero"
-                    inst_sig_map[f"rvfi_{name}"] = inst_sig
-                    inst_sig_decls.append(f"(* keep *) wire {obs.bitrange()} {inst_sig} = {obs.zero_condition} ? 0 : rvfi.{name};")
+                else:
+                    raise NotImplementedError(type(obs))
 
             # compose instance
             insn_inst = '\n'.join(inst_sig_decls)
@@ -86,7 +90,6 @@ class InstructionChecker(GenericChecker):
             if isinstance(obs, SpeculativeObserver) and name not in ["valid", "trap"]:
                 #TODO: maskable memory/byte enables
                 #TODO: `rvformal_addr_eq addresses
-                #TODO: arbitrary values on some unused rvfi (e.g. rs1_addr)
                 spec_body.append(f"assert(spec_{name} == rvfi.{name});")
         body_str = "\n".join(spec_body)
         v_str = dedent(f"""\

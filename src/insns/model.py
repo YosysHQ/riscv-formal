@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
-from textwrap import dedent
-from typing import Optional, ClassVar, Callable
+from typing import Optional, ClassVar, Callable, Iterable
 
 from ..checks import GenericChecker
+from ..rvfi import Observer
 
 
 @dataclass
@@ -46,6 +46,9 @@ class Instruction(GenericChecker):
     inst_args: Optional[list[str]] = None
     wrap_next_pc: Optional[bool] = None
 
+    registered_inputs: Optional[dict[str, Observer]] = None
+    registered_outputs: Optional[dict[str, Observer]] = None
+
     registered_assigns: ClassVar[dict[str, Callable[['Instruction'], str]]] = {}
     registered_checks: ClassVar[set[str]] = set()
 
@@ -56,6 +59,88 @@ class Instruction(GenericChecker):
     @classmethod
     def register_check(cls, check: str):
         cls.registered_checks.add(check)
+
+    def _default_inputs(self):
+        # rvfi_insn_check.sv compliant inputs
+        return {o.name: o for o in [
+            Observer("valid", "1"),
+            Observer("insn", "`RISCV_FORMAL_ILEN"),
+            Observer("pc_rdata", "`RISCV_FORMAL_XLEN"),
+            Observer("rs1_rdata", "`RISCV_FORMAL_XLEN"),
+            Observer("rs2_rdata", "`RISCV_FORMAL_XLEN"),
+            Observer("mem_rdata", "`RISCV_FORMAL_XLEN"),
+        ]}
+
+    def _default_outputs(self):
+        # rvfi_insn_check.sv compliant outputs
+        return {o.name: o for o in [
+            Observer("valid", "1"),
+            Observer("trap", "1"),
+            Observer("rs1_addr", "5"),
+            Observer("rs2_addr", "5"),
+            Observer("rd_addr", "5"),
+            Observer("rd_wdata", "`RISCV_FORMAL_XLEN"),
+            Observer("pc_wdata", "`RISCV_FORMAL_XLEN"),
+            Observer("mem_addr", "`RISCV_FORMAL_XLEN"),
+            Observer("mem_rmask", "`RISCV_FORMAL_XLEN/8"),
+            Observer("mem_wmask", "`RISCV_FORMAL_XLEN/8"),
+            Observer("mem_wdata", "`RISCV_FORMAL_XLEN"),
+        ]}
+
+    def get_inputs(self):
+        return self.registered_inputs if self.registered_inputs is not None else self._default_inputs()
+
+    def get_outputs(self):
+        return self.registered_outputs if self.registered_outputs is not None else self._default_outputs()
+
+    def _inputs_used(self) -> set[str]:
+        inputs = set([
+            "valid",
+            "insn",
+        ])
+        for used_reg in self._used_regs:
+            if used_reg in self._maybe_sources:
+                inputs.add(f"{used_reg}_rdata")
+        if self.mem_addr and not self.mem_wdata:
+            inputs.add("mem_rdata")
+        if self.read_pc:
+            inputs.add("pc_rdata")
+        return inputs
+
+    def _outputs_used(self) -> set[str]:
+        outputs = set([
+            "valid",
+        ])
+        for used_reg in self._used_regs:
+            outputs.add(f"{used_reg}_addr")
+            if used_reg in self._maybe_dests:
+                outputs.add(f"{used_reg}_wdata")
+        if self.next_pc:
+            outputs.add("pc_wdata")
+            outputs.add("trap")
+        if self.mem_addr:
+            outputs.add("mem_addr")
+            if self.mem_wdata:
+                outputs.add("mem_wmask")
+                outputs.add("mem_wdata")
+            else:
+                outputs.add("mem_rmask")
+        outputs.update(self.spec_map.keys())
+        return outputs
+
+    def select_inputs(self, observers: Iterable[Observer]):
+        self.registered_inputs = {}
+        inputs_used = self._inputs_used()
+        for observer in observers:
+            if observer.name in inputs_used:
+                self.registered_inputs[observer.name] = observer
+
+    def select_outputs(self, observers: Iterable[Observer]):
+        self.registered_outputs = {}
+        outputs_used = self._outputs_used()
+        for observer in observers:
+            if observer.name in outputs_used:
+                self.registered_outputs[observer.name] = observer
 
     def _insn_fixup(self):
         if isinstance(self.insn_parts, Instruction_format):
@@ -105,26 +190,12 @@ class Instruction(GenericChecker):
         return f"rvfi_insn_{self.name}"
 
     def _v_io(self) -> str:
-        # rvfi_insn_check.sv compliant io
-        return dedent("""\
-            input                                 rvfi_valid,
-            input  [`RISCV_FORMAL_ILEN   - 1 : 0] rvfi_insn,
-            input  [`RISCV_FORMAL_XLEN   - 1 : 0] rvfi_pc_rdata,
-            input  [`RISCV_FORMAL_XLEN   - 1 : 0] rvfi_rs1_rdata,
-            input  [`RISCV_FORMAL_XLEN   - 1 : 0] rvfi_rs2_rdata,
-            input  [`RISCV_FORMAL_XLEN   - 1 : 0] rvfi_mem_rdata,
-
-            output                                spec_valid,
-            output                                spec_trap,
-            output [                       4 : 0] spec_rs1_addr,
-            output [                       4 : 0] spec_rs2_addr,
-            output [                       4 : 0] spec_rd_addr,
-            output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_rd_wdata,
-            output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_pc_wdata,
-            output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_mem_addr,
-            output [`RISCV_FORMAL_XLEN/8 - 1 : 0] spec_mem_rmask,
-            output [`RISCV_FORMAL_XLEN/8 - 1 : 0] spec_mem_wmask,
-            output [`RISCV_FORMAL_XLEN   - 1 : 0] spec_mem_wdata""")
+        io_sigs: list[str] = []
+        for observer in self.get_inputs().values():
+            io_sigs.append(f"input {observer.bitrange()} rvfi_{observer.name}")
+        for observer in self.get_outputs().values():
+            io_sigs.append(f"output {observer.bitrange()} spec_{observer.name}")
+        return ",\n".join(io_sigs)
 
     def _v_insn_fmt(self) -> str:
         # insn decode
@@ -228,19 +299,7 @@ class Instruction(GenericChecker):
     def _v_spec_mapping(self, xlen: int) -> str:
         # map spec values
         spec_mapping = "// spec mapping\n"
-        spec_sigs = [
-            "valid",
-            "rs2_addr",
-            "rs1_addr",
-            "rd_addr",
-            "rd_wdata",
-            "pc_wdata",
-            "trap",
-            "mem_addr",
-            "mem_rmask",
-            "mem_wmask",
-            "mem_wdata",
-        ]
+        spec_sigs = self.get_outputs().keys()
         for spec_sig in self.spec_map.keys():
             if spec_sig not in spec_sigs:
                 raise NotImplementedError(f"spec_sig {spec_sig}")
