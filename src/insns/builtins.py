@@ -15,7 +15,11 @@
 from textwrap import dedent
 from typing import Optional
 
-from .model import Instruction, Instruction_format
+from .model import (
+    Instruction_format,
+    Instruction,
+    MemoryInstruction,
+)
 
 FORMAT_R = Instruction_format(
     "R-type", [
@@ -114,7 +118,7 @@ def insn_b(insn, funct3, expr, extension = "I"):
 
 def insn_l(insn, funct3, numbytes, signext, extension = "I"):
     result_width = numbytes*8
-    return Instruction(
+    return MemoryInstruction(
         name = insn,
         insn_parts = FORMAT_I,
         opcode = "0000011",
@@ -133,7 +137,7 @@ def insn_l(insn, funct3, numbytes, signext, extension = "I"):
 
 def insn_s(insn, funct3, numbytes, extension = "I"):
     result_width = numbytes*8
-    return Instruction(
+    return MemoryInstruction(
         name = insn,
         insn_parts = FORMAT_S,
         opcode = "0100011",

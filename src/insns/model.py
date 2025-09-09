@@ -17,9 +17,6 @@ class Instruction(GenericChecker):
     insn_parts: list[tuple[str, int]]
     opcode: str
 
-    mem_addr: Optional[str] = None
-    mem_bytes: Optional[int] = None
-    mem_wdata: Optional[str] = None
     result: Optional[str] = None
     next_pc: Optional[str] = None
     extension: Optional[str] = None
@@ -101,8 +98,6 @@ class Instruction(GenericChecker):
         for used_reg in self._used_regs:
             if used_reg in self._maybe_sources:
                 inputs.add(f"{used_reg}_rdata")
-        if self.mem_addr and not self.mem_wdata:
-            inputs.add("mem_rdata")
         if self.read_pc:
             inputs.add("pc_rdata")
         return inputs
@@ -118,13 +113,6 @@ class Instruction(GenericChecker):
         if self.next_pc:
             outputs.add("pc_wdata")
             outputs.add("trap")
-        if self.mem_addr:
-            outputs.add("mem_addr")
-            if self.mem_wdata:
-                outputs.add("mem_wmask")
-                outputs.add("mem_wdata")
-            else:
-                outputs.add("mem_rmask")
         outputs.update(self.spec_map.keys())
         return outputs
 
@@ -245,28 +233,6 @@ class Instruction(GenericChecker):
         instantiation = ""
         result_width = self._result_width or xlen
 
-        # memory alignment
-        if self.mem_addr:
-            instantiation += "`ifdef RISCV_FORMAL_ALIGNED_MEM\n"
-            instantiation += f"wire [{xlen-1}:0] addr = {self.mem_addr};\n"
-            instantiation += f"wire [{xlen-1}:0] spec_addr = addr & ~({xlen}/8-1);\n"
-            instantiation += f"wire [{int(xlen/8)-1}:0] spec_mem_mask = ((1 << {self.mem_bytes})-1) << (addr-spec_addr);\n"
-            instantiation += f"wire trap = (addr & ({self.mem_bytes}-1)) != 0;\n"
-            if self.mem_wdata:
-                instantiation += f"wire [{xlen-1}:0] mem_wdata = {self.mem_wdata} << (8*(addr-spec_addr));\n"
-            else:
-                instantiation += f"wire [{result_width-1}:0] mem_rdata = rvfi_mem_rdata >> (8*(addr-spec_addr));\n"
-            instantiation += "`else\n"
-            instantiation += f"wire [{xlen-1}:0] addr = {self.mem_addr};\n"
-            instantiation += f"wire [{xlen-1}:0] spec_addr = addr;\n"
-            instantiation += f"wire [{int(xlen/8)-1}:0] spec_mem_mask = ((1 << {self.mem_bytes})-1);\n"
-            instantiation += f"wire trap = 0;\n"
-            if self.mem_wdata:
-                instantiation += f"wire [{self.mem_bytes*8-1}:0] mem_wdata = {self.mem_wdata};\n"
-            else:
-                instantiation += f"wire [{result_width-1}:0] mem_rdata = rvfi_mem_rdata;\n"
-            instantiation += "`endif\n"
-
         # altops injection
         if self.alt_add:
             alt_mask = self.alt_add
@@ -296,16 +262,40 @@ class Instruction(GenericChecker):
 
         return instantiation
 
+    def _v_spec_value(self, spec_sig: str, xlen: int) -> str:
+        if spec_sig == "pc_wdata":
+            if self.next_pc:
+                return "next_pc"
+            else:
+                return self._default_pc_increment
+        elif spec_sig == "valid":
+            try:
+                int(self.opcode, 2)
+                opcode = f"{self.opcode_width}'b {self.opcode}"
+            except ValueError:
+                opcode = self.opcode
+            val = f"rvfi_valid && !illinsn && insn_opcode == {opcode}"
+            for check in self.check_valid:
+                val += f" && ({check})"
+            for check in self.registered_checks:
+                val += f" && ({check})"
+            return val
+        elif spec_sig == "trap" and self.next_pc:
+            return self._next_pc_check
+        else:
+            return "0"
+
     def _v_spec_mapping(self, xlen: int) -> str:
         # map spec values
         spec_mapping = "// spec mapping\n"
+        spec_map: dict[str, str] = self.spec_map.copy()
         spec_sigs = self.get_outputs().keys()
-        for spec_sig in self.spec_map.keys():
+        for spec_sig in spec_map.keys():
             if spec_sig not in spec_sigs:
                 raise NotImplementedError(f"spec_sig {spec_sig}")
 
         for used_reg in self._used_regs:
-            self.spec_map[f"{used_reg}_addr"] = f"insn_{used_reg}"
+            spec_map[f"{used_reg}_addr"] = f"insn_{used_reg}"
             if used_reg in self._maybe_dests:
                 extend_from = self.sign_extend_from or self.zero_extend_from or 0
                 if extend_from:
@@ -313,52 +303,19 @@ class Instruction(GenericChecker):
                     result = f"${funct}(result[0+:{extend_from}])"
                 else:
                     result = "result"
-                self.spec_map[f"{used_reg}_wdata"] = f"spec_{used_reg}_addr ? {result} : 0"
+                spec_map[f"{used_reg}_wdata"] = f"spec_{used_reg}_addr ? {result} : 0"
 
         for assign in self.registered_assigns.values():
             spec_mapping += f"{assign(self)}\n"
 
         for spec_sig in spec_sigs:
-            if spec_sig not in self.spec_map:
-                if spec_sig == "pc_wdata":
-                    if self.next_pc:
-                        val = "next_pc"
-                    else:
-                        val = self._default_pc_increment
-                elif spec_sig == "valid":
-                    try:
-                        int(self.opcode, 2)
-                        opcode = f"{self.opcode_width}'b {self.opcode}"
-                    except ValueError:
-                        opcode = self.opcode
-                    val = f"rvfi_valid && !illinsn && insn_opcode == {opcode}"
-                    for check in self.check_valid:
-                        val += f" && ({check})"
-                    for check in self.registered_checks:
-                        val += f" && ({check})"
-                elif spec_sig == "trap":
-                    if self.mem_addr:
-                        val = "trap"
-                    elif self.next_pc:
-                        val = self._next_pc_check
-                    else:
-                        val = "0"
-                elif spec_sig == "mem_addr" and self.mem_addr:
-                    val = "spec_addr"
-                elif spec_sig == "mem_rmask" and self.mem_addr and not self.mem_wdata:
-                    val = "spec_mem_mask"
-                elif spec_sig == "mem_wmask" and self.mem_wdata:
-                    val = "spec_mem_mask"
-                elif spec_sig == "mem_wdata" and self.mem_wdata:
-                    val = "mem_wdata"
-                else:
-                    val = "0"
-                self.spec_map[spec_sig] = val
+            if spec_sig not in spec_map:
+                spec_map[spec_sig] = self._v_spec_value(spec_sig, xlen)
 
         if self.wrap_next_pc:
-            self.spec_map.pop("pc_wdata")
+            spec_map.pop("pc_wdata")
 
-        for spec_sig, spec_val in self.spec_map.items():
+        for spec_sig, spec_val in spec_map.items():
             spec_mapping += f"assign spec_{spec_sig} = {spec_val};\n"
 
         return spec_mapping
@@ -376,3 +333,65 @@ class Instruction(GenericChecker):
 
     def to_verilog(self, xlen: int):
         return super().to_verilog(xlen=xlen)
+
+@dataclass(kw_only=True)
+class MemoryInstruction(Instruction):
+    mem_addr: str
+    mem_bytes: int
+    mem_wdata: Optional[str] = None
+
+    def _inputs_used(self) -> set[str]:
+        inputs = super()._inputs_used()
+        if not self.mem_wdata:
+            inputs.add("mem_rdata")
+        return inputs
+
+    def _outputs_used(self) -> set[str]:
+        outputs = super()._outputs_used()
+        outputs.add("mem_addr")
+        if self.mem_wdata:
+            outputs.add("mem_wmask")
+            outputs.add("mem_wdata")
+        else:
+            outputs.add("mem_rmask")
+        return outputs
+
+    def _v_instantiation(self, xlen: int):
+        result_width = self._result_width or xlen
+
+        # memory alignment
+        v_str = "`ifdef RISCV_FORMAL_ALIGNED_MEM\n"
+        v_str += f"wire [{xlen-1}:0] addr = {self.mem_addr};\n"
+        v_str += f"wire [{xlen-1}:0] spec_addr = addr & ~({xlen}/8-1);\n"
+        v_str += f"wire [{int(xlen/8)-1}:0] spec_mem_mask = ((1 << {self.mem_bytes})-1) << (addr-spec_addr);\n"
+        v_str += f"wire trap = (addr & ({self.mem_bytes}-1)) != 0;\n"
+        if self.mem_wdata:
+            v_str += f"wire [{xlen-1}:0] mem_wdata = {self.mem_wdata} << (8*(addr-spec_addr));\n"
+        else:
+            v_str += f"wire [{result_width-1}:0] mem_rdata = rvfi_mem_rdata >> (8*(addr-spec_addr));\n"
+        v_str += "`else\n"
+        v_str += f"wire [{xlen-1}:0] addr = {self.mem_addr};\n"
+        v_str += f"wire [{xlen-1}:0] spec_addr = addr;\n"
+        v_str += f"wire [{int(xlen/8)-1}:0] spec_mem_mask = ((1 << {self.mem_bytes})-1);\n"
+        v_str += f"wire trap = 0;\n"
+        if self.mem_wdata:
+            v_str += f"wire [{self.mem_bytes*8-1}:0] mem_wdata = {self.mem_wdata};\n"
+        else:
+            v_str += f"wire [{result_width-1}:0] mem_rdata = rvfi_mem_rdata;\n"
+        v_str += "`endif\n"
+
+        return v_str + super()._v_instantiation(xlen)
+
+    def _v_spec_value(self, spec_sig: str, xlen: int) -> str:
+        if spec_sig == "mem_addr":
+            return "spec_addr"
+        elif spec_sig == "mem_rmask" and not self.mem_wdata:
+            return "spec_mem_mask"
+        elif spec_sig == "mem_wmask" and self.mem_wdata:
+            return "spec_mem_mask"
+        elif spec_sig == "mem_wdata" and self.mem_wdata:
+            return "mem_wdata"
+        elif spec_sig == "trap":
+            return "trap"
+        else:
+            return super()._v_spec_value(spec_sig, xlen)
