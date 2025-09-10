@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional, ClassVar, Callable, Iterable
+from textwrap import dedent
 
 from ..checks import GenericChecker
 from ..rvfi import Observer
@@ -20,8 +21,6 @@ class Instruction(GenericChecker):
     result: Optional[str] = None
     next_pc: Optional[str] = None
     extension: Optional[str] = None
-    alt_add: Optional[str] = None
-    alt_sub: Optional[str] = None
     shamt: Optional[bool] = None
     sign_extend_from: Optional[int] = None
     zero_extend_from: Optional[int] = None
@@ -153,12 +152,6 @@ class Instruction(GenericChecker):
     def _config_widths(self):
         self._result_width = self.sign_extend_from or self.zero_extend_from
 
-    def _altops_fixup(self):
-        for alt_var in ["alt_add", "alt_sub"]:
-            alt_val = self.__getattribute__(alt_var)
-            if isinstance(alt_val, int):
-                self.__dict__[alt_var] = hex(alt_val)
-
     def __post_init__(self):
         self._insn_fixup()
         if isinstance(self.imm, bool):
@@ -166,7 +159,6 @@ class Instruction(GenericChecker):
         self._process_insn_parts()
         self._config_used_regs()
         self._config_widths()
-        self._altops_fixup()
 
     def _v_xlen_check(self, xlen) -> None:
         # check valid xlen
@@ -229,34 +221,19 @@ class Instruction(GenericChecker):
 
         return insn_map
 
+    def _v_result(self, result_width: int, result: str) -> str:
+        return f"wire [{result_width-1}:0] result = {result};"
+
     def _v_instantiation(self, xlen: int) -> str:
         instantiation = ""
         result_width = self._result_width or xlen
-
-        # altops injection
-        if self.alt_add:
-            alt_mask = self.alt_add
-            alt_op = "+"
-        elif self.alt_sub:
-            alt_mask = self.alt_sub
-            alt_op = "-"
-        else:
-            alt_mask = None
-
-        if isinstance(alt_mask, str):
-            alt_mask = int(alt_mask, 16)
-
-        if alt_mask:
-            result = f"(rvfi_rs1_rdata {alt_op} rvfi_rs2_rdata) ^ 64'h{alt_mask:016x}"
-        else:
-            result = self.result
 
         # raw code injection
         for code_line in self.raw_code:
             code_line = code_line.replace("%RESULT_WIDTH%", str(result_width))
             instantiation += code_line + "\n"
-        if result:
-            instantiation += f"wire [{result_width-1}:0] result = {result};\n"
+        if self.result:
+            instantiation += self._v_result(result_width, self.result) + "\n"
         if self.next_pc:
             instantiation += f"wire [{xlen-1}:0] next_pc = {self.next_pc};\n"
 
@@ -395,3 +372,47 @@ class MemoryInstruction(Instruction):
             return "trap"
         else:
             return super()._v_spec_value(spec_sig, xlen)
+
+@dataclass(kw_only=True)
+class AltopsInstruction(Instruction):
+    def _alt_vars(self) -> list[str]:
+        return []
+
+    def _altops_fixup(self) -> None:
+        for alt_var in self._alt_vars():
+            alt_val = self.__getattribute__(alt_var)
+            if isinstance(alt_val, int):
+                self.__dict__[alt_var] = hex(alt_val)
+
+    def __post_init__(self):
+        super().__post_init__()
+        self._altops_fixup()
+
+    def _get_alt_result_and_mask(self) -> Optional[tuple[str, str | int]]:
+        return None
+
+    def _mask_alt_result(self) -> Optional[str]:
+        try:
+            alt_result, alt_mask = self._get_alt_result_and_mask()
+        except ValueError:
+            return None
+        
+        if isinstance(alt_mask, str):
+            alt_mask = int(alt_mask, 16)
+
+        return f"({alt_result}) ^ 64'h{alt_mask:016x}"
+
+    def _v_result(self, result_width: int, result: str) -> str:
+        result_str = super()._v_result(result_width, result)
+
+        masked_alt_result = self._mask_alt_result()
+        if masked_alt_result is None:
+            return result_str
+
+        alt_str = super()._v_result(result_width, masked_alt_result)
+        return dedent(f"""\
+            `ifdef RISCV_FORMAL_ALTOPS
+                {alt_str}
+            `else
+                {result_str}
+            `endif""")

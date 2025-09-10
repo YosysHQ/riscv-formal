@@ -470,7 +470,7 @@ def insn_c_alu(insn, funct6, funct2, expr, wmode = False, extension = "Zca"):
         xlen_min = 64 if wmode else 32,
     )
 
-def cext():
+def cext() -> dict[str, C_Instruction]:
     return {i.name: i for i in [
         # Load and Store Instructions
 
