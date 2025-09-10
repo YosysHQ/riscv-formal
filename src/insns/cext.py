@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from .model import Instruction, Instruction_format
+from .model import (
+    Instruction_format,
+    Instruction,
+    MemoryInstruction,
+)
 
 FORMAT_CR = Instruction_format(
     "CR-type", [
@@ -132,6 +136,16 @@ class C_Instruction(Instruction):
     _default_pc_increment: str = "rvfi_pc_rdata + 2"
     _next_pc_check: str = "next_pc[0] != 0"
 
+    def _inputs_used(self):
+        inputs = super()._inputs_used()
+        inputs.add("pc_rdata")
+        return inputs
+
+    def _outputs_used(self):
+        outputs = super()._outputs_used()
+        outputs.add("pc_wdata")
+        return outputs
+
     def _config_used_regs(self):
         super()._config_used_regs()
         for inst_arg in self.inst_args:
@@ -173,6 +187,9 @@ class C_Instruction(Instruction):
             v_str += "wire [4:0] insn_rs2 = {2'b01, insn_crs2};\n"
         return v_str[:-1]
 
+@dataclass(kw_only=True)
+class C_MemoryInstruction(C_Instruction, MemoryInstruction):
+    pass
 
 def insn_c_l(insn, funct3, numbytes, is_float = False, extension = "Zca"):
     result_width = numbytes*8
@@ -184,7 +201,7 @@ def insn_c_l(insn, funct3, numbytes, is_float = False, extension = "Zca"):
         imm = "{insn_imm3[0], insn_imm2, insn_imm3[2:1], 4'b000}"
     else:
         raise NotImplementedError(numbytes)
-    return C_Instruction(
+    return C_MemoryInstruction(
         name = insn,
         insn_parts = FORMAT_CL,
         opcode = "00",
@@ -211,7 +228,7 @@ def insn_c_s(insn, funct3, numbytes, is_float = False, extension = "Zca"):
         imm = "{insn_imm3[0], insn_imm2, insn_imm3[2:1], 4'b000}"
     else:
         raise NotImplementedError(numbytes)
-    return C_Instruction(
+    return C_MemoryInstruction(
         name = insn,
         insn_parts = FORMAT_CS,
         opcode = "00",
@@ -223,7 +240,6 @@ def insn_c_s(insn, funct3, numbytes, is_float = False, extension = "Zca"):
         mem_bytes = numbytes,
         mem_wdata = "rvfi_rs2_rdata",
         imm = imm,
-        rs1_reg = 2,
         xlen_min = max(32, result_width) if not is_float else 32,
         xlen_max = max(32, result_width) if is_float else 128,
     )
@@ -238,7 +254,7 @@ def insn_c_lsp(insn, funct3, numbytes, is_float = False, extension = "Zca"):
         imm = "{insn_imm5[3:0], insn_imm1, insn_imm5[4], 4'b000}"
     else:
         raise NotImplementedError(numbytes)
-    instr = C_Instruction(
+    instr = C_MemoryInstruction(
         name = insn,
         insn_parts = FORMAT_CI,
         opcode = "10",
@@ -271,7 +287,7 @@ def insn_c_ssp(insn, funct3, numbytes, is_float = False, extension = "Zca"):
         imm = "{insn_imm6[3:0], insn_imm6[5:4], 4'b000}"
     else:
         raise NotImplementedError(numbytes)
-    return C_Instruction(
+    return C_MemoryInstruction(
         name = insn,
         insn_parts = FORMAT_CSS,
         opcode = "10",
@@ -283,6 +299,7 @@ def insn_c_ssp(insn, funct3, numbytes, is_float = False, extension = "Zca"):
         mem_bytes = numbytes,
         mem_wdata = "rvfi_rs2_rdata",
         imm = imm,
+        rs1_reg = 2,
         xlen_min = max(32, result_width) if not is_float else 32,
         xlen_max = max(32, result_width) if is_float else 128,
     )
@@ -367,7 +384,7 @@ def insn_c_addi(insn, sp_mult = None, wmode = False, extension = "Zca"):
         },
         result = "rvfi_rs1_rdata + insn_imm",
         imm = "$signed({insn_imm1, insn_imm5[2:1], insn_imm5[3], insn_imm5[0], insn_imm5[4], 4'b0})" if sp_mult == 16 else True,
-        read_rsd = True if not sp_mult else None,
+        read_rsd = True if sp_mult != 4 else None,
         rd_reg = 2 if sp_mult == 16 else None,
         rs1_reg = 2 if sp_mult == 4 else None,
         xlen_min = 64 if wmode else 32,
@@ -430,7 +447,7 @@ def insn_c_mvadd(insn, funct4, add, extension = "Zca"):
             "funct4": funct4,
         },
         result = "rvfi_rs1_rdata + rvfi_rs2_rdata" if add else "rvfi_rs2_rdata",
-        read_rsd = add is not None,
+        read_rsd = add,
         check_valid = [
             "insn_rsd != 0",
             "insn_rs2 != 0",
