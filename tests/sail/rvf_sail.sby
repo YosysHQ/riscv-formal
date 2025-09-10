@@ -47,7 +47,6 @@ rvfi_insn_check.sv
 `define RISCV_FORMAL_CHECKER rvfi_insn_check
 nerv:
 `define RISCV_FORMAL_CHECK_CYCLE 10
-`define YOSYS // Hotfix for older Tabby CAD Releases
 `define NERV_RVFI
 `define RISCV_FORMAL_ALIGNED_MEM
 --

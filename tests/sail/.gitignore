@@ -3,4 +3,5 @@ rvf_sail/
 rvf_sail_*/
 generated.sv
 rvfi_insn_check.sv
+insn
 z3_problems

@@ -148,7 +148,7 @@ class C_Instruction(Instruction):
 
     def _config_used_regs(self):
         super()._config_used_regs()
-        for inst_arg in self.inst_args:
+        for inst_arg in self._insn_part_dict.keys():
             if inst_arg.startswith('c'):
                 inst_arg = inst_arg[1:]
             if inst_arg == "rsd":

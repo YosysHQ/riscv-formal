@@ -28,8 +28,13 @@ SV_FLAGS += --sv-toplevel execute
 RV_PROJECT := $(SAIL_RISCV_DIR)/model/riscv_min.sail_project
 
 INSN ?= rtype
-.PHONY: generated.sv
-generated.sv: $(RV_PROJECT) model/riscv_insts_base_$(INSN).sail Makefile
+ifneq ($(INSN), $(shell cat insn))
+.PHONY: insn
+endif
+insn:
+	@echo $(INSN) > insn
+
+generated.sv: $(RV_PROJECT) insn model/riscv_insts_base_$(INSN).sail Makefile
 	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $< model/$(INSN).sail_project -o $(basename $@) riscv_$(INSN)
 	$(PYTHON) sv_rewriter.py -f $@
 
@@ -39,8 +44,7 @@ model/%.json: model/riscv_insts_base_%.sail $(addprefix $(RISCV_ROOT)/src/insns/
 	cd $(RISCV_ROOT) && $(PYTHON) -m $(CONFIGURATOR) $(abspath $< $@)
 
 WRAPPER := src.checks.sail_wrapper
-.PHONY: rvfi_insn_check.sv
-rvfi_insn_check.sv: model/$(INSN).json $(addprefix $(RISCV_ROOT)/src/,checks/sail_wrapper.py insns/wrapped_model.py)
+rvfi_insn_check.sv: model/$(INSN).json insn $(addprefix $(RISCV_ROOT)/src/,checks/sail_wrapper.py insns/wrapped_model.py)
 	cd $(RISCV_ROOT) && $(PYTHON) -m $(WRAPPER) $(abspath $< $@) -f
 
 rvf_sail_%: rvfi_insn_check.sv generated.sv rvf_sail.sby

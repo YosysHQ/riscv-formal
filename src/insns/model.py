@@ -39,9 +39,6 @@ class Instruction(GenericChecker):
     _default_pc_increment: str = "rvfi_pc_rdata + 4"
     _next_pc_check: str = "next_pc[1:0] != 0"
 
-    inst_args: Optional[list[str]] = None
-    wrap_next_pc: Optional[bool] = None
-
     registered_inputs: Optional[dict[str, Observer]] = None
     registered_outputs: Optional[dict[str, Observer]] = None
 
@@ -137,16 +134,13 @@ class Instruction(GenericChecker):
 
     def _process_insn_parts(self):
         self._insn_part_dict = dict(self.insn_parts)
-        self._insn_part_keys = [k for k, _ in self.insn_parts]
-        if self.inst_args is None:
-            self.inst_args = self._insn_part_keys
 
     def _config_used_regs(self):
         self._maybe_sources = ["rs2", "rs1"]
         self._maybe_dests = ["rd"]
         self._used_regs = []
         for maybe_reg in self._maybe_sources + self._maybe_dests:
-            if maybe_reg in self.inst_args:
+            if maybe_reg in self._insn_part_dict.keys():
                 self._used_regs.append(maybe_reg)
 
     def _config_widths(self):
@@ -239,7 +233,7 @@ class Instruction(GenericChecker):
 
         return instantiation
 
-    def _v_spec_value(self, spec_sig: str, xlen: int) -> str:
+    def _v_spec_value(self, spec_sig: str, xlen: int) -> Optional[str]:
         if spec_sig == "pc_wdata":
             if self.next_pc:
                 return "next_pc"
@@ -287,10 +281,9 @@ class Instruction(GenericChecker):
 
         for spec_sig in spec_sigs:
             if spec_sig not in spec_map:
-                spec_map[spec_sig] = self._v_spec_value(spec_sig, xlen)
-
-        if self.wrap_next_pc:
-            spec_map.pop("pc_wdata")
+                spec_value = self._v_spec_value(spec_sig, xlen)
+                if spec_value is not None:
+                    spec_map[spec_sig] = spec_value
 
         for spec_sig, spec_val in spec_map.items():
             spec_mapping += f"assign spec_{spec_sig} = {spec_val};\n"

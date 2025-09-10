@@ -8,6 +8,8 @@ from .model import Instruction
 class WrappedInstruction(Instruction):
     checker_module: str
 
+    inst_args: Optional[list[str]] = None
+
     wrap_x_in: bool = False
     wrap_x_out: bool = False
     wrap_pc: bool = False
@@ -25,9 +27,21 @@ class WrappedInstruction(Instruction):
     op_type_enum: Optional[str | list[str]] = None
     op_value_switch: str = ""
 
+    def _inputs_used(self):
+        inputs = super()._inputs_used()
+        if self.wrap_pc:
+            inputs.add("pc_rdata")
+        return inputs
+
+    def _outputs_used(self):
+        outputs = super()._outputs_used()
+        if self.wrap_next_pc:
+            outputs.add("pc_wdata")
+        return outputs
+
     def _v_inst_check(self) -> None:
         # check instance map
-        inst_args_avail = self._insn_part_keys + [self.op_name]
+        inst_args_avail = list(self._insn_part_dict.keys()) + [self.op_name]
         for inst_arg in self.inst_args:
             for arg_part in inst_arg.split():
                 if arg_part not in inst_args_avail and not arg_part[0].isdigit():
@@ -161,6 +175,12 @@ class WrappedInstruction(Instruction):
         instantiation += ");\n"
 
         return instantiation
+
+    def _v_spec_value(self, spec_sig: str, xlen: int) -> str:
+        if spec_sig == "pc_wdata" and self.wrap_next_pc:
+            return None
+        else:
+            return super()._v_spec_value(spec_sig, xlen)
 
     def _v_checks(self, xlen: int):
         super()._v_checks(xlen)
