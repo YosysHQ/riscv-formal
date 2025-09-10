@@ -27,8 +27,10 @@ SV_FLAGS += --sv-toplevel execute
 
 RV_PROJECT := $(SAIL_RISCV_DIR)/model/riscv_min.sail_project
 
-generated_%.sv: $(RV_PROJECT) model/riscv_insts_base_%.sail Makefile
-	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $< model/$*.sail_project -o $(basename $@) riscv_$*
+INSN ?= rtype
+.PHONY: generated.sv
+generated.sv: $(RV_PROJECT) model/riscv_insts_base_$(INSN).sail Makefile
+	$(SAIL) $(SAIL_FLAGS) $(SV_FLAGS) $< model/$(INSN).sail_project -o $(basename $@) riscv_$(INSN)
 	$(PYTHON) sv_rewriter.py -f $@
 
 RISCV_ROOT ?= ../..
@@ -36,12 +38,13 @@ CONFIGURATOR := src.insns.sail_configurator
 model/%.json: model/riscv_insts_base_%.sail $(addprefix $(RISCV_ROOT)/src/insns/,sail_configurator.py wrapped_model.py)
 	cd $(RISCV_ROOT) && $(PYTHON) -m $(CONFIGURATOR) $(abspath $< $@)
 
-WRAPPER := src.insns.wrapper
-%_wrapper.sv: model/%.json $(addprefix $(RISCV_ROOT)/src/insns/,wrapper.py wrapped_model.py)
+WRAPPER := src.checks.sail_wrapper
+.PHONY: rvfi_insn_check.sv
+rvfi_insn_check.sv: model/$(INSN).json $(addprefix $(RISCV_ROOT)/src/,checks/sail_wrapper.py insns/wrapped_model.py)
 	cd $(RISCV_ROOT) && $(PYTHON) -m $(WRAPPER) $(abspath $< $@) -f
 
-nerv_%: %_wrapper.sv generated_%.sv rvf_sail.sby
-	$(SBY) -f rvf_sail.sby $@
+rvf_sail_%: rvfi_insn_check.sv generated.sv rvf_sail.sby
+	$(SBY) -f rvf_sail.sby $*
 
 .PHONY: clean-sby
 clean-sby:

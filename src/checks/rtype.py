@@ -12,7 +12,7 @@ def rtype(format: str):
         if key in rtype_mnemonics:
             rtype_insns[key] = val
 
-    dump_isa("insn_check", rtype_insns, 32, format)
+    click.echo(dump_isa("insn_check", rtype_insns, 32, format))
 
 if __name__ == "__main__":
     rtype()

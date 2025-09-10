@@ -1,5 +1,6 @@
 sail-riscv/
 rvf_sail/
 rvf_sail_*/
-generated_*.sv
+generated.sv
+rvfi_insn_check.sv
 z3_problems

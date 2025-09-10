@@ -3,8 +3,8 @@
 from pathlib import Path
 import click
 
-from .model import Instruction
-from .wrapped_model import WrappedInstruction
+from .base_isa import dump_isa
+from ..insns import Instruction, WrappedInstruction
 
 @click.command()
 @click.option('-f', '--force', is_flag=True)
@@ -31,7 +31,11 @@ def wrap(force: bool, xlen: int, cfg: Path, out_file: Path = None):
     if out_file.exists() and not force:
         raise FileExistsError(out_file)
 
-    v_str = insn.to_verilog(xlen)
+    if out_file.name.startswith("rvfi_"):
+        name = out_file.stem[5:]
+    else:
+        name = "insn_check"
+    v_str = dump_isa(name, {insn.name: insn}, xlen, "verilog")
 
     # write out to file
     with open(out_file, 'wt', encoding='utf-8') as f:

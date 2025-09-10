@@ -11,7 +11,7 @@ from ..rvfi import (
     SpeculativeEvaluation,
 )
 
-def dump_isa(name: str, insns: dict[str, Instruction], xlen: int, format: str):
+def dump_isa(name: str, insns: dict[str, Instruction], xlen: int, format: str) -> str:
     rvfi: dict[str, Observer] = {o.name: o for o in [
         SpeculativeObserver("valid", "1"),
                    Observer("order", "64"),
@@ -82,10 +82,9 @@ def dump_isa(name: str, insns: dict[str, Instruction], xlen: int, format: str):
     isa_checker.configure_io()
 
     if format == "json":
-        data = json.dumps(isa_checker)
+        return json.dumps(isa_checker)
     elif format == "verilog":
-        data = isa_checker.to_verilog(xlen=xlen)
-    click.echo(data)
+        return isa_checker.to_verilog(xlen=xlen)
 
 @click.option('--format', type=click.Choice(['json', 'verilog']), default='json')
 @click.command()
@@ -103,7 +102,7 @@ def base_isa(format: str):
 
         insns[key] = val
 
-    dump_isa("insn_check", insns, xlen, format)
+    click.echo(dump_isa("insn_check", insns, xlen, format))
 
 if __name__ == "__main__":
     base_isa()

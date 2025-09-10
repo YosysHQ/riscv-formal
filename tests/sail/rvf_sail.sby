@@ -1,11 +1,6 @@
 [tasks]
-nerv_rtype nerv rtype
-nerv_itype nerv itype
-nerv_btype nerv btype
-nerv_add nerv add
-picorv_rtype picorv rtype
-picorv_itype picorv itype
-picorv_btype picorv btype
+nerv
+picorv
 
 [options]
 mode bmc
@@ -39,20 +34,8 @@ chformal -early
 /home/dawn/riscv-formal/checks/rvfi_macros.vh
 /home/dawn/riscv-formal/checks/rvfi_channel.sv
 /home/dawn/riscv-formal/checks/rvfi_testbench.sv
-/home/dawn/riscv-formal/checks/rvfi_insn_check.sv
-rtype:
-generated_rtype.sv
-rtype_wrapper.sv
---
-itype:
-generated_itype.sv
-itype_wrapper.sv
---
-btype:
-generated_btype.sv
-btype_wrapper.sv
---
-add: add_wrapper.sv
+generated.sv
+rvfi_insn_check.sv
 
 [file defines.sv]
 `define RISCV_FORMAL
@@ -62,15 +45,10 @@ add: add_wrapper.sv
 `define RISCV_FORMAL_RESET_CYCLES 1
 `define RISCV_FORMAL_CHANNEL_IDX 0
 `define RISCV_FORMAL_CHECKER rvfi_insn_check
-rtype: `define RISCV_FORMAL_INSN_MODEL rvfi_insn_rtype
-itype: `define RISCV_FORMAL_INSN_MODEL rvfi_insn_itype
-btype: `define RISCV_FORMAL_INSN_MODEL rvfi_insn_btype
-add: `define RISCV_FORMAL_INSN_MODEL rvfi_insn_add
 nerv:
 `define RISCV_FORMAL_CHECK_CYCLE 10
 `define YOSYS // Hotfix for older Tabby CAD Releases
 `define NERV_RVFI
-`define NERV_FAULT
 `define RISCV_FORMAL_ALIGNED_MEM
 --
 picorv:
@@ -88,18 +66,6 @@ picorv:
 `include "defines.sv"
 `include "rvfi_channel.sv"
 `include "rvfi_testbench.sv"
+`include "generated.sv"
 `include "rvfi_insn_check.sv"
-rtype:
-`include "generated_rtype.sv"
-`include "rtype_wrapper.sv"
---
-itype:
-`include "generated_itype.sv"
-`include "itype_wrapper.sv"
---
-btype:
-`include "generated_btype.sv"
-`include "btype_wrapper.sv"
---
-add: `include "add_wrapper.sv"
 
