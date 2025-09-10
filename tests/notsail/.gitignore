@@ -1,4 +1,7 @@
 rvf_notsail/
 rvf_notsail_*/
+rvf_complete/
+rvf_complete_*/
 insn_*.json
 *_wrapper.sv
+rvfi_insn_check.sv

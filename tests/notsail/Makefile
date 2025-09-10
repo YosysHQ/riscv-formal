@@ -25,6 +25,14 @@ insn_wrapper.sv: $(INSN_SV) Makefile
 rvf_notsail_%: rvf_notsail.sby insn_wrapper.sv
 	$(SBY) -f $< $*
 
+ISA_MODEL = rtype
+.PHONY: rvfi_insn_check.sv
+rvfi_insn_check.sv:
+	cd $(RISCV_ROOT) && $(PYTHON) -m src.checks.$(ISA_MODEL) --format verilog > $(abspath $@)
+
+rvf_complete_%: rvf_complete.sby rvfi_insn_check.sv
+	$(SBY) -f $< $*
+
 .PHONY: clean
 clean:
 	rm -f insn_*.json
