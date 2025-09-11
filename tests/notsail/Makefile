@@ -26,8 +26,13 @@ rvf_notsail_%: rvf_notsail.sby insn_wrapper.sv
 	$(SBY) -f $< $*
 
 ISA_MODEL = rtype
-.PHONY: rvfi_insn_check.sv
-rvfi_insn_check.sv:
+ifneq ($(ISA_MODEL), $(shell cat isa_model))
+.PHONY: isa_model
+endif
+isa_model: $(addprefix $(RISCV_ROOT)/src/checks/,$(ISA_MODEL).py)
+	@echo $(ISA_MODEL) > isa_model
+
+rvfi_insn_check.sv: isa_model
 	cd $(RISCV_ROOT) && $(PYTHON) -m src.checks.$(ISA_MODEL) --format verilog > $(abspath $@)
 
 rvf_complete_%: rvf_complete.sby rvfi_insn_check.sv
@@ -36,3 +41,5 @@ rvf_complete_%: rvf_complete.sby rvfi_insn_check.sv
 .PHONY: clean
 clean:
 	rm -f insn_*.json
+	rm -f *_wrapper.sv rvfi_insn_check.sv
+	rm -rf rvf_complete rvf_complete_* rvf_notsail rvf_notsail_*

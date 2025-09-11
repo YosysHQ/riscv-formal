@@ -5,3 +5,4 @@ rvf_complete_*/
 insn_*.json
 *_wrapper.sv
 rvfi_insn_check.sv
+isa_model
