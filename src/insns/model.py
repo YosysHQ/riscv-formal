@@ -319,6 +319,7 @@ class MemoryInstruction(Instruction):
     def _outputs_used(self) -> set[str]:
         outputs = super()._outputs_used()
         outputs.add("mem_addr")
+        outputs.add("trap")
         if self.mem_wdata:
             outputs.add("mem_wmask")
             outputs.add("mem_wdata")
