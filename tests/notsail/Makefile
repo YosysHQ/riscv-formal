@@ -25,15 +25,17 @@ insn_wrapper.sv: $(INSN_SV) Makefile
 rvf_notsail_%: rvf_notsail.sby insn_wrapper.sv
 	$(SBY) -f $< $*
 
-ISA_MODEL = rtype
-ifneq ($(ISA_MODEL), $(shell cat isa_model))
-.PHONY: isa_model
+ISA_MODEL ?= rtype
+MODEL_FLAGS ?=
+INSN_CHECK = $(ISA_MODEL) $(MODEL_FLAGS)
+ifneq ("$(INSN_CHECK)", $(shell cat insn_check))
+.PHONY: insn_check
 endif
-isa_model: $(addprefix $(RISCV_ROOT)/src/checks/,$(ISA_MODEL).py)
-	@echo $(ISA_MODEL) > isa_model
+insn_check: $(addprefix $(RISCV_ROOT)/src/checks/,$(ISA_MODEL).py)
+	@echo \"$(INSN_CHECK)\" > insn_check
 
-rvfi_insn_check.sv: isa_model
-	cd $(RISCV_ROOT) && $(PYTHON) -m src.checks.$(ISA_MODEL) --format verilog > $(abspath $@)
+rvfi_insn_check.sv: insn_check
+	cd $(RISCV_ROOT) && $(PYTHON) -m src.checks.$(ISA_MODEL) $(MODEL_FLAGS) --format verilog > $(abspath $@)
 
 rvf_complete_%: rvf_complete.sby rvfi_insn_check.sv
 	$(SBY) -f $< $*
@@ -43,3 +45,4 @@ clean:
 	rm -f insn_*.json
 	rm -f *_wrapper.sv rvfi_insn_check.sv
 	rm -rf rvf_complete rvf_complete_* rvf_notsail rvf_notsail_*
+	rm -f insn_check

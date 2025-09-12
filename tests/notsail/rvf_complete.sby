@@ -1,6 +1,7 @@
 [tasks]
 nerv
 picorv
+nerv_fault: nerv
 
 [options]
 mode bmc
@@ -49,6 +50,9 @@ nerv:
 `define YOSYS // Hotfix for older Tabby CAD Releases
 `define NERV_RVFI
 `define RISCV_FORMAL_ALIGNED_MEM
+nerv_fault:
+`define NERV_FAULT
+`define RISCV_FORMAL_MEM_FAULT
 --
 picorv:
 `define RISCV_FORMAL_CHECK_CYCLE 20

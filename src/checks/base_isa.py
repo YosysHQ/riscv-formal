@@ -86,11 +86,15 @@ def dump_isa(name: str, insns: dict[str, Instruction], xlen: int, format: str) -
     elif format == "verilog":
         return isa_checker.to_verilog(xlen=xlen)
 
+@click.option('--fault', is_flag=True)
 @click.option('--format', type=click.Choice(['json', 'verilog']), default='json')
 @click.command()
-def base_isa(format: str):
+def base_isa(fault: bool, format: str):
     xlen = 32
     insns: dict[str, Instruction] = {}
+
+    if fault:
+        from ..rvfi import mem_fault
 
     for key, val in builtins().items():
         # skip incompatible xlen

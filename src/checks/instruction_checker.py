@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from textwrap import dedent, indent
+from typing import Callable, ClassVar
 
 from . import GenericChecker
 from ..insns import Instruction
@@ -17,10 +18,16 @@ class InstructionChecker(GenericChecker):
 
     defined_checks: list[SpeculativeEvaluation] = field(default_factory=list)
 
+    registered_hw_traps: ClassVar[dict[str, Callable[[dict[str, Observer]], str]]] = {}
+
     def configure_io(self):
         for insn in self.instructions.values():
             insn.select_inputs(self.observers.values())
             insn.select_outputs([o for o in self.observers.values() if isinstance(o, SpeculativeObserver)])
+
+    @classmethod
+    def register_hw_trap(cls, condition: str, handler: Callable[[dict[str, Observer]], str]):
+        cls.registered_hw_traps[condition] = handler
 
     def _v_io(self) -> str:
         # macro defined RVFI inputs
@@ -92,28 +99,47 @@ class InstructionChecker(GenericChecker):
         return v_str
 
     def _v_spec_check(self) -> str:
+        # initialize speculative check lists
         handled_observers: set[str] = set(["valid", "trap"])
-        spec_pre_trap: list[str] = [
+        spec_pre_hw_trap: list[str] = [
             "assume (spec_valid);",
+        ]
+        spec_pre_trap: list[str] = [
             "assert (spec_trap == rvfi.trap);",
         ]
         spec_untrapped: list[str] = []
+
+        # load defined checks
         for spec in self.defined_checks:
             handled_observers.update(spec.speculates_about)
             if spec.ignore_trap:
                 spec_pre_trap.append(spec.evaluation)
             else:
                 spec_untrapped.append(spec.evaluation)
-        pre_trap_str = "\n".join(spec_pre_trap)
+
+        # use default checks for unhandled observers
         for name, obs in self.observers.items():
             if isinstance(obs, SpeculativeObserver) and name not in handled_observers:
                 spec_untrapped.append(f"assert(spec_{name} == rvfi.{name});")
-        untrapped_str = "\n".join(spec_untrapped)
+
+        # hw traps
+        trapdent = "    "*5
+        hw_trap_str = trapdent
+        for condition, callback in self.registered_hw_traps.items():
+            hw_trap_str += f"if ({condition}) begin\n"
+            hw_trap_str += indent(callback(self.observers), trapdent + "    ")
+            hw_trap_str += f"\n{trapdent}end else "
+
+        # bring it together
+        pre_hw_trap_str = indent("\n".join(spec_pre_hw_trap), "    "*5)
+        pre_trap_str = indent("\n".join(spec_pre_trap), "    "*6)
+        untrapped_str = indent("\n".join(spec_untrapped), "    "*7)
         v_str = dedent(f"""\
             integer i;
             always @* begin
-                if (!reset && check) begin\n{indent(pre_trap_str, "                    ")}
-                    if (!spec_trap) begin\n{indent(untrapped_str, "                        ")}
+                if (!reset && check) begin\n{pre_hw_trap_str}\n{hw_trap_str}begin\n{pre_trap_str}
+                        if (!spec_trap) begin\n{untrapped_str}
+                        end
                     end
                 end
             end
