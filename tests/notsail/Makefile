@@ -37,7 +37,7 @@ insn_check: $(addprefix $(RISCV_ROOT)/src/checks/,$(ISA_MODEL).py)
 rvfi_insn_check.sv: insn_check
 	cd $(RISCV_ROOT) && $(PYTHON) -m src.checks.$(ISA_MODEL) $(MODEL_FLAGS) --format verilog > $(abspath $@)
 
-rvf_complete_%: rvf_complete.sby rvfi_insn_check.sv
+rvf_complete_%: rvf_complete.sby rvfi_insn_check.sv $(RISCV_ROOT)/cores/nerv/nerv.sv
 	$(SBY) -f $< $*
 
 .PHONY: clean

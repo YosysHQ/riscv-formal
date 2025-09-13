@@ -94,7 +94,8 @@ def base_isa(fault: bool, format: str):
     insns: dict[str, Instruction] = {}
 
     if fault:
-        from ..rvfi import mem_fault
+        from ..rvfi import mem_fault, misa_fault
+        misa_fault.register_weak_misa()
 
     for key, val in builtins().items():
         # skip incompatible xlen

@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from textwrap import dedent, indent
-from typing import Callable, ClassVar
+from typing import Callable, ClassVar, Optional
 
 from . import GenericChecker
 from ..insns import Instruction
@@ -18,12 +18,30 @@ class InstructionChecker(GenericChecker):
 
     defined_checks: list[SpeculativeEvaluation] = field(default_factory=list)
 
+    registered_checks: ClassVar[list[SpeculativeEvaluation]] = []
+    registered_verilog: ClassVar[list[str]] = []
+    registered_speculators: ClassVar[dict[str, tuple[SpeculativeObserver, Callable[[Instruction], Optional[str]]]]] = {}
     registered_hw_traps: ClassVar[dict[str, Callable[[dict[str, Observer]], str]]] = {}
 
     def configure_io(self):
         for insn in self.instructions.values():
             insn.select_inputs(self.observers.values())
             insn.select_outputs([o for o in self.observers.values() if isinstance(o, SpeculativeObserver)])
+
+    @classmethod
+    def register_check(cls, check: SpeculativeEvaluation):
+        cls.registered_checks.append(check)
+
+    @classmethod
+    def register_verilog(cls, verilog: str):
+        cls.registered_verilog.append(verilog)
+
+    @classmethod
+    def register_speculator(cls,
+        spec_obs: SpeculativeObserver,
+        speculator: Callable[[Instruction], Optional[str]],
+    ):
+        cls.registered_speculators[spec_obs.name] = (spec_obs, speculator)
 
     @classmethod
     def register_hw_trap(cls, condition: str, handler: Callable[[dict[str, Observer]], str]):
@@ -43,11 +61,12 @@ class InstructionChecker(GenericChecker):
 
         # instantiate insns
         insn_inst_map: list[str] = []
-        spec_map = {}
+        spec_map: dict[str, tuple[Instruction, list[str]]] = {}
         for mnemonic, insn in self.instructions.items():
             insn_prefix = "insn_" + mnemonic
 
-            spec_map[insn_prefix] = spec_list = []
+            spec_list: list[str] = []
+            spec_map[insn_prefix] = (insn, spec_list)
 
             # map observers to signals
             inst_sig_map: dict[str, str] = {}
@@ -78,23 +97,40 @@ class InstructionChecker(GenericChecker):
 
         v_str += '\n'.join(insn_inst_map) + '\n'
 
-        # assign speculative values for valid insn
+        # generate speculative signals
+        # name: (bitrange, default_value)
+        spec_obs: dict[str, SpeculativeObserver] = {}
         for name, obs in self.observers.items():
             if isinstance(obs, SpeculativeObserver):
-                v_str += f"(* keep *) reg {obs.bitrange()} spec_{name};\n"
+                spec_obs[name] = obs
+        for name, (obs, _) in self.registered_speculators.items():
+            spec_obs[name] = obs
+
+        for name, obs in spec_obs.items():
+            v_str += f"(* keep *) reg {obs.bitrange()} spec_{name};\n"
         v_str += "always @* begin\n"
-        for name, obs in self.observers.items():
-            if isinstance(obs, SpeculativeObserver):
-                v_str += f"    spec_{name} <= {obs.spec_value};\n"
+        for name, obs in spec_obs.items():
+            v_str += f"    spec_{name} <= {obs.spec_value};\n"
+
+        # assign speculative values for valid insn
         is_first = True
-        for insn_prefix, spec_list in spec_map.items():
+        for insn_prefix, (insn, spec_list) in spec_map.items():
             conditional = "    if" if is_first else " else if"
             is_first = False
             v_str += f"{conditional} ({insn_prefix}_spec_valid) begin\n        spec_valid <= 1;\n"
             for name in spec_list:
                 v_str += f"        spec_{name} <= {insn_prefix}_spec_{name};\n"
+            for name, (_, speculator) in self.registered_speculators.items():
+                value = speculator(insn)
+                if value is not None:
+                    v_str += f"        spec_{name} <= {value};\n"
             v_str += "    end"
-        v_str += "\nend"
+        v_str += "\nend\n"
+
+        if self.registered_verilog:
+            v_str += "\n"
+            v_str += "\n\n".join(self.registered_verilog)
+            v_str += "\n"
 
         return v_str
 
@@ -110,7 +146,7 @@ class InstructionChecker(GenericChecker):
         spec_untrapped: list[str] = []
 
         # load defined checks
-        for spec in self.defined_checks:
+        for spec in self.registered_checks + self.defined_checks:
             handled_observers.update(spec.speculates_about)
             if spec.ignore_trap:
                 spec_pre_trap.append(spec.evaluation)

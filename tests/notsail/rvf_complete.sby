@@ -49,10 +49,12 @@ nerv:
 `define RISCV_FORMAL_CHECK_CYCLE 10
 `define YOSYS // Hotfix for older Tabby CAD Releases
 `define NERV_RVFI
+`define NERV_CSR
 `define RISCV_FORMAL_ALIGNED_MEM
 nerv_fault:
 `define NERV_FAULT
 `define RISCV_FORMAL_MEM_FAULT
+`define RISCV_FORMAL_CSR_MISA
 --
 picorv:
 `define RISCV_FORMAL_CHECK_CYCLE 20
