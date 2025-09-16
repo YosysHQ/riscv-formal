@@ -26,14 +26,13 @@ verific -set-ignore VERI-1018
 verific -set-ignore VDB-1002
 
 # loading nerv
-nerv: read -sv insn_add_ch0.sv /home/dawn/riscv-formal/cores/nerv/wrapper.sv /home/dawn/riscv-formal/cores/nerv/nerv.sv
-picorv: read -sv insn_add_ch0.sv /home/dawn/riscv-formal/cores/picorv32/wrapper.sv /home/dawn/riscv-formal/cores/picorv32/picorv32.v
+nerv: read -sv insn_add.sv /home/dawn/riscv-formal/cores/nerv/wrapper.sv /home/dawn/riscv-formal/cores/nerv/nerv.sv
+picorv: read -sv insn_add.sv /home/dawn/riscv-formal/cores/picorv32/wrapper.sv /home/dawn/riscv-formal/cores/picorv32/picorv32.v
 prep -flatten -nordff -top rvfi_testbench
 chformal -early
 
 [files]
 /home/dawn/riscv-formal/checks/rvfi_macros.vh
-/home/dawn/riscv-formal/checks/rvfi_channel.sv
 /home/dawn/riscv-formal/checks/rvfi_testbench.sv
 rvfi_insn_check.sv
 
@@ -43,7 +42,6 @@ rvfi_insn_check.sv
 `define RISCV_FORMAL_XLEN 32
 `define RISCV_FORMAL_ILEN 32
 `define RISCV_FORMAL_RESET_CYCLES 1
-`define RISCV_FORMAL_CHANNEL_IDX 0
 `define RISCV_FORMAL_CHECKER rvfi_insn_check
 nerv:
 `define RISCV_FORMAL_CHECK_CYCLE 10
@@ -67,9 +65,8 @@ picorv:
 --
 `include "rvfi_macros.vh"
 
-[file insn_add_ch0.sv]
+[file insn_add.sv]
 `include "defines.sv"
-`include "rvfi_channel.sv"
 `include "rvfi_testbench.sv"
 `include "rvfi_insn_check.sv"
 

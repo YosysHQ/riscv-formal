@@ -53,9 +53,6 @@ class InstructionChecker(GenericChecker):
             input clock, reset, check,
             `RVFI_INPUTS""")
 
-    def _v_rvfi_channel(self) -> str:
-        return "`RVFI_CHANNEL(rvfi, `RISCV_FORMAL_CHANNEL_IDX)\n"
-
     def _v_instantiation(self) -> str:
         v_str = ""
 

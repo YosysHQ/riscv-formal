@@ -1,5 +1,7 @@
 import json
 from textwrap import dedent
+from typing import Optional
+
 import click
 
 from .instruction_checker import InstructionChecker
@@ -11,7 +13,14 @@ from ..rvfi import (
     SpeculativeEvaluation,
 )
 
-def dump_isa(name: str, insns: dict[str, Instruction], xlen: int, format: str) -> str:
+def dump_isa(
+    name: str,
+    insns: dict[str, Instruction],
+    xlen: int,
+    format: str,
+    channel: Optional[int] = None,
+    channelized: bool = True,
+) -> str:
     rvfi: dict[str, Observer] = {o.name: o for o in [
         SpeculativeObserver("valid", "1"),
                    Observer("order", "64"),
@@ -77,6 +86,8 @@ def dump_isa(name: str, insns: dict[str, Instruction], xlen: int, format: str) -
         instructions = insns,
         observers = rvfi,
         defined_checks = defined_checks,
+        channel = channel,
+        channelized = channelized if channelized is not None else channel is not None
     )
 
     isa_checker.configure_io()

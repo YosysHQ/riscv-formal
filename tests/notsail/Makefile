@@ -31,7 +31,7 @@ INSN_CHECK = $(ISA_MODEL) $(MODEL_FLAGS)
 ifneq ("$(INSN_CHECK)", $(shell cat insn_check))
 .PHONY: insn_check
 endif
-insn_check: $(addprefix $(RISCV_ROOT)/src/checks/,$(ISA_MODEL).py)
+insn_check: $(addprefix $(RISCV_ROOT)/src/checks/,$(ISA_MODEL).py instruction_checker.py generic_checker.py)
 	@echo \"$(INSN_CHECK)\" > insn_check
 
 rvfi_insn_check.sv: insn_check
