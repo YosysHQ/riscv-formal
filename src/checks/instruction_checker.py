@@ -11,17 +11,13 @@ from ..rvfi import (
     SpeculativeEvaluation,
 )
 
+
 @dataclass(kw_only=True)
-class InstructionChecker(GenericChecker):
+class InstructionCheckerBase(GenericChecker):
     instructions: dict[str, Instruction] = field(default_factory=dict)
     observers: dict[str, Observer] = field(default_factory=dict)
 
-    defined_checks: list[SpeculativeEvaluation] = field(default_factory=list)
-
-    registered_checks: ClassVar[list[SpeculativeEvaluation]] = []
-    registered_verilog: ClassVar[list[str]] = []
     registered_speculators: ClassVar[dict[str, tuple[SpeculativeObserver, Callable[[Instruction], Optional[str]]]]] = {}
-    registered_hw_traps: ClassVar[dict[str, Callable[[dict[str, Observer]], str]]] = {}
 
     def configure_io(self):
         for insn in self.instructions.values():
@@ -29,23 +25,11 @@ class InstructionChecker(GenericChecker):
             insn.select_outputs([o for o in self.observers.values() if isinstance(o, SpeculativeObserver)])
 
     @classmethod
-    def register_check(cls, check: SpeculativeEvaluation):
-        cls.registered_checks.append(check)
-
-    @classmethod
-    def register_verilog(cls, verilog: str):
-        cls.registered_verilog.append(verilog)
-
-    @classmethod
     def register_speculator(cls,
         spec_obs: SpeculativeObserver,
         speculator: Callable[[Instruction], Optional[str]],
     ):
         cls.registered_speculators[spec_obs.name] = (spec_obs, speculator)
-
-    @classmethod
-    def register_hw_trap(cls, condition: str, handler: Callable[[dict[str, Observer]], str]):
-        cls.registered_hw_traps[condition] = handler
 
     def _v_io(self) -> str:
         # macro defined RVFI inputs
@@ -124,6 +108,47 @@ class InstructionChecker(GenericChecker):
             v_str += "    end"
         v_str += "\nend\n"
 
+        return v_str
+
+    def _v_spec_check(self) -> str:
+        raise NotImplementedError()
+
+    def _v_body(self) -> str:
+        v_str = self._v_format_block(self._v_rvfi_channel())
+        v_str += self._v_format_block(self._v_instantiation())
+        v_str += self._v_format_block(self._v_spec_check())
+        return v_str
+
+    def to_verilog(self, xlen: int):
+        v_str = ""
+        for insn in self.instructions.values():
+            v_str += insn.to_verilog(xlen) + '\n\n'
+        return v_str + super().to_verilog()
+
+
+@dataclass(kw_only=True)
+class InstructionChecker(InstructionCheckerBase):
+    defined_checks: list[SpeculativeEvaluation] = field(default_factory=list)
+
+    registered_checks: ClassVar[list[SpeculativeEvaluation]] = []
+    registered_verilog: ClassVar[list[str]] = []
+    registered_hw_traps: ClassVar[dict[str, Callable[[dict[str, Observer]], str]]] = {}
+
+    @classmethod
+    def register_check(cls, check: SpeculativeEvaluation):
+        cls.registered_checks.append(check)
+
+    @classmethod
+    def register_verilog(cls, verilog: str):
+        cls.registered_verilog.append(verilog)
+
+    @classmethod
+    def register_hw_trap(cls, condition: str, handler: Callable[[dict[str, Observer]], str]):
+        cls.registered_hw_traps[condition] = handler
+
+    def _v_instantiation(self) -> str:
+        v_str = super()._v_instantiation()
+
         if self.registered_verilog:
             v_str += "\n"
             v_str += "\n\n".join(self.registered_verilog)
@@ -180,14 +205,42 @@ class InstructionChecker(GenericChecker):
         )
         return v_str
 
-    def _v_body(self) -> str:
-        v_str = self._v_format_block(self._v_rvfi_channel())
-        v_str += self._v_format_block(self._v_instantiation())
-        v_str += self._v_format_block(self._v_spec_check())
-        return v_str
 
-    def to_verilog(self, xlen: int):
+@dataclass(kw_only=True)
+class CompleteISAChecker(InstructionCheckerBase):
+    valid_opcodes: list[str] = field(default_factory=list)
+    extra_valid_checks: list[str] = field(default_factory=list)
+
+    def _v_spec_check(self) -> str:
         v_str = ""
-        for insn in self.instructions.values():
-            v_str += insn.to_verilog(xlen) + '\n\n'
-        return v_str + super().to_verilog()
+
+        v_str += "wire opcode_valid = "
+        if self.valid_opcodes:
+            op_checks: list[str] = []
+            for op in self.valid_opcodes:
+                if len(op) == 7:
+                    try:
+                        int(op, 2)
+                    except ValueError:
+                        # not valid binary
+                        pass
+                    else:
+                        op = f"7'b {op}"
+                op_checks.append(f"(rvfi.insn[6:0] == {op})")
+            v_str += "\n    || ".join(op_checks)
+        else:
+            v_str += "0"
+        v_str += ";\n\n"
+
+        v_str += "wire extra_valid = "
+        v_str += "\n    || ".join(f"({check})" for check in self.extra_valid_checks) or "0"
+        v_str += ";\n\n"
+
+        v_str +=dedent("""\
+            always @* begin
+                if (!reset && rvfi.valid && !rvfi.trap && !opcode_valid && !extra_valid) begin
+                    assert(spec_valid && !spec_trap);
+                end
+            end""")
+
+        return v_str

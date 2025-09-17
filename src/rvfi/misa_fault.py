@@ -1,10 +1,13 @@
 from textwrap import dedent
 from typing import Optional
 
-from ..checks.instruction_checker import InstructionChecker
+from ..checks import InstructionChecker
 from ..insns import Instruction
-from .observer import Observer, SpeculativeObserver
-from . import SpeculativeEvaluation
+from . import (
+    Observer,
+    SpeculativeObserver,
+    SpeculativeEvaluation,
+)
 
 MISA_MAP = {
     "A": 1 <<  0, # Atomic

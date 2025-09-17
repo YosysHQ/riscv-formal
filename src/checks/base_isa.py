@@ -4,48 +4,15 @@ from typing import Optional
 
 import click
 
-from .instruction_checker import InstructionChecker
+from . import InstructionChecker, CompleteISAChecker
 from ..insns import Instruction, builtins
 from ..rvfi import (
-    Observer,
-    SpeculativeObserver,
-    ZeroedObserver,
+    base_observers,
     SpeculativeEvaluation,
 )
 
-def dump_isa(
-    name: str,
-    insns: dict[str, Instruction],
-    xlen: int,
-    format: str,
-    channel: Optional[int] = None,
-    channelized: bool = True,
-) -> str:
-    rvfi: dict[str, Observer] = {o.name: o for o in [
-        SpeculativeObserver("valid", "1"),
-                   Observer("order", "64"),
-                   Observer("insn", "`RISCV_FORMAL_ILEN"),
-        SpeculativeObserver("trap", "1"),
-                   Observer("halt", "1"),
-                   Observer("intr", "1"),
-                   Observer("mode", "2"),
-                   Observer("ixl", "2"),
-        SpeculativeObserver("rs1_addr", "5", "rvfi.rs1_addr"),
-        SpeculativeObserver("rs2_addr", "5", "rvfi.rs2_addr"),
-             ZeroedObserver("rs1_rdata", "`RISCV_FORMAL_XLEN", "spec_rs1_addr == 0"),
-             ZeroedObserver("rs2_rdata", "`RISCV_FORMAL_XLEN", "spec_rs2_addr == 0"),
-        SpeculativeObserver("rd_addr", "5"),
-        SpeculativeObserver("rd_wdata", "`RISCV_FORMAL_XLEN"),
-                   Observer("pc_rdata", "`RISCV_FORMAL_XLEN"),
-        SpeculativeObserver("pc_wdata", "`RISCV_FORMAL_XLEN", "rvfi.pc_rdata + 4"),
-        SpeculativeObserver("mem_addr", "`RISCV_FORMAL_XLEN"),
-        SpeculativeObserver("mem_rmask", "`RISCV_FORMAL_XLEN/8"),
-        SpeculativeObserver("mem_wmask", "`RISCV_FORMAL_XLEN/8"),
-                   Observer("mem_rdata", "`RISCV_FORMAL_XLEN"),
-        SpeculativeObserver("mem_wdata", "`RISCV_FORMAL_XLEN"),
-    ]}
-
-    defined_checks: list[SpeculativeEvaluation] = [
+def base_checks() -> list[SpeculativeEvaluation]:
+    return [
         SpeculativeEvaluation(
             "if (rvfi.rs1_addr == 0) assert(rvfi.rs1_rdata == 0);",
             ignore_trap = True,
@@ -81,13 +48,39 @@ def dump_isa(
         ),
     ]
 
+def dump_isa(
+    name: str,
+    insns: dict[str, Instruction],
+    xlen: int,
+    format: str,
+    channel: Optional[int] = None,
+    channelized: bool = True,
+) -> str:
+    rvfi = base_observers()
+    defined_checks = base_checks()
+
+    # checks base_isa with a missing lb insn check
+    # isa_checker = CompleteISAChecker(
+    #     name = name,
+    #     instructions = insns,
+    #     observers = rvfi,
+    #     channel = channel,
+    #     channelized = channelized if channelized is not None else channel is not None,
+    #     valid_opcodes = [
+    #         "1110011", # SYSTEM
+    #     ], 
+    #     extra_valid_checks = [
+    #         "rvfi.insn[14:12] == 3'b 000 && rvfi.insn[6:0] == 7'b 0000011", # lb
+    #     ]
+    # )
+
     isa_checker = InstructionChecker(
         name = name,
         instructions = insns,
         observers = rvfi,
         defined_checks = defined_checks,
         channel = channel,
-        channelized = channelized if channelized is not None else channel is not None
+        channelized = channelized if channelized is not None else channel is not None,
     )
 
     isa_checker.configure_io()

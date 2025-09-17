@@ -1,6 +1,6 @@
 from textwrap import dedent
 
-from ..checks.instruction_checker import InstructionChecker
+from ..checks import InstructionChecker
 from .observer import Observer
 
 def mem_fault_handler(observers: dict[str, Observer]) -> str:

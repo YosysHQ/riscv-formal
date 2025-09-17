@@ -1,7 +1,9 @@
-from . import observer, speculative_evaluation
+from .observer import (    
+    Observer, 
+    SpeculativeObserver, 
+    ZeroedObserver, 
+)
 
-Observer = observer.Observer
-SpeculativeObserver = observer.SpeculativeObserver
-ZeroedObserver = observer.ZeroedObserver
+from .speculative_evaluation import SpeculativeEvaluation
 
-SpeculativeEvaluation = speculative_evaluation.SpeculativeEvaluation
+from .base import base_observers

@@ -1,7 +1,9 @@
-from . import model, wrapped_model, builtins
+from .model import (
+    Instruction,
+    MemoryInstruction,
+    AltopsInstruction,
+)
 
-Instruction = model.Instruction
-MemoryInstruction = model.MemoryInstruction
-AltopsInstruction = model.AltopsInstruction
-WrappedInstruction = wrapped_model.WrappedInstruction
-builtins = builtins.builtins
+from .wrapped_model import WrappedInstruction
+
+from .builtins import builtins

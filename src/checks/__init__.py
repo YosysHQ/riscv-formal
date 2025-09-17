@@ -1,3 +1,6 @@
-from . import generic_checker
+from .generic_checker import GenericChecker
 
-GenericChecker = generic_checker.GenericChecker
+from .instruction_checker import (
+    InstructionChecker,
+    CompleteISAChecker,
+)
