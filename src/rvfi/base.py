@@ -1,7 +1,9 @@
 from .observer import Observer, SpeculativeObserver, ZeroedObserver
+from ..named_set import NamedSet
 
-def base_observers() -> dict[str, Observer]:
-    return {o.name: o for o in [
+
+def base_observers() -> NamedSet[Observer]:
+    return NamedSet([
         SpeculativeObserver("valid", "1"),
                    Observer("order", "64"),
                    Observer("insn", "`RISCV_FORMAL_ILEN"),
@@ -23,4 +25,4 @@ def base_observers() -> dict[str, Observer]:
         SpeculativeObserver("mem_wmask", "`RISCV_FORMAL_XLEN/8"),
                    Observer("mem_rdata", "`RISCV_FORMAL_XLEN"),
         SpeculativeObserver("mem_wdata", "`RISCV_FORMAL_XLEN"),
-    ]}
+    ])

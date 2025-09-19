@@ -21,6 +21,8 @@ from .model import (
     MemoryInstruction,
 )
 
+from ..named_set import NamedSet
+
 FORMAT_R = Instruction_format(
     "R-type", [
         ("funct7", 7),
@@ -438,8 +440,8 @@ def insn_xperm(insn, funct3, width, extension = "Zbkx"):
             end""").splitlines()
     )
 
-def builtins() -> dict[str, Instruction]:
-    return {i.name: i for i in [
+def builtins() -> NamedSet[Instruction]:
+    return NamedSet([
         # Base Integer ISA (I)
 
         Instruction(
@@ -588,4 +590,4 @@ def builtins() -> dict[str, Instruction]:
         insn_xperm("xperm4", "010", 4),
         insn_xperm("xperm8", "100", 8),
 
-    ]}
+    ])

@@ -3,8 +3,10 @@ import json
 
 import json_fix
 
+from ..named_set import NamedClass
+
 @dataclass
-class Observer:
+class Observer(NamedClass):
     name: str
     width: str
 

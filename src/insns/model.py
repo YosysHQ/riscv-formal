@@ -4,6 +4,7 @@ from textwrap import dedent
 
 from ..checks import GenericChecker
 from ..rvfi import Observer
+from ..named_set import NamedSet
 
 
 @dataclass
@@ -39,8 +40,8 @@ class Instruction(GenericChecker):
     _default_pc_increment: str = "rvfi_pc_rdata + 4"
     _next_pc_check: str = "next_pc[1:0] != 0"
 
-    registered_inputs: Optional[dict[str, Observer]] = None
-    registered_outputs: Optional[dict[str, Observer]] = None
+    registered_inputs: Optional[NamedSet[Observer]] = None
+    registered_outputs: Optional[NamedSet[Observer]] = None
 
     registered_assigns: ClassVar[dict[str, Callable[['Instruction'], str]]] = {}
     registered_checks: ClassVar[set[str]] = set()
@@ -55,18 +56,18 @@ class Instruction(GenericChecker):
 
     def _default_inputs(self):
         # rvfi_insn_check.sv compliant inputs
-        return {o.name: o for o in [
+        return NamedSet([
             Observer("valid", "1"),
             Observer("insn", "`RISCV_FORMAL_ILEN"),
             Observer("pc_rdata", "`RISCV_FORMAL_XLEN"),
             Observer("rs1_rdata", "`RISCV_FORMAL_XLEN"),
             Observer("rs2_rdata", "`RISCV_FORMAL_XLEN"),
             Observer("mem_rdata", "`RISCV_FORMAL_XLEN"),
-        ]}
+        ])
 
     def _default_outputs(self):
         # rvfi_insn_check.sv compliant outputs
-        return {o.name: o for o in [
+        return NamedSet([
             Observer("valid", "1"),
             Observer("trap", "1"),
             Observer("rs1_addr", "5"),
@@ -78,7 +79,7 @@ class Instruction(GenericChecker):
             Observer("mem_rmask", "`RISCV_FORMAL_XLEN/8"),
             Observer("mem_wmask", "`RISCV_FORMAL_XLEN/8"),
             Observer("mem_wdata", "`RISCV_FORMAL_XLEN"),
-        ]}
+        ])
 
     def get_inputs(self):
         return self.registered_inputs if self.registered_inputs is not None else self._default_inputs()
@@ -113,18 +114,18 @@ class Instruction(GenericChecker):
         return outputs
 
     def select_inputs(self, observers: Iterable[Observer]):
-        self.registered_inputs = {}
+        self.registered_inputs = NamedSet()
         inputs_used = self._inputs_used()
         for observer in observers:
             if observer.name in inputs_used:
-                self.registered_inputs[observer.name] = observer
+                self.registered_inputs.add(observer)
 
     def select_outputs(self, observers: Iterable[Observer]):
-        self.registered_outputs = {}
+        self.registered_outputs = NamedSet()
         outputs_used = self._outputs_used()
         for observer in observers:
             if observer.name in outputs_used:
-                self.registered_outputs[observer.name] = observer
+                self.registered_outputs.add(observer)
 
     def _insn_fixup(self):
         if isinstance(self.insn_parts, Instruction_format):
@@ -165,9 +166,9 @@ class Instruction(GenericChecker):
 
     def _v_io(self) -> str:
         io_sigs: list[str] = []
-        for observer in self.get_inputs().values():
+        for observer in self.get_inputs():
             io_sigs.append(f"input {observer.bitrange()} rvfi_{observer.name}")
-        for observer in self.get_outputs().values():
+        for observer in self.get_outputs():
             io_sigs.append(f"output {observer.bitrange()} spec_{observer.name}")
         return ",\n".join(io_sigs)
 
@@ -260,7 +261,7 @@ class Instruction(GenericChecker):
         # map spec values
         spec_mapping = "// spec mapping\n"
         spec_map: dict[str, str] = self.spec_map.copy()
-        spec_sigs = self.get_outputs().keys()
+        spec_sigs = self.get_outputs().names()
         for spec_sig in spec_map.keys():
             if spec_sig not in spec_sigs:
                 raise NotImplementedError(f"spec_sig {spec_sig}")

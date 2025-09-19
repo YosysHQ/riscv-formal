@@ -10,19 +10,20 @@ from ..rvfi import (
     ZeroedObserver,
     SpeculativeEvaluation,
 )
+from ..named_set import NamedSet
 
 
 @dataclass(kw_only=True)
 class InstructionCheckerBase(GenericChecker):
-    instructions: dict[str, Instruction] = field(default_factory=dict)
-    observers: dict[str, Observer] = field(default_factory=dict)
+    instructions: NamedSet[Instruction] = field(default_factory=NamedSet)
+    observers: NamedSet[Observer] = field(default_factory=NamedSet)
 
     registered_speculators: ClassVar[dict[str, tuple[SpeculativeObserver, Callable[[Instruction], Optional[str]]]]] = {}
 
     def configure_io(self):
-        for insn in self.instructions.values():
-            insn.select_inputs(self.observers.values())
-            insn.select_outputs([o for o in self.observers.values() if isinstance(o, SpeculativeObserver)])
+        for insn in self.instructions:
+            insn.select_inputs(self.observers)
+            insn.select_outputs([o for o in self.observers if isinstance(o, SpeculativeObserver)])
 
     @classmethod
     def register_speculator(cls,
@@ -43,8 +44,8 @@ class InstructionCheckerBase(GenericChecker):
         # instantiate insns
         insn_inst_map: list[str] = []
         spec_map: dict[str, tuple[Instruction, list[str]]] = {}
-        for mnemonic, insn in self.instructions.items():
-            insn_prefix = "insn_" + mnemonic
+        for insn in self.instructions:
+            insn_prefix = "insn_" + insn.name
 
             spec_list: list[str] = []
             spec_map[insn_prefix] = (insn, spec_list)
@@ -52,19 +53,19 @@ class InstructionCheckerBase(GenericChecker):
             # map observers to signals
             inst_sig_map: dict[str, str] = {}
             inst_sig_decls: list[str] = []
-            for name, obs in insn.get_inputs().items():
+            for obs in insn.get_inputs():
                 if isinstance(obs, ZeroedObserver):
                     #TODO: substitute insn specific signals in zero_condition
-                    inst_sig = f"{insn_prefix}_{name}_or_zero"
-                    inst_sig_map[f"rvfi_{name}"] = inst_sig
-                    inst_sig_decls.append(f"(* keep *) wire {obs.bitrange()} {inst_sig} = {obs.zero_condition} ? 0 : rvfi.{name};")
+                    inst_sig = f"{insn_prefix}_{obs.name}_or_zero"
+                    inst_sig_map[f"rvfi_{obs.name}"] = inst_sig
+                    inst_sig_decls.append(f"(* keep *) wire {obs.bitrange()} {inst_sig} = {obs.zero_condition} ? 0 : rvfi.{obs.name};")
                 else:
-                    inst_sig_map[f"rvfi_{name}"] = f"rvfi.{name}"
-            for name, obs in insn.get_outputs().items():
+                    inst_sig_map[f"rvfi_{obs.name}"] = f"rvfi.{obs.name}"
+            for obs in insn.get_outputs():
                 if isinstance(obs, SpeculativeObserver):
-                    if name != "valid": spec_list.append(name)
-                    inst_sig = f"{insn_prefix}_spec_{name}"
-                    inst_sig_map[f"spec_{name}"] = inst_sig
+                    if obs.name != "valid": spec_list.append(obs.name)
+                    inst_sig = f"{insn_prefix}_spec_{obs.name}"
+                    inst_sig_map[f"spec_{obs.name}"] = inst_sig
                     inst_sig_decls.append(f"(* keep *) wire {obs.bitrange()} {inst_sig};")
                 else:
                     raise NotImplementedError(type(obs))
@@ -80,18 +81,18 @@ class InstructionCheckerBase(GenericChecker):
 
         # generate speculative signals
         # name: (bitrange, default_value)
-        spec_obs: dict[str, SpeculativeObserver] = {}
-        for name, obs in self.observers.items():
+        spec_obs: NamedSet[SpeculativeObserver] = NamedSet()
+        for obs in self.observers:
             if isinstance(obs, SpeculativeObserver):
-                spec_obs[name] = obs
-        for name, (obs, _) in self.registered_speculators.items():
-            spec_obs[name] = obs
+                spec_obs.add(obs)
+        for obs, _ in self.registered_speculators.values():
+            spec_obs.add(obs)
 
-        for name, obs in spec_obs.items():
-            v_str += f"(* keep *) reg {obs.bitrange()} spec_{name};\n"
+        for obs in spec_obs:
+            v_str += f"(* keep *) reg {obs.bitrange()} spec_{obs.name};\n"
         v_str += "always @* begin\n"
-        for name, obs in spec_obs.items():
-            v_str += f"    spec_{name} <= {obs.spec_value};\n"
+        for obs in spec_obs:
+            v_str += f"    spec_{obs.name} <= {obs.spec_value};\n"
 
         # assign speculative values for valid insn
         is_first = True
@@ -121,7 +122,7 @@ class InstructionCheckerBase(GenericChecker):
 
     def to_verilog(self, xlen: int):
         v_str = ""
-        for insn in self.instructions.values():
+        for insn in self.instructions:
             v_str += insn.to_verilog(xlen) + '\n\n'
         return v_str + super().to_verilog()
 
@@ -132,7 +133,7 @@ class InstructionChecker(InstructionCheckerBase):
 
     registered_checks: ClassVar[list[SpeculativeEvaluation]] = []
     registered_verilog: ClassVar[list[str]] = []
-    registered_hw_traps: ClassVar[dict[str, Callable[[dict[str, Observer]], str]]] = {}
+    registered_hw_traps: ClassVar[dict[str, Callable[[NamedSet[Observer]], str]]] = {}
 
     @classmethod
     def register_check(cls, check: SpeculativeEvaluation):
@@ -143,7 +144,7 @@ class InstructionChecker(InstructionCheckerBase):
         cls.registered_verilog.append(verilog)
 
     @classmethod
-    def register_hw_trap(cls, condition: str, handler: Callable[[dict[str, Observer]], str]):
+    def register_hw_trap(cls, condition: str, handler: Callable[[NamedSet[Observer]], str]):
         cls.registered_hw_traps[condition] = handler
 
     def _v_instantiation(self) -> str:
@@ -176,9 +177,9 @@ class InstructionChecker(InstructionCheckerBase):
                 spec_untrapped.append(spec.evaluation)
 
         # use default checks for unhandled observers
-        for name, obs in self.observers.items():
-            if isinstance(obs, SpeculativeObserver) and name not in handled_observers:
-                spec_untrapped.append(f"assert(spec_{name} == rvfi.{name});")
+        for obs in self.observers:
+            if isinstance(obs, SpeculativeObserver) and obs.name not in handled_observers:
+                spec_untrapped.append(f"assert(spec_{obs.name} == rvfi.{obs.name});")
 
         # hw traps
         trapdent = "    "*5

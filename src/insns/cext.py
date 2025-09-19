@@ -6,6 +6,7 @@ from .model import (
     Instruction,
     MemoryInstruction,
 )
+from ..named_set import NamedSet
 
 FORMAT_CR = Instruction_format(
     "CR-type", [
@@ -470,8 +471,8 @@ def insn_c_alu(insn, funct6, funct2, expr, wmode = False, extension = "Zca"):
         xlen_min = 64 if wmode else 32,
     )
 
-def cext() -> dict[str, C_Instruction]:
-    return {i.name: i for i in [
+def cext() -> NamedSet[C_Instruction]:
+    return NamedSet([
         # Load and Store Instructions
 
         ## Stack-Pointer-Based
@@ -544,4 +545,4 @@ def cext() -> dict[str, C_Instruction]:
 
         insn_c_alu("c_addw", "100111", "01", "rvfi_rs1_rdata[31:0] + rvfi_rs2_rdata[31:0]", wmode=True),
         insn_c_alu("c_subw", "100111", "00", "rvfi_rs1_rdata[31:0] - rvfi_rs2_rdata[31:0]", wmode=True),
-    ]}
+    ])

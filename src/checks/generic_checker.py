@@ -5,6 +5,8 @@ from typing import Any, Optional
 
 import json_fix
 
+from ..named_set import NamedClass
+
 def skip_empty_factory(mapping: list[tuple[str, Any]]) -> dict:
     """dictionary factory which skips empty values"""
     result = {}
@@ -17,7 +19,7 @@ def skip_empty_factory(mapping: list[tuple[str, Any]]) -> dict:
     return result
 
 @dataclass(kw_only=True)
-class GenericChecker:
+class GenericChecker(NamedClass):
     name: str
     body: str = ""
 

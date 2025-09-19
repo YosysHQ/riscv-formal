@@ -3,6 +3,8 @@ from typing import Optional
 
 from .model import AltopsInstruction
 from .builtins import FORMAT_R
+from ..named_set import NamedSet
+
 
 @dataclass(kw_only=True)
 class M_Instruction(AltopsInstruction):
@@ -46,8 +48,8 @@ def m_insn(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, wmode=False, 
     )
 
 
-def mext() -> dict[str, M_Instruction]:
-    return {i.name: i for i in [
+def mext() -> NamedSet[M_Instruction]:
+    return NamedSet([
         m_insn("mul",    "0000001", "000", "rvfi_rs1_rdata * rvfi_rs2_rdata", alt_add=0x2cdf52a55876063e),
         m_insn("mulh",   "0000001", "001", "({{`RISCV_FORMAL_XLEN{rvfi_rs1_rdata[`RISCV_FORMAL_XLEN-1]}}, rvfi_rs1_rdata} *\n" +
                 "\t\t{{`RISCV_FORMAL_XLEN{rvfi_rs2_rdata[`RISCV_FORMAL_XLEN-1]}}, rvfi_rs2_rdata}) >> `RISCV_FORMAL_XLEN", alt_add=0x15d01651f6583fb7),
@@ -80,4 +82,4 @@ def mext() -> dict[str, M_Instruction]:
                                               $signed(rvfi_rs1_rdata[31:0]) % $signed(rvfi_rs2_rdata[31:0])""", alt_sub=0xf5b7d8538da68fa5, wmode=True),
         m_insn("remuw",  "0000001", "111", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdata :
                                               rvfi_rs1_rdata[31:0] % rvfi_rs2_rdata[31:0]""", alt_sub=0xbc4402413138d0e1, wmode=True),
-    ]}
+    ])

@@ -70,3 +70,7 @@ class NamedSet(Collection[T]):
 
     def names(self) -> Iterator[str]:
         return iter(self._store.keys())
+
+    def update(self, other: "NamedSet[T]") -> None:
+        for val in other:
+            self[val.name] = val

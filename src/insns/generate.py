@@ -17,7 +17,7 @@ def generate(with_c: bool, xlen: int, format: str, out_file: Path, insn: str):
         insns.update(cext())
 
     extensions = set()
-    for instr in insns.values():
+    for instr in insns:
         extensions.update(instr.extension.split(" "))
 
     if insn and insn not in insns:

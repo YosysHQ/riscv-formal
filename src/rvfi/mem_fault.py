@@ -2,8 +2,9 @@ from textwrap import dedent
 
 from ..checks import InstructionChecker
 from .observer import Observer
+from ..named_set import NamedSet
 
-def mem_fault_handler(observers: dict[str, Observer]) -> str:
+def mem_fault_handler(observers: NamedSet[Observer]) -> str:
     return dedent("""\
         assert (rvfi.trap);
         assert (rvfi.rd_addr == 0);

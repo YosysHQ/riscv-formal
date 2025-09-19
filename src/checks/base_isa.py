@@ -10,6 +10,7 @@ from ..rvfi import (
     base_observers,
     SpeculativeEvaluation,
 )
+from ..named_set import NamedSet
 
 def base_checks() -> list[SpeculativeEvaluation]:
     return [
@@ -50,7 +51,7 @@ def base_checks() -> list[SpeculativeEvaluation]:
 
 def dump_isa(
     name: str,
-    insns: dict[str, Instruction],
+    insns: NamedSet[Instruction],
     xlen: int,
     format: str,
     channel: Optional[int] = None,
@@ -95,21 +96,21 @@ def dump_isa(
 @click.command()
 def base_isa(fault: bool, format: str):
     xlen = 32
-    insns: dict[str, Instruction] = {}
+    insns: NamedSet[Instruction] = NamedSet()
 
     if fault:
         from ..rvfi import mem_fault, misa_fault
         misa_fault.register_weak_misa()
 
-    for key, val in builtins().items():
+    for insn in builtins():
         # skip incompatible xlen
-        if xlen > val.xlen_max or xlen < val.xlen_min:
+        if xlen > insn.xlen_max or xlen < insn.xlen_min:
             continue
         # skip M extension for NERV
-        if "M" in val.extension:
+        if "M" in insn.extension:
             continue
 
-        insns[key] = val
+        insns.add(insn)
 
     click.echo(dump_isa("insn_check", insns, xlen, format))
 

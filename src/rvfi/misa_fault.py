@@ -8,6 +8,7 @@ from . import (
     SpeculativeObserver,
     SpeculativeEvaluation,
 )
+from ..named_set import NamedSet
 
 MISA_MAP = {
     "A": 1 <<  0, # Atomic
@@ -53,14 +54,14 @@ def misa_rmask_speculator(insn: Instruction) -> Optional[str]:
     else:
         return f"'b{misa_bit:026b}"
 
-def weak_misa_fault_handler(observers: dict[str, Observer]) -> str:
+def weak_misa_fault_handler(observers: NamedSet[Observer]) -> str:
     return dedent("""\
         // core *may* trap
         assert (rvfi.rd_addr == 0);
         assert (rvfi.rd_wdata == 0);
         assert (rvfi.mem_wdata == 0);""")
 
-def strong_misa_fault_handler(observers: dict[str, Observer]) -> str:
+def strong_misa_fault_handler(observers: NamedSet[Observer]) -> str:
     return dedent("""\
         // core *must* trap
         assert (rvfi.trap);
