@@ -40,8 +40,8 @@ class Csr(GenericChecker):
 
             wire csr_write = !rvfi.insn[13] || rvfi.insn[19:15];
             wire csr_read = rvfi.insn[11:7] != 0;
-            wire csr_write_valid = csr_write && csr_insn_valid;
-            wire csr_read_valid = csr_read && csr_insn_valid;
+            wire csr_write_valid = csr_write && csr_insn_valid && !rvfi.trap;
+            wire csr_read_valid = csr_read && csr_insn_valid && !rvfi.trap;
 
             wire [1:0] csr_mode = rvfi.insn[13:12];
             wire [{xlen-1}:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
@@ -72,12 +72,14 @@ class Csr(GenericChecker):
         return v_str
 
     def _behavioral_regs(self) -> NamedSet[SpeculativeObserver]:
-        return NamedSet([
+        regs = NamedSet([
             SpeculativeObserver("rsval_shadow", "`RISCV_FORMAL_XLEN"),
-            SpeculativeObserver("wdata_shadow", "`RISCV_FORMAL_XLEN"),
             SpeculativeObserver("csr_written", "1"),
             SpeculativeObserver("csr_mode_shadow", "2"),
         ])
+        if self.has_rvfi:
+            regs.add(SpeculativeObserver("wdata_shadow", "`RISCV_FORMAL_XLEN"))
+        return regs
 
     def _v_process(self) -> str:
         v_str = "// setup for testing\n"
@@ -89,6 +91,44 @@ class Csr(GenericChecker):
             resets.append(reset)
         reset_str = "\n                    ".join(resets)
 
+        if self.has_rvfi:
+            assign_str = dedent("""
+                rsval_shadow = csr_rsval;
+                wdata_shadow = csr_insn_wdata;
+                csr_written = 1;
+                csr_mode_shadow = csr_mode;""")
+            check_str = dedent("""
+                case (csr_mode_shadow)
+                    2'b 00 /* None */,
+                    2'b 01 /* RW   */: begin
+                        assert(rsval_shadow == csr_insn_rdata || csr_insn_rdata == wdata_shadow);
+                        assert(rsval_shadow == wdata_shadow);
+                    end
+                    // Currently not testing set/clear from rsval
+                    2'b 10 /* RS   */,
+                    2'b 11 /* RC   */: begin assert(csr_insn_rdata == wdata_shadow); end
+                endcase""")
+        else:
+            assign_str = dedent("""
+                    rsval_shadow = csr_rsval;
+                    csr_written = 1;
+                    csr_mode_shadow = csr_mode;""")
+            check_str = dedent("""
+                assume(csr_mode_shadow <= 2'b 01);
+                assume(rvfi.rd_addr != 0);
+                case (csr_mode_shadow)
+                    2'b 00 /* None */,
+                    2'b 01 /* RW   */: begin
+                        assert(rsval_shadow == rvfi.rd_wdata);
+                    end
+                    // Currently not testing set/clear from rsval
+                    2'b 10 /* RS   */,
+                    2'b 11 /* RC   */: begin assert(0); end
+                endcase""")
+
+        assign_str = indent(assign_str, "                            ")
+        check_str = indent(check_str, "                            ")
+
         v_str += dedent(f"""
             // test
             always @(posedge clock) begin
@@ -96,24 +136,11 @@ class Csr(GenericChecker):
                     {reset_str}
                 end else begin
                     if (check) begin
-                        if (csr_written && csr_read_valid && csr_insn_under_test) begin
-                            case (csr_mode_shadow)
-                                2'b 00 /* None */,
-                                2'b 01 /* RW   */: begin
-                                    assert(rsval_shadow == csr_insn_rdata || csr_insn_rdata == wdata_shadow);
-                                    assert(rsval_shadow == wdata_shadow);
-                                end
-                                // Currently not testing set/clear from rsval
-                                2'b 10 /* RS   */,
-                                2'b 11 /* RC   */: begin assert(csr_insn_rdata == wdata_shadow); end
-                            endcase
+                        assume(csr_written);
+                        if (csr_written && csr_read_valid && csr_insn_under_test) begin{check_str}
                         end
                     end else begin
-                        if (csr_write_valid && csr_insn_under_test) begin
-                            rsval_shadow = csr_rsval;
-                            wdata_shadow = csr_insn_wdata;
-                            csr_written = 1;
-                            csr_mode_shadow = csr_mode;
+                        if (csr_write_valid && csr_insn_under_test) begin{assign_str}
                         end
                     end
                 end

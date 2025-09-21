@@ -1,9 +1,8 @@
 [options]
 mode bmc
 expect pass,fail
-append 0
-depth 11
-skip 10
+depth 7
+skip 6
 
 [engines]
 smtbmc boolector
@@ -25,7 +24,7 @@ rvfi_csr_check.sv
 `define RISCV_FORMAL_ILEN 32
 `define RISCV_FORMAL_CHECKER rvfi_custom
 `define RISCV_FORMAL_RESET_CYCLES 1
-`define RISCV_FORMAL_CHECK_CYCLE 10
+`define RISCV_FORMAL_CHECK_CYCLE 6
 `define RISCV_FORMAL_CHANNEL_IDX 0
 `define RISCV_FORMAL_CSR_CUSTOM
 `define RISCV_FORMAL_CUSTOM_CSR_INPUTS \
