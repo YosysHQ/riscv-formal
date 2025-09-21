@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Optional, ClassVar, Callable, Iterable
 from textwrap import dedent
 
-from ..checks import GenericChecker
+from ..checks.generic_checker import GenericChecker
 from ..rvfi import Observer
 from ..named_set import NamedSet
 

@@ -1,22 +1,8 @@
-from dataclasses import dataclass, asdict
-import json
+from dataclasses import dataclass
 from textwrap import indent, dedent
-from typing import Any, Optional
+from typing import Optional
 
-import json_fix
-
-from ..named_set import NamedClass
-
-def skip_empty_factory(mapping: list[tuple[str, Any]]) -> dict:
-    """dictionary factory which skips empty values"""
-    result = {}
-    for key, val in mapping:
-        if isinstance(val, bool):
-            result[key] = val
-        elif val:
-            # skip falsy non-boolean values
-            result[key] = val
-    return result
+from ..named_set import NamedClass, NamedSet
 
 @dataclass(kw_only=True)
 class GenericChecker(NamedClass):
@@ -30,20 +16,6 @@ class GenericChecker(NamedClass):
         if self.channel is not None:
             self.channelized = True
 
-    @classmethod
-    def from_json(cls, s: str):
-        mapping = json.loads(s)
-        return cls(**mapping)
-
-    def __json__(self, skip_empty: bool = True) -> dict:
-        if skip_empty:
-            return asdict(self, dict_factory=skip_empty_factory)
-        else:
-            return asdict(self)
-
-    def to_json(self, skip_empty: bool = True, indent: int | str | None = None) -> str:
-        return json.dumps(self.__json__(skip_empty), indent=indent)
-
     def _v_modname(self) -> str:
         # module name
         return f"rvfi_{self.name}"
@@ -52,8 +24,7 @@ class GenericChecker(NamedClass):
         # macro defined RVFI inputs
         return dedent("""\
             input clock, reset, check,
-            `RVFI_INPUTS
-            `RVFI_BUS_INPUTS""")
+            `RVFI_INPUTS""")
 
     def _v_rvfi_channel(self) -> str:
         if self.channelized:
@@ -92,3 +63,15 @@ class GenericChecker(NamedClass):
             v_str += body
         v_str += "endmodule"
         return v_str
+
+@dataclass
+class GenericGroupChecker(GenericChecker):
+
+    def _subchecks(self) -> NamedSet[GenericChecker]:
+        raise NotImplementedError()
+
+    def to_verilog(self, **kwargs):
+        v_str = ""
+        for check in self._subchecks():
+            v_str += check.to_verilog(**kwargs) + '\n\n'
+        return v_str + super().to_verilog()

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from textwrap import dedent, indent
 from typing import Callable, ClassVar, Optional
 
-from . import GenericChecker
+from . import GenericGroupChecker
 from ..insns import Instruction
 from ..rvfi import (
     Observer,
@@ -14,7 +14,7 @@ from ..named_set import NamedSet
 
 
 @dataclass(kw_only=True)
-class InstructionCheckerBase(GenericChecker):
+class InstructionCheckerBase(GenericGroupChecker):
     instructions: NamedSet[Instruction] = field(default_factory=NamedSet)
     observers: NamedSet[Observer] = field(default_factory=NamedSet)
 
@@ -31,12 +31,6 @@ class InstructionCheckerBase(GenericChecker):
         speculator: Callable[[Instruction], Optional[str]],
     ):
         cls.registered_speculators[spec_obs.name] = (spec_obs, speculator)
-
-    def _v_io(self) -> str:
-        # macro defined RVFI inputs
-        return dedent("""\
-            input clock, reset, check,
-            `RVFI_INPUTS""")
 
     def _v_instantiation(self) -> str:
         v_str = ""
@@ -120,11 +114,8 @@ class InstructionCheckerBase(GenericChecker):
         v_str += self._v_format_block(self._v_spec_check())
         return v_str
 
-    def to_verilog(self, xlen: int):
-        v_str = ""
-        for insn in self.instructions:
-            v_str += insn.to_verilog(xlen) + '\n\n'
-        return v_str + super().to_verilog()
+    def _subchecks(self) -> NamedSet[Instruction]:
+        return self.instructions
 
 
 @dataclass(kw_only=True)
