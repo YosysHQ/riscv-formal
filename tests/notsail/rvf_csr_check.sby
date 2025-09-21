@@ -1,0 +1,81 @@
+[options]
+mode bmc
+expect pass,fail
+append 0
+depth 11
+skip 10
+
+[engines]
+smtbmc boolector
+
+[script]
+read -sv csr_check.sv /home/dawn/riscv-formal/cores/nerv/../../cores/nerv/wrapper.sv /home/dawn/riscv-formal/cores/nerv/../../cores/nerv/nerv.sv
+prep -flatten -nordff -top rvfi_testbench
+chformal -early
+
+[files]
+/home/dawn/riscv-formal/cores/nerv/../../checks/rvfi_macros.vh
+/home/dawn/riscv-formal/cores/nerv/../../checks/rvfi_testbench.sv
+rvfi_csr_check.sv
+
+[file defines.sv]
+`define RISCV_FORMAL
+`define RISCV_FORMAL_NRET 1
+`define RISCV_FORMAL_XLEN 32
+`define RISCV_FORMAL_ILEN 32
+`define RISCV_FORMAL_CHECKER rvfi_custom
+`define RISCV_FORMAL_RESET_CYCLES 1
+`define RISCV_FORMAL_CHECK_CYCLE 10
+`define RISCV_FORMAL_CHANNEL_IDX 0
+`define RISCV_FORMAL_CSR_CUSTOM
+`define RISCV_FORMAL_CUSTOM_CSR_INPUTS \
+  ,input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_rmask \
+  ,input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_wmask \
+  ,input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_rdata \
+  ,input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_wdata \
+
+`define RISCV_FORMAL_CUSTOM_CSR_WIRES \
+  (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_rmask; \
+  (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_wmask; \
+  (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_rdata; \
+  (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_wdata; \
+
+`define RISCV_FORMAL_CUSTOM_CSR_CONN \
+  ,.rvfi_csr_custom_rmask (rvfi_csr_custom_rmask) \
+  ,.rvfi_csr_custom_wmask (rvfi_csr_custom_wmask) \
+  ,.rvfi_csr_custom_rdata (rvfi_csr_custom_rdata) \
+  ,.rvfi_csr_custom_wdata (rvfi_csr_custom_wdata) \
+
+`define RISCV_FORMAL_CUSTOM_CSR_CHANNEL(_idx) \
+  wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_custom_rmask = rvfi_csr_custom_rmask [(_idx)*(`RISCV_FORMAL_XLEN) +: `RISCV_FORMAL_XLEN]; \
+  wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_custom_wmask = rvfi_csr_custom_wmask [(_idx)*(`RISCV_FORMAL_XLEN) +: `RISCV_FORMAL_XLEN]; \
+  wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_custom_rdata = rvfi_csr_custom_rdata [(_idx)*(`RISCV_FORMAL_XLEN) +: `RISCV_FORMAL_XLEN]; \
+  wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_custom_wdata = rvfi_csr_custom_wdata [(_idx)*(`RISCV_FORMAL_XLEN) +: `RISCV_FORMAL_XLEN]; \
+
+`define RISCV_FORMAL_CUSTOM_CSR_SIGNALS \
+`RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN, csr_custom_rmask) \
+`RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN, csr_custom_wmask) \
+`RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN, csr_custom_rdata) \
+`RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN, csr_custom_wdata) \
+
+`define RISCV_FORMAL_CUSTOM_CSR_OUTPUTS \
+  ,output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_rmask \
+  ,output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_wmask \
+  ,output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_rdata \
+  ,output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_custom_wdata \
+
+`define RISCV_FORMAL_CUSTOM_CSR_INDICES \
+  localparam [11:0] csr_mindex_custom = 12'hBC0; \
+  localparam [11:0] csr_sindex_custom = 12'hFFF; \
+  localparam [11:0] csr_uindex_custom = 12'hBC0; \
+
+`define YOSYS // Hotfix for older Tabby CAD Releases
+`define NERV_RVFI
+`define RISCV_FORMAL_ALIGNED_MEM
+`define NERV_CSR
+`include "rvfi_macros.vh"
+
+[file csr_check.sv]
+`include "defines.sv"
+`include "rvfi_testbench.sv"
+`include "rvfi_csr_check.sv"
