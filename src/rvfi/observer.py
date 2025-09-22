@@ -21,7 +21,11 @@ class Observer(NamedClass):
     def bitrange(self) -> str:
         if self.width == "1":
             return ""
-        else:
+        elif self.width == "xlen":
+            return "[`RISCV_FORMAL_XLEN-1:0]"
+        try:
+            return f"[{int(self.width)-1}:0]"
+        except ValueError:
             return f"[{self.width}-1:0]"
 
 @dataclass

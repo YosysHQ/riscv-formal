@@ -4,7 +4,13 @@ from typing import Optional
 
 from ..checks.generic_checker import GenericChecker
 from ..named_set import NamedSet
-from ..rvfi import SpeculativeObserver
+from .behavior import Behavior
+
+WIDE_CSRS = [
+    "mcycle",
+    "minstret",
+    *( f"mhpmcounter{i}" for i in range(3, 32) ),
+]
 
 @dataclass(kw_only=True)
 class Csr(GenericChecker):
@@ -16,20 +22,33 @@ class Csr(GenericChecker):
     has_rvfi: bool = False
     read_insn: bool = True
 
-    def _v_insn_under_test(self) -> str:
-        v_str = f"(csr_insn_addr == 12'h {self.index:X})"
+    behavior: Optional[Behavior] = None
+
+    def _v_insn_priv_check(self) -> Optional[str]:
         try:
             priv = self.privilege[0]
         except IndexError:
             # no privilege
-            pass
+            return None
         else:
             priv_mode = {
                 "M": 3,
                 "S": 1,
                 "U": 0,
             }[priv]
-            v_str += f" && (rvfi.mode >= {priv_mode})"
+            return f"rvfi.mode >= {priv_mode}"
+
+    def _v_insn_csr_idx(self, hi: bool) -> str:
+        idx = self.indexh if hi else self.index
+        try:
+            v_str = f"csr_insn_addr == 12'h {idx:X}"
+        except TypeError:
+            #indexh is None
+            return "0"
+        priv_check = self._v_insn_priv_check()
+        if priv_check:
+            v_str += f" && {priv_check}"
+
         return v_str
 
     def _v_insn_check(self, xlen: int) -> str:
@@ -45,16 +64,22 @@ class Csr(GenericChecker):
 
             wire [1:0] csr_mode = rvfi.insn[13:12];
             wire [{xlen-1}:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
-            wire csr_insn_under_test = (""")
-
-        v_str += self._v_insn_under_test() + ");\n"
+            wire csr_hi = {self._v_insn_csr_idx(hi=True)};
+            wire csr_lo = {self._v_insn_csr_idx(hi=False)};
+            wire csr_insn_under_test = (csr_hi || csr_lo);
+        """)
 
         return v_str
 
     def _v_rvfi_map(self, xlen: int) -> str:
         v_str = "// rvfi mapping\n"
         for val in ["rmask", "wmask", "rdata", "wdata"]:
-            v_str += f"wire [{xlen-1}:0] csr_insn_{val} = rvfi.csr_{self.name}_{val};\n"
+            width = 64 if (self.width == "64" and xlen == 32) else xlen
+            if self.name in WIDE_CSRS or self.width == "xlen" or xlen > 32:
+                rhs = f"rvfi.csr_{self.name}_{val}"
+            else:
+                raise NotImplementedError()
+            v_str += f"wire [{width-1}:0] csr_insn_{val} = {rhs};\n"
         return v_str
 
     def _v_signal_map(self, xlen: int) -> str:
@@ -71,76 +96,47 @@ class Csr(GenericChecker):
 
         return v_str
 
-    def _behavioral_regs(self) -> NamedSet[SpeculativeObserver]:
-        regs = NamedSet([
-            SpeculativeObserver("rsval_shadow", "`RISCV_FORMAL_XLEN"),
-            SpeculativeObserver("csr_written", "1"),
-            SpeculativeObserver("csr_mode_shadow", "2"),
-        ])
-        if self.has_rvfi:
-            regs.add(SpeculativeObserver("wdata_shadow", "`RISCV_FORMAL_XLEN"))
-        return regs
-
-    def _v_process(self) -> str:
+    def _v_process(self, xlen: int) -> str:
         v_str = "// setup for testing\n"
 
+        reg_width = "64" if (self.width == "64" and xlen == 32) else "xlen"
+
         resets: list[str] = []
-        for reg in self._behavioral_regs():
-            reset = f"{reg.name} = {reg.spec_value};"
+        assigns: list[str] = []
+        for reg in self.behavior.regs(reg_width, self.has_rvfi):
+            reset = f"{reg.name} = {reg.default_value};"
             v_str += f"reg {reg.bitrange()} {reset}\n"
             resets.append(reset)
+            assigns.append(f"{reg.name} = {reg.spec_value};")
         reset_str = "\n                    ".join(resets)
+        assign_str = "\n                            ".join(assigns)
 
-        if self.has_rvfi:
-            assign_str = dedent("""
-                rsval_shadow = csr_rsval;
-                wdata_shadow = csr_insn_wdata;
-                csr_written = 1;
-                csr_mode_shadow = csr_mode;""")
-            check_str = dedent("""
-                case (csr_mode_shadow)
-                    2'b 00 /* None */,
-                    2'b 01 /* RW   */: begin
-                        assert(rsval_shadow == csr_insn_rdata || csr_insn_rdata == wdata_shadow);
-                        assert(rsval_shadow == wdata_shadow);
-                    end
-                    // Currently not testing set/clear from rsval
-                    2'b 10 /* RS   */,
-                    2'b 11 /* RC   */: begin assert(csr_insn_rdata == wdata_shadow); end
-                endcase""")
-        else:
-            assign_str = dedent("""
-                    rsval_shadow = csr_rsval;
-                    csr_written = 1;
-                    csr_mode_shadow = csr_mode;""")
-            check_str = dedent("""
-                assume(csr_mode_shadow <= 2'b 01);
-                assume(rvfi.rd_addr != 0);
-                case (csr_mode_shadow)
-                    2'b 00 /* None */,
-                    2'b 01 /* RW   */: begin
-                        assert(rsval_shadow == rvfi.rd_wdata);
-                    end
-                    // Currently not testing set/clear from rsval
-                    2'b 10 /* RS   */,
-                    2'b 11 /* RC   */: begin assert(0); end
-                endcase""")
+        global_assumes_str = ""
+        for assumption in self.behavior.global_assumptions:
+            global_assumes_str += f"\n                    assume({assumption});"
 
-        assign_str = indent(assign_str, "                            ")
-        check_str = indent(check_str, "                            ")
+        check_assumes_str = ""
+        for assumption in self.behavior.check_assumptions:
+            check_assumes_str += f"\n                        assume({assumption});"
+
+        assign_assumes_str = ""
+        for assumption in self.behavior.assign_assumptions:
+            assign_assumes_str += f"\n                            assume({assumption});"
+
+        check_str = indent(self.behavior.check(self.has_rvfi), "                            ")
 
         v_str += dedent(f"""
             // test
             always @(posedge clock) begin
                 if (reset) begin
                     {reset_str}
-                end else begin
-                    if (check) begin
-                        assume(csr_written);
-                        if (csr_written && csr_read_valid && csr_insn_under_test) begin{check_str}
+                end else begin{global_assumes_str}
+                    if (check) begin{check_assumes_str}
+                        if ({self.behavior.check_condition}) begin{check_str}
                         end
                     end else begin
-                        if (csr_write_valid && csr_insn_under_test) begin{assign_str}
+                        if ({self.behavior.assign_condition}) begin{assign_assumes_str}
+                            {assign_str}
                         end
                     end
                 end
@@ -151,7 +147,7 @@ class Csr(GenericChecker):
     def _v_body(self, xlen: int) -> str:
         v_str = self._v_format_block(self._v_rvfi_channel())
         v_str += self._v_format_block(self._v_signal_map(xlen))
-        v_str += self._v_format_block(self._v_process())
+        v_str += self._v_format_block(self._v_process(xlen))
         return v_str
 
 @dataclass(kw_only=True)

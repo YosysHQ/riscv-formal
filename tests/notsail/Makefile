@@ -40,7 +40,7 @@ rvfi_insn_check.sv: insn_check
 rvf_complete_%: rvf_complete.sby rvfi_insn_check.sv $(RISCV_ROOT)/cores/nerv/nerv.sv
 	$(SBY) -f $< $*
 
-rvfi_csr_check.sv: $(addprefix $(RISCV_ROOT)/src/csrs/,nerv_test.py model.py)
+rvfi_csr_check.sv: $(addprefix $(RISCV_ROOT)/src/csrs/,nerv_test.py csr.py behavior.py)
 	cd $(RISCV_ROOT) && $(PYTHON) -m src.csrs.nerv_test > $(abspath $@)
 
 rvf_csr_check: rvf_csr_check.sby rvfi_csr_check.sv $(RISCV_ROOT)/cores/nerv/nerv.sv

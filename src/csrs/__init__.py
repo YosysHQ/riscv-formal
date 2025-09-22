@@ -1,4 +1,10 @@
-from .model import (
+from .behavior import (
+    Behavior,
+    AnyValue,
+    UpcntValue,
+)
+
+from .csr import (
     Csr,
     ShadowCsr,
     MachineCsr,
