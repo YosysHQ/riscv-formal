@@ -18,6 +18,9 @@ class Behavior(metaclass=ABCMeta):
     def global_assumptions(self) -> list[str]:
         return []
 
+    def global_code(self, csr_has_rvfi: bool) -> Optional[str]:
+        return None
+
     @property
     def check_assumptions(self) -> list[str]:
         return []
@@ -66,7 +69,7 @@ class AnyValue(Behavior):
 
     @property
     def check_condition(self) -> str:
-        return "csr_written && csr_read_valid && csr_insn_under_test"
+        return "csr_read_valid && csr_insn_under_test"
 
     def check(self, csr_has_rvfi: bool) -> str:
         if csr_has_rvfi:
@@ -84,7 +87,6 @@ class AnyValue(Behavior):
         else:
             return dedent("""
                 assume(csr_mode_shadow <= 2'b 01);
-                assume(rvfi.rd_addr != 0);
                 case (csr_mode_shadow)
                     2'b 00 /* None */,
                     2'b 01 /* RW   */: begin
@@ -101,13 +103,17 @@ class AnyValue(Behavior):
 
 class UpcntValue(Behavior):
     def regs(self, csr_width: str, csr_has_rvfi: bool) -> NamedSet[BehavioralReg]:
-        regs = NamedSet([
-            BehavioralReg("csr_read_shadowed", "1", "1"),
-        ])
         if csr_has_rvfi:
-            regs.add(BehavioralReg("rdata_shadow", csr_width, "csr_insn_rdata"))
+            regs = NamedSet([
+                BehavioralReg("csr_read_lo", "1", "1"),
+                BehavioralReg("rdata_shadow", csr_width, "csr_insn_rdata"),
+            ])
         else:
-            regs.add(BehavioralReg("rdata_shadow", csr_width, "rvfi.rd_wdata"))
+            regs = NamedSet([
+                BehavioralReg("csr_read_hi", "1", "csr_hi"),
+                BehavioralReg("csr_read_lo", "1", "csr_lo"),
+                BehavioralReg("rdata_shadow", csr_width, "rvfi.rd_wdata"),
+            ])
         return regs
 
     @property
@@ -116,7 +122,7 @@ class UpcntValue(Behavior):
 
     @property
     def check_assumptions(self) -> list[str]:
-        return ["csr_read_shadowed"]
+        return ["csr_read_lo"]
 
     @property
     def check_condition(self) -> str:
@@ -128,7 +134,9 @@ class UpcntValue(Behavior):
                 assert(csr_insn_rdata > rdata_shadow);""")
         else:
             return dedent("""
-                assume(0);""")
+                // currently only tests low half when not using rvfi signal
+                assume(csr_lo);
+                assert(rvfi.rd_wdata > rdata_shadow[31:0]);""")
 
     @property
     def assign_assumptions(self) -> list[str]:
