@@ -8,6 +8,7 @@ from ..rvfi import SpeculativeObserver
 
 @dataclass
 class BehavioralReg(SpeculativeObserver):
+    spec_value: Optional[str] = "0"
     default_value: str = "0"
 
 class Behavior(metaclass=ABCMeta):
@@ -153,6 +154,9 @@ class ZeroValue(ConstValue):
         return ""
 
 class UpcntValue(Behavior):
+    def __init__(self):
+        self.comparison = ">"
+    
     def regs(self, csr_width: str, csr_has_rvfi: bool) -> NamedSet[BehavioralReg]:
         if csr_has_rvfi:
             regs = NamedSet([
@@ -165,11 +169,17 @@ class UpcntValue(Behavior):
                 BehavioralReg("csr_read_lo", "1", "csr_lo"),
                 BehavioralReg("rdata_shadow", csr_width, "rvfi.rd_wdata"),
             ])
+        regs.add(BehavioralReg("csr_written", "1", None))
+        regs.add(BehavioralReg("wdata_shadow", csr_width, None))
         return regs
 
     @property
     def global_assumptions(self) -> list[str]:
-        return ["!(csr_write_valid && csr_insn_under_test)"]
+        return []
+
+    def global_code(self, csr_has_rvfi: bool) -> str:
+        # no writes without read that could decrease the value manually
+        return "if (csr_write_valid) assume(csr_read_valid);"
 
     @property
     def check_assumptions(self) -> list[str]:
@@ -180,14 +190,21 @@ class UpcntValue(Behavior):
         return "csr_read_valid && csr_insn_under_test"
 
     def check(self, csr_has_rvfi: bool) -> str:
+        check = ""
         if csr_has_rvfi:
-            return dedent("""\
-                assert(csr_insn_rdata > rdata_shadow);""")
+            lhs = "csr_insn_rdata"
+            bitrange = ""
         else:
-            return dedent("""\
-                // currently only tests low half when not using rvfi signal
-                assume(csr_lo);
-                assert(rvfi.rd_wdata > rdata_shadow[31:0]);""")
+            lhs = "rvfi.rd_wdata"
+            bitrange = "[31:0]"
+            # currently only tests low half when not using rvfi signal
+            check += "assume(csr_lo);\n"
+        check += dedent(f"""\
+                if (csr_written)
+                    assert({lhs} {self.comparison} wdata_shadow{bitrange});
+                else
+                    assert({lhs} {self.comparison} rdata_shadow{bitrange});""")
+        return check
 
     @property
     def assign_assumptions(self) -> list[str]:
@@ -196,3 +213,20 @@ class UpcntValue(Behavior):
     @property
     def assign_condition(self) -> str:
         return "csr_read_valid && csr_insn_under_test"
+
+    def assign(self, csr_has_rvfi: bool) -> str:
+        if not csr_has_rvfi:
+            # incomplete wdata calculation without RVFI
+            raise NotImplementedError()
+        rhs = "csr_insn_wdata" if csr_has_rvfi else "csr_rsval"
+        return dedent(f"""\
+            if (csr_write_valid) begin
+                assume(wdata_shadow < 32'h F000_0000);
+                wdata_shadow = {rhs};
+                csr_written = 1;
+            end else
+                csr_written = 0;""")
+
+class IncValue(UpcntValue):
+    def __init__(self):
+        self.comparison = ">="

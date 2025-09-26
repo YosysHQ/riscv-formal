@@ -110,7 +110,7 @@ class Csr(GenericChecker):
             if not self.has_rvfi and reg_width == "64" and reg.spec_value == "rvfi.rd_wdata":
                 assigns.append(f"if (csr_hi) {reg.name}[63:32] = {reg.spec_value};")
                 assigns.append(f"if (csr_lo) {reg.name}[31: 0] = {reg.spec_value};")
-            else:
+            elif reg.spec_value is not None:
                 assigns.append(f"{reg.name} = {reg.spec_value};")
         reset_str = "\n                    ".join(resets)
         assign_str = "\n                            ".join(assigns)
@@ -132,6 +132,10 @@ class Csr(GenericChecker):
         global_code = self.behavior.global_code(self.has_rvfi)
         if global_code:
             global_assumes_str += "\n" + indent(global_code, "                    ")
+
+        assign_code = self.behavior.assign(self.has_rvfi)
+        if assign_code:
+            assign_assumes_str += "\n" + indent(assign_code, "                            ")
 
         v_str += dedent(f"""
             // test
