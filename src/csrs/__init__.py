@@ -1,6 +1,8 @@
 from .behavior import (
     Behavior,
     AnyValue,
+    ConstValue,
+    ZeroValue,
     UpcntValue,
 )
 

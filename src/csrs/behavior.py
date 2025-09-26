@@ -73,7 +73,7 @@ class AnyValue(Behavior):
 
     def check(self, csr_has_rvfi: bool) -> str:
         if csr_has_rvfi:
-            return dedent("""
+            return dedent("""\
                 case (csr_mode_shadow)
                     2'b 00 /* None */,
                     2'b 01 /* RW   */: begin
@@ -85,7 +85,7 @@ class AnyValue(Behavior):
                     2'b 11 /* RC   */: begin assert(csr_insn_rdata == wdata_shadow); end
                 endcase""")
         else:
-            return dedent("""
+            return dedent("""\
                 assume(csr_mode_shadow <= 2'b 01);
                 case (csr_mode_shadow)
                     2'b 00 /* None */,
@@ -100,6 +100,57 @@ class AnyValue(Behavior):
     @property
     def assign_condition(self) -> str:
         return "csr_write_valid && csr_insn_under_test"
+
+class ConstValue(Behavior):
+    def __init__(self, const_value: Optional[str | int] = None):
+        if isinstance(const_value, int):
+            self.const_value = f"'h {const_value:X}"
+        else:
+            self.const_value = const_value
+
+    def _repr_args(self):
+        return self.const_value
+
+    def regs(self, csr_width: str, csr_has_rvfi: bool) -> NamedSet[BehavioralReg]:
+        regs = NamedSet([
+            BehavioralReg("csr_read_shadow", "1", "1"),
+            BehavioralReg("csr_mode_shadow", "2", "csr_mode"),
+        ])
+        if csr_has_rvfi:
+            # try to shadow CSR interface
+            regs.add(BehavioralReg("rdata_shadow", csr_width, "csr_insn_rdata"))
+        else:
+            # fallback to shadowing the writeback
+            regs.add(BehavioralReg("rvfi_wdata_shadow", csr_width, "rvfi.rd_wdata"))
+        return regs
+
+    @property
+    def check_condition(self) -> str:
+        return "csr_read_valid && csr_insn_under_test"
+
+    def check(self, csr_has_rvfi: bool) -> str:
+        check = ""
+        if self.const_value is None:
+            # fallback to compare against read value if we don't know the const
+            check += "assume(csr_read_shadow);\n"
+            rhs = "rdata_shadow" if csr_has_rvfi else "rvfi_wdata_shadow"
+        else:
+            rhs = self.const_value
+
+        lhs = "csr_insn_rdata" if csr_has_rvfi else "rvfi.rd_wdata"
+        check += f"assert({lhs} == {rhs});"
+        return check
+
+    @property
+    def assign_condition(self) -> str:
+        return "csr_read_valid && csr_insn_under_test"
+
+class ZeroValue(ConstValue):
+    def __init__(self):
+        super().__init__(0)
+
+    def _repr_args(self):
+        return ""
 
 class UpcntValue(Behavior):
     def regs(self, csr_width: str, csr_has_rvfi: bool) -> NamedSet[BehavioralReg]:
@@ -130,10 +181,10 @@ class UpcntValue(Behavior):
 
     def check(self, csr_has_rvfi: bool) -> str:
         if csr_has_rvfi:
-            return dedent("""
+            return dedent("""\
                 assert(csr_insn_rdata > rdata_shadow);""")
         else:
-            return dedent("""
+            return dedent("""\
                 // currently only tests low half when not using rvfi signal
                 assume(csr_lo);
                 assert(rvfi.rd_wdata > rdata_shadow[31:0]);""")

@@ -140,7 +140,7 @@ class Csr(GenericChecker):
                     {reset_str}
                 end else begin{global_assumes_str}
                     if (check) begin{check_assumes_str}
-                        if ({self.behavior.check_condition}) begin{check_str}
+                        if ({self.behavior.check_condition}) begin\n{check_str}
                         end
                     end else begin
                         if ({self.behavior.assign_condition}) begin{assign_assumes_str}
