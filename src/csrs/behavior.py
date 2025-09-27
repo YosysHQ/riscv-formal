@@ -57,50 +57,46 @@ class AnyValue(Behavior):
     def regs(self, csr_width: str, csr_has_rvfi: bool) -> NamedSet[BehavioralReg]:
         regs = NamedSet([
             BehavioralReg("rsval_shadow", csr_width, "csr_rsval"),
-            BehavioralReg("csr_written", "1", "1"),
+            BehavioralReg("csr_write_shadow", "1", "1"),
             BehavioralReg("csr_mode_shadow", "2", "csr_mode"),
+            BehavioralReg("csr_mask_shadow", csr_width, None),
+            # try to shadow CSR interface, with fallback to the writeback
+            BehavioralReg("rdata_shadow", csr_width, "csr_insn_rdata" if csr_has_rvfi else "rvfi.rd_wdata"),
         ])
-        if csr_has_rvfi:
-            regs.add(BehavioralReg("wdata_shadow", csr_width, "csr_insn_wdata"))
         return regs
 
     @property
     def check_assumptions(self) -> list[str]:
-        return ["csr_written"]
+        return ["csr_write_shadow"]
 
     @property
     def check_condition(self) -> str:
         return "csr_read_valid && csr_insn_under_test"
 
     def check(self, csr_has_rvfi: bool) -> str:
-        if csr_has_rvfi:
-            return dedent("""\
-                case (csr_mode_shadow)
-                    2'b 00 /* None */,
-                    2'b 01 /* RW   */: begin
-                        assert(rsval_shadow == csr_insn_rdata || csr_insn_rdata == wdata_shadow);
-                        assert(rsval_shadow == wdata_shadow);
-                    end
-                    // Currently not testing set/clear from rsval
-                    2'b 10 /* RS   */,
-                    2'b 11 /* RC   */: begin assert(csr_insn_rdata == wdata_shadow); end
-                endcase""")
-        else:
-            return dedent("""\
-                assume(csr_mode_shadow <= 2'b 01);
-                case (csr_mode_shadow)
-                    2'b 00 /* None */,
-                    2'b 01 /* RW   */: begin
-                        assert(rsval_shadow == rvfi.rd_wdata);
-                    end
-                    // Currently not testing set/clear from rsval
-                    2'b 10 /* RS   */,
-                    2'b 11 /* RC   */: begin assert(0); end
-                endcase""")
+        lhs = "csr_insn_rdata" if csr_has_rvfi else "rvfi.rd_wdata"
+        check = dedent(f"""\
+            case (csr_mode_shadow)
+                2'b 00 /* None (ignored) */,
+                2'b 01 /* RW */: assert({lhs} == rsval_shadow);
+                2'b 10 /* RS */: assert(({lhs} & csr_mask_shadow) == csr_mask_shadow);
+                2'b 11 /* RC */: assert(({lhs} & csr_mask_shadow) == '0);
+            endcase
+            // only mask bits are changed from prior read
+            assert(({lhs} & ~csr_mask_shadow) == (rdata_shadow & ~csr_mask_shadow));""")
+        return check
 
     @property
     def assign_condition(self) -> str:
         return "csr_write_valid && csr_insn_under_test"
+
+    def assign(self, csr_has_rvfi: bool) -> Optional[str]:
+        assign = "" if csr_has_rvfi else "assume(csr_read_valid);\n"
+        assign += dedent("""\
+            csr_mask_shadow = 
+                /* RS */ csr_mode == 2'b 10 ? csr_insn_smask :
+                /* RC */ csr_mode == 2'b 11 ? csr_insn_cmask : '1;""")
+        return assign
 
 class ConstValue(Behavior):
     def __init__(self, const_value: Optional[str | int] = None):
@@ -116,13 +112,9 @@ class ConstValue(Behavior):
         regs = NamedSet([
             BehavioralReg("csr_read_shadow", "1", "1"),
             BehavioralReg("csr_mode_shadow", "2", "csr_mode"),
+            # try to shadow CSR interface, with fallback to the writeback
+            BehavioralReg("rdata_shadow", csr_width, "csr_insn_rdata" if csr_has_rvfi else "rvfi.rd_wdata"),
         ])
-        if csr_has_rvfi:
-            # try to shadow CSR interface
-            regs.add(BehavioralReg("rdata_shadow", csr_width, "csr_insn_rdata"))
-        else:
-            # fallback to shadowing the writeback
-            regs.add(BehavioralReg("rvfi_wdata_shadow", csr_width, "rvfi.rd_wdata"))
         return regs
 
     @property
