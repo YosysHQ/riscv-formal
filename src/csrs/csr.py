@@ -24,19 +24,54 @@ class Csr(GenericChecker):
 
     behavior: Optional[Behavior] = None
 
+    @property
+    def min_priv_level(self) -> int:
+        return {
+            "M": 3,
+            "H": 2,
+            "S": 1,
+            "U": 0,
+        }[self.min_priv]
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        # auto assign privilege
+        for idx in [self.index, self.indexh]:
+            if idx is None: continue
+            bindex = f"{idx:012b}"
+            read_bin = bindex[0:2] # csr[11:10]
+            priv_bin = bindex[2:4] # csr[ 9: 8]
+            priv_level = ["U", "S", "H", "M"][int(priv_bin, 2)]
+            read_write = "RO" if read_bin == "11" else "RW"
+            auto_priv = priv_level + read_write
+            if self.privilege is None:
+                self.privilege = auto_priv
+
+        # check privilege
+        try:
+            valid_priv = (
+                self.privilege[0] in ["U", "S", "H", "M"] and
+                self.privilege[1:] in ["RO", "RW"])
+        except IndexError:
+            valid_priv = False
+        if not valid_priv:
+            raise NotImplementedError()
+
+    @property
+    def read_write(self) -> bool:
+        return self.privilege[1:] == "RW"
+
+    @property
+    def min_priv(self) -> str:
+        return self.privilege[0]
+
     def _v_insn_priv_check(self) -> Optional[str]:
         try:
-            priv = self.privilege[0]
+            return f"rvfi.mode >= {self.min_priv_level}"
         except IndexError:
             # no privilege
             return None
-        else:
-            priv_mode = {
-                "M": 3,
-                "S": 1,
-                "U": 0,
-            }[priv]
-            return f"rvfi.mode >= {priv_mode}"
 
     def _v_insn_csr_idx(self, hi: bool) -> str:
         idx = self.indexh if hi else self.index
