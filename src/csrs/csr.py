@@ -76,15 +76,10 @@ class Csr(GenericChecker):
     def _v_insn_csr_idx(self, hi: bool) -> str:
         idx = self.indexh if hi else self.index
         try:
-            v_str = f"csr_insn_addr == 12'h {idx:X}"
+            return f"csr_insn_addr == 12'h {idx:X}"
         except TypeError:
             #indexh is None
             return "0"
-        priv_check = self._v_insn_priv_check()
-        if priv_check:
-            v_str += f" && {priv_check}"
-
-        return v_str
 
     def _v_insn_check(self, xlen: int) -> str:
         v_str = dedent(f"""\
@@ -99,10 +94,26 @@ class Csr(GenericChecker):
 
             wire [1:0] csr_mode = rvfi.insn[13:12];
             wire [{xlen-1}:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
-            wire csr_hi = {self._v_insn_csr_idx(hi=True)};
+
+            wire [{xlen-1}:0] csr_insn_smask =
+                /* CSRRW, CSRRWI */ (rvfi.insn[13:12] == 1) ? csr_rsval :
+                /* CSRRS, CSRRSI */ (rvfi.insn[13:12] == 2) ? csr_rsval : 0;
+
+            wire [{xlen-1}:0] csr_insn_cmask =
+                /* CSRRW, CSRRWI */ (rvfi.insn[13:12] == 1) ? ~csr_rsval :
+                /* CSRCS, CSRRCI */ (rvfi.insn[13:12] == 3) ? csr_rsval : 0;
+
             wire csr_lo = {self._v_insn_csr_idx(hi=False)};
-            wire csr_insn_under_test = (csr_hi || csr_lo);
         """)
+
+        if self.indexh is not None:
+            v_str += dedent(f"""\
+                wire csr_hi = {self._v_insn_csr_idx(hi=True)} && rvfi.ixl == 1;
+                wire csr_access = (csr_hi || csr_lo);
+            """)
+        else:
+            v_str += f"wire csr_access = csr_lo;\n"
+        v_str += f"wire csr_insn_under_test = csr_access && {self._v_insn_priv_check()};\n"
 
         return v_str
 
@@ -129,6 +140,63 @@ class Csr(GenericChecker):
         if self.read_insn:
             v_str += "\n" + self._v_insn_check(xlen)
 
+        return v_str
+
+    def _v_rw_test(self, xlen: int) -> str:
+        csr_illacc = f"rvfi.mode < {self.min_priv_level}"
+        if not self.read_write:
+            csr_illacc += " || csr_write"
+        v_str = dedent(f"""\
+            // read/write testing
+            wire csr_illacc = csr_insn_valid && ({csr_illacc});
+            wire [{xlen-1}:0] effective_csr_insn_wmask = csr_insn_rmask | csr_insn_wmask;
+            wire [{xlen-1}:0] effective_csr_insn_wdata = (csr_insn_wdata & csr_insn_wmask) | (csr_insn_rdata & ~csr_insn_wmask);
+
+            // CSR accesses are (currently) only valid in non-C instructions and never jump
+            wire [{xlen-1}:0] spec_pc_wdata = rvfi.pc_rdata + 4;
+
+            always @* begin
+                if (!reset && check) begin
+                    // checked instruction is a well formed access to CSR under test
+                    assume (csr_insn_valid);
+                    assume (csr_insn_addr != csr_none);
+                    assume (csr_access);
+
+                    if (!`rvformal_addr_valid(rvfi.pc_rdata) || csr_illacc) begin
+                        // an illegal csr access must trap
+                        assert (rvfi.trap);
+                        assert (rvfi.rd_addr == 0);
+                        assert (rvfi.rd_wdata == 0);
+                    end else begin
+                        assert (!rvfi.trap);
+
+                        // check rd/rs access
+                        assert (rvfi.rd_addr == rvfi.insn[11:7]);
+                        if (rvfi.insn[14] == 0) assert (rvfi.rs1_addr == rvfi.insn[19:15]);
+
+                        // check pc
+                        assert (`rvformal_addr_eq(rvfi.pc_wdata, spec_pc_wdata));
+
+                        // bits that should have been read were
+                        if (rvfi.rd_addr == 0) begin
+                            assert (rvfi.rd_wdata == 0);
+                        end else begin
+                            assert (csr_insn_rmask == {{{xlen}{{1'b1}}}});
+                            assert (csr_insn_rdata == rvfi.rd_wdata);
+                        end
+
+                        // bits that should have been written were
+                        assert (((csr_insn_smask | csr_insn_cmask) & ~effective_csr_insn_wmask) == 0);
+                        assert ((csr_insn_smask & ~effective_csr_insn_wdata) == 0);
+                        assert ((csr_insn_cmask & effective_csr_insn_wdata) == 0);
+                    end
+
+                    // csr accesses are never considered memory writes on RVFI
+                    assert (rvfi.mem_wmask == 0);
+                end
+            end
+            """)
+        
         return v_str
 
     def _v_process(self, xlen: int) -> str:
@@ -173,7 +241,7 @@ class Csr(GenericChecker):
             assign_assumes_str += "\n" + indent(assign_code, "                            ")
 
         v_str += dedent(f"""
-            // test
+            // test behaviour
             always @(posedge clock) begin
                 if (reset) begin
                     {reset_str}
@@ -191,9 +259,13 @@ class Csr(GenericChecker):
             """)
         return v_str
 
-    def _v_body(self, xlen: int) -> str:
+    def _v_body(self, xlen: int, rw_test: bool = False) -> str:
         v_str = self._v_format_block(self._v_rvfi_channel())
         v_str += self._v_format_block(self._v_signal_map(xlen))
+        if rw_test:
+            if not self.has_rvfi:
+                raise NotImplementedError()
+            v_str += self._v_format_block(self._v_rw_test(xlen))
         v_str += self._v_format_block(self._v_process(xlen))
         return v_str
 
