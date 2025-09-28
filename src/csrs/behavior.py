@@ -192,15 +192,14 @@ class UpcntValue(Behavior):
             # currently only tests low half when not using rvfi signal
             check += "assume(csr_lo);\n"
         check += dedent(f"""\
-                if (csr_written)
+                if (csr_written) begin
+                    assume(wdata_shadow < 32'h F000_000);
                     assert({lhs} {self.comparison} wdata_shadow{bitrange});
-                else
-                    assert({lhs} {self.comparison} rdata_shadow{bitrange});""")
+                end else begin
+                    assume(rdata_shadow < 32'h F000_000);
+                    assert({lhs} {self.comparison} rdata_shadow{bitrange});
+                end""")
         return check
-
-    @property
-    def assign_assumptions(self) -> list[str]:
-        return ["rdata_shadow < 32'h F000_0000"]
 
     @property
     def assign_condition(self) -> str:
@@ -213,7 +212,6 @@ class UpcntValue(Behavior):
         rhs = "csr_insn_wdata" if csr_has_rvfi else "csr_rsval"
         return dedent(f"""\
             if (csr_write_valid) begin
-                assume(wdata_shadow < 32'h F000_0000);
                 wdata_shadow = {rhs};
                 csr_written = 1;
             end else

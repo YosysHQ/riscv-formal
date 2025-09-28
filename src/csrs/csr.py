@@ -266,7 +266,8 @@ class Csr(GenericChecker):
             if not self.has_rvfi:
                 raise NotImplementedError()
             v_str += self._v_format_block(self._v_rw_test(xlen))
-        v_str += self._v_format_block(self._v_process(xlen))
+        if self.behavior:
+            v_str += self._v_format_block(self._v_process(xlen))
         return v_str
 
 @dataclass(kw_only=True)
