@@ -43,7 +43,7 @@ def mcycle_csr(rvfi: bool):
         behavior = UpcntValue(),
     )
 
-def mhpmcounter5_csr(rvfi: bool):
+def mhpmcounter5_csr(rvfi: bool, rw_test: bool):
     return MachineCsr(
         name = "mhpmcounter5",
         width = "xlen",
@@ -51,18 +51,19 @@ def mhpmcounter5_csr(rvfi: bool):
         index = 0xB05,
         has_rvfi = rvfi,
         read_insn = True,
-        behavior = IncValue()
+        rw_test = rw_test,
+        behavior = IncValue(),
     )
 
 @click.option('-r', '--rvfi', is_flag=True)
 @click.option('-w', '--rw_test', is_flag=True)
 @click.command
 def nerv_test(rvfi: bool, rw_test: bool):
-    csr = custom_csr(rvfi)
+    # csr = custom_csr(rvfi)
     # csr = mcycle_csr(rvfi)
-    # csr = mhpmcounter5_csr(rvfi)
+    csr = mhpmcounter5_csr(rvfi, rw_test)
     # csr = custom_ro_csr(rvfi)
-    print(csr.to_verilog(xlen=32, rw_test=rw_test))
+    print(csr.to_verilog(xlen=32))
 
 if __name__ == "__main__":
     nerv_test()

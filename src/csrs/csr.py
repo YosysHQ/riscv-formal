@@ -21,6 +21,7 @@ class Csr(GenericChecker):
 
     has_rvfi: bool = False
     read_insn: bool = True
+    rw_test: bool = False
 
     behavior: Optional[Behavior] = None
 
@@ -262,10 +263,10 @@ class Csr(GenericChecker):
             """)
         return v_str
 
-    def _v_body(self, xlen: int, rw_test: bool = False) -> str:
+    def _v_body(self, xlen: int) -> str:
         v_str = self._v_format_block(self._v_rvfi_channel())
         v_str += self._v_format_block(self._v_signal_map(xlen))
-        if rw_test:
+        if self.rw_test:
             if not self.has_rvfi:
                 raise NotImplementedError()
             v_str += self._v_format_block(self._v_rw_test(xlen))
