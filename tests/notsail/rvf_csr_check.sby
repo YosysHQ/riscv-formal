@@ -22,7 +22,7 @@ rvfi_csr_check.sv
 `define RISCV_FORMAL_NRET 1
 `define RISCV_FORMAL_XLEN 32
 `define RISCV_FORMAL_ILEN 32
-`define RISCV_FORMAL_CHECKER rvfi_custom
+`define RISCV_FORMAL_CHECKER rvfi_csr_check
 `define RISCV_FORMAL_RESET_CYCLES 1
 `define RISCV_FORMAL_CHECK_CYCLE 6
 `define RISCV_FORMAL_CHANNEL_IDX 0

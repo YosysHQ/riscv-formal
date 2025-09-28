@@ -58,6 +58,9 @@ class Csr(GenericChecker):
         if not valid_priv:
             raise NotImplementedError()
 
+    def _v_modname(self) -> str:
+        return "rvfi_csr_check"
+
     @property
     def read_write(self) -> bool:
         return self.privilege[1:] == "RW"
