@@ -11,4 +11,10 @@ from .csr import (
     ShadowCsr,
     MachineCsr,
     base_csrs,
+    hext_csrs,
+    sext_csrs,
+    uext_csrs,
+    hpm_csrs,
+    pmp_csrs,
+    fext_csrs,
 )

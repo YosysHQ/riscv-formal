@@ -46,6 +46,12 @@ rvfi_csr_check.sv: $(addprefix $(RISCV_ROOT)/src/csrs/,nerv_test.py csr.py behav
 rvf_csr_check: rvf_csr_check.sby rvfi_csr_check.sv $(RISCV_ROOT)/cores/nerv/nerv.sv
 	$(SBY) -f $<
 
+rvfi_csr_ill_check.sv: $(addprefix $(RISCV_ROOT)/src/checks/,base_csr.py csr_checker.py)
+	cd $(RISCV_ROOT) && $(PYTHON) -m src.checks.base_csr --format verilog > $(abspath $@)
+
+rvf_csr_ill_check: rvf_csr_ill_check.sby rvfi_csr_ill_check.sv $(RISCV_ROOT)/cores/nerv/nerv.sv
+	$(SBY) -f $<
+
 .PHONY: clean
 clean:
 	rm -f insn_*.json

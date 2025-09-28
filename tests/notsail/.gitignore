@@ -3,8 +3,10 @@ rvf_notsail_*/
 rvf_complete/
 rvf_complete_*/
 rvf_csr_check/
+rvf_csr_ill_check/
 insn_*.json
 *_wrapper.sv
 rvfi_insn_check.sv
 rvfi_csr_check.sv
+rvfi_csr_ill_check.sv
 insn_check

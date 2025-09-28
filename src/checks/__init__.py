@@ -8,4 +8,4 @@ from .instruction_checker import (
     CompleteISAChecker,
 )
 
-from .csr_checker import CsrChecker
+from .csr_checker import CsrIllChecker

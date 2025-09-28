@@ -71,11 +71,7 @@ class Csr(GenericChecker):
         return self.privilege[0]
 
     def _v_insn_priv_check(self) -> Optional[str]:
-        try:
-            return f"rvfi.mode >= {self.min_priv_level}"
-        except IndexError:
-            # no privilege
-            return None
+        return f"rvfi.mode >= {self.min_priv_level}"
 
     def _v_insn_csr_idx(self, hi: bool) -> str:
         idx = self.indexh if hi else self.index
@@ -335,21 +331,14 @@ def base_csrs() -> NamedSet[Csr]:
         mcsr("mstatus",       "xlen", "MRW", 0x300),
         mcsr("mstatush",      "xlen", "MRW", 0x310),
         mcsr("misa",          "xlen", "MRW", 0x301),
-        mcsr("medeleg",       "xlen", "MRW", 0x302),
-        mcsr("mideleg",       "xlen", "MRW", 0x303),
         mcsr("mie",           "xlen", "MRW", 0x304),
         mcsr("mtvec",         "xlen", "MRW", 0x305),
-        mcsr("mcounteren",    "xlen", "MRW", 0x306),
         mcsr("mscratch",      "xlen", "MRW", 0x340),
         mcsr("mepc",          "xlen", "MRW", 0x341),
         mcsr("mcause",        "xlen", "MRW", 0x342),
         mcsr("mtval",         "xlen", "MRW", 0x343),
         mcsr("mip",           "xlen", "MRW", 0x344),
-        mcsr("mtinst",        "xlen", "MRW", 0x34A),
-        mcsr("mtval2",        "xlen", "MRW", 0x34B),
         mcsr("mcountinhibit", "xlen", "MRW", 0x320),
-        mcsr("menvcfg",       "xlen", "MRW", 0x30A),
-        mcsr("menvcfgh",      "xlen", "MRW", 0x31A),
         *mcsr_with_shadow(
              "mcycle",          "64", "MRW", 0xB00, 0xB80,
              "cycle",                 "URO", 0xC00, 0xC80,
@@ -361,18 +350,34 @@ def base_csrs() -> NamedSet[Csr]:
         ),
     ])
 
-def hpm_csrs(max_idx: int = 32) -> NamedSet[Csr]:
+def hext_csrs() -> NamedSet[Csr]:
     return NamedSet([
-        *(
-            Csr(f"mhpmevent{i}", "xlen", 0x320 + i,  None,  None)
-            for i in range(3, max_idx)
-        ),
-        *(
-            Csr(f"mhpmcounter{i}", "64", 0xB00 + i, None, 0xC00 + i,
-                                         0xB80 + i, None, 0xC80 + i)
-            for i in range(3, max_idx)
-        ),
+        mcsr("mtinst",        "xlen", "MRW", 0x34A),
+        mcsr("mtval2",        "xlen", "MRW", 0x34B),
     ])
+
+def sext_csrs() -> NamedSet[Csr]:
+    return NamedSet([
+        mcsr("medeleg",       "xlen", "MRW", 0x302),
+        mcsr("mideleg",       "xlen", "MRW", 0x303),
+    ])
+
+def uext_csrs() -> NamedSet[Csr]:
+    return NamedSet([
+        mcsr("mcounteren",    "xlen", "MRW", 0x306),
+        mcsr("menvcfg",       "xlen", "MRW", 0x30A),
+        mcsr("menvcfgh",      "xlen", "MRW", 0x31A),
+    ])
+
+def hpm_csrs(max_idx: int = 32) -> NamedSet[Csr]:
+    csr_list: list[Csr] = []
+    for i in range(3, max_idx):
+        csr_list.append(mcsr(f"mhpmevent{i}", "xlen", "MRW", 0x320 + i))
+        csr_list.extend(mcsr_with_shadow(
+            f"mhpmcounter{i}", "64", "MRW", 0xB00 + i, 0xB80 + i,
+            f"hpmcounter{i}",        "URO", 0xC00 + i, 0xC80 + i)
+        )
+    return NamedSet(csr_list)
 
 def pmp_csrs(entries: int = 64) -> NamedSet[Csr]:
     return NamedSet([
