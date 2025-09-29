@@ -81,6 +81,18 @@ class Csr(GenericChecker):
             #indexh is None
             return "0"
 
+    def _v_access_check(self, prefix: str = "csr") -> str:
+        v_str = f"\nwire {prefix}_lo = {self._v_insn_csr_idx(hi=False)};\n"
+        if self.indexh is not None:
+            v_str += dedent(f"""\
+                wire {prefix}_hi = {self._v_insn_csr_idx(hi=True)} && rvfi.ixl == 1;
+                wire {prefix}_access = ({prefix}_hi || {prefix}_lo);
+            """)
+        else:
+            v_str += f"wire {prefix}_access = {prefix}_lo;\n"
+        v_str += f"wire {prefix}_insn_under_test = {prefix}_access && {self._v_insn_priv_check()};\n"
+        return v_str
+
     def _v_insn_check(self, xlen: int) -> str:
         v_str = dedent(f"""\
             // insn mapping
@@ -102,30 +114,27 @@ class Csr(GenericChecker):
             wire [{xlen-1}:0] csr_insn_cmask =
                 /* CSRRW, CSRRWI */ (rvfi.insn[13:12] == 1) ? ~csr_rsval :
                 /* CSRCS, CSRRCI */ (rvfi.insn[13:12] == 3) ? csr_rsval : 0;
-
-            wire csr_lo = {self._v_insn_csr_idx(hi=False)};
         """)
 
-        if self.indexh is not None:
-            v_str += dedent(f"""\
-                wire csr_hi = {self._v_insn_csr_idx(hi=True)} && rvfi.ixl == 1;
-                wire csr_access = (csr_hi || csr_lo);
-            """)
-        else:
-            v_str += f"wire csr_access = csr_lo;\n"
-        v_str += f"wire csr_insn_under_test = csr_access && {self._v_insn_priv_check()};\n"
+        v_str += self._v_access_check()
 
         return v_str
+
+    def _normalized_width(self, xlen: int) -> int:
+        return 64 if (self.width == "64" and xlen == 32) else xlen
+
+    def _v_rvfi_assign(self, val: str, xlen: int, prefix: str = "csr_insn") -> str:
+        width = self._normalized_width(xlen)
+        if self.name in WIDE_CSRS or self.width == "xlen" or xlen > 32:
+            rhs = f"rvfi.csr_{self.name}_{val}"
+        else:
+            raise NotImplementedError()
+        return f"wire [{width-1}:0] {prefix}_{val} = {rhs};\n"
 
     def _v_rvfi_map(self, xlen: int) -> str:
         v_str = "// rvfi mapping\n"
         for val in ["rmask", "wmask", "rdata", "wdata"]:
-            width = 64 if (self.width == "64" and xlen == 32) else xlen
-            if self.name in WIDE_CSRS or self.width == "xlen" or xlen > 32:
-                rhs = f"rvfi.csr_{self.name}_{val}"
-            else:
-                raise NotImplementedError()
-            v_str += f"wire [{width-1}:0] csr_insn_{val} = {rhs};\n"
+            v_str += self._v_rvfi_assign(val, xlen)
         return v_str
 
     def _v_signal_map(self, xlen: int) -> str:
@@ -296,6 +305,74 @@ class MachineCsr(Csr):
         return shadow
 
 
+@dataclass(kw_only=True)
+class HpmeventCsr(Csr):
+    counter: MachineCsr
+
+    event_counter_map: dict[str, str] = field(default_factory=dict)
+
+    def _v_insn_check(self, xlen):
+        v_str = super()._v_insn_check(xlen)
+        v_str += self.counter._v_access_check("hpmcounter")
+        return v_str
+
+    def _v_rvfi_map(self, xlen: int) -> str:
+        v_str = super()._v_rvfi_map(xlen)
+        v_str += self.counter._v_rvfi_assign("rdata", xlen, "hpmcounter")
+        return v_str
+
+    def _v_hpm_check(self, xlen: int) -> str:
+        event_width = self._normalized_width(xlen)
+        counter_width = self.counter._normalized_width(xlen)
+        valid_events: list[str] = []
+        counter_checks: list[str] = []
+        for cond, check in self.event_counter_map.items():
+            counter_check = f"if ({cond}) begin\n"
+            counter_check += self._v_format_block(check)
+            counter_check += "end"
+            counter_checks.append(counter_check)
+            valid_events.append(cond)
+        counter_checks_str = indent("\n".join(counter_checks), "                            ")
+        valid_events_str = " || ".join(valid_events)
+        return dedent(f"""\
+            // HPM check
+            `rvformal_rand_const_reg [63:0] insn_order;
+            reg [{counter_width-1}:0] csr_hpmcounter_shadow;
+            reg csr_hpmevent_written;
+            reg [{event_width-1}:0] csr_hpmevent_shadow;
+
+            always @(posedge clock) begin
+                if (reset) begin
+                    csr_hpmcounter_shadow = 0;
+                    csr_hpmevent_written = 0;
+                    csr_hpmevent_shadow = 0;
+                end else begin
+                    if (csr_hpmevent_written) begin
+                        // one of the events under test was written
+                        assume({valid_events_str});
+                        // no further writes allowed
+                        assume(!(csr_write_valid && (hpmcounter_insn_under_test || csr_insn_under_test)));
+                        // check readback of counter
+                        if (csr_read_valid && hpmcounter_insn_under_test) begin\n{counter_checks_str}
+                        end
+                    end
+                    if (csr_write_valid && csr_insn_under_test) begin
+                        assume(hpmcounter_rdata < 32'h F000_000);
+                        csr_hpmcounter_shadow = hpmcounter_rdata;
+                        csr_hpmevent_written = 1;
+                        csr_hpmevent_shadow = csr_insn_wdata;
+                    end
+                end
+            end
+            """)
+
+    def _v_body(self, xlen: int) -> str:
+        v_str = super()._v_body(xlen)
+        if self.event_counter_map:
+            v_str += self._v_format_block(self._v_hpm_check(xlen))
+        return v_str
+
+
 def csr(name: str, width: str, privilege: str, index: int, indexh: Optional[int] = None) -> Csr:
     return Csr(
         name = name,
@@ -320,6 +397,21 @@ def mcsr_with_shadow(mname: str, width: str,  mprivilege: str, mindex: int, mind
     machinecsr = mcsr(mname, width, mprivilege, mindex, mindexh)
     shadow = machinecsr.shadow(sname, sprivilege, sindex, sindexh)
     return (machinecsr, shadow)
+
+def hpm_csr(ename: str, ewidth: str, eprivilege: str, eindex: int,
+            cname: str, cwidth: str, cprivilege: str, cindex: int, cindexh: Optional[int],
+            sname: str,              sprivilege: str, sindex: int, sindexh: Optional[int],
+    ) -> tuple[HpmeventCsr, MachineCsr, Csr]:
+    counter_csr = mcsr(cname, cwidth, cprivilege, cindex, cindexh)
+    shadow_csr = counter_csr.shadow(sname, sprivilege, sindex, sindexh)
+    event_csr = HpmeventCsr(
+        name = ename,
+        width = ewidth,
+        privilege = eprivilege,
+        index = eindex,
+        counter = counter_csr,
+    )
+    return (event_csr, counter_csr, shadow_csr)
 
 def base_csrs() -> NamedSet[Csr]:
     return NamedSet([
@@ -372,11 +464,11 @@ def uext_csrs() -> NamedSet[Csr]:
 def hpm_csrs(max_idx: int = 32) -> NamedSet[Csr]:
     csr_list: list[Csr] = []
     for i in range(3, max_idx):
-        csr_list.append(mcsr(f"mhpmevent{i}", "xlen", "MRW", 0x320 + i))
-        csr_list.extend(mcsr_with_shadow(
+        csr_list.extend(hpm_csr(
+            f"mhpmevent{i}", "xlen", "MRW", 0x320 + i,
             f"mhpmcounter{i}", "64", "MRW", 0xB00 + i, 0xB80 + i,
-            f"hpmcounter{i}",        "URO", 0xC00 + i, 0xC80 + i)
-        )
+            f"hpmcounter{i}",        "URO", 0xC00 + i, 0xC80 + i,
+        ))
     return NamedSet(csr_list)
 
 def pmp_csrs(entries: int = 64) -> NamedSet[Csr]:
