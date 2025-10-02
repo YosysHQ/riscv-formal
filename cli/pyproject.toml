@@ -1,0 +1,19 @@
+[project]
+name = "riscv_formal"
+version = "0.1.0"
+description = "TODO"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["yosys-mau"]
+
+[project.scripts]
+riscv_formal = "riscv_formal.__main__:main"
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+yosys-mau = { git = "https://github.com/YosysHQ/mau.git" }
+
+[tool.ruff]
+line-length = 100
