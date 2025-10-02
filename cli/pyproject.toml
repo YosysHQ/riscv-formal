@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "TODO"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["yosys-mau"]
+dependencies = [
+    "json-fix>=1.0.0",
+    "yosys-mau",
+]
 
 [project.scripts]
 riscv_formal = "riscv_formal.__main__:main"

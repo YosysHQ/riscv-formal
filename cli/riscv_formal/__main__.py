@@ -67,8 +67,8 @@ class SetupTask(tl.Task):
         for define_type, defines in [
             ("hdl defines", App.config.defines),
             ("script defines", App.config.script_defines),
-            ("script sources", App.config.script_sources),
-            ("script links", App.config.script_links),
+            ("script sources", {"": App.config.script_sources}),
+            ("script links", {"": App.config.script_link}),
         ]:
             for check_name, check_defines in defines.items():
                 if check_name:
@@ -95,7 +95,11 @@ class SetupTask(tl.Task):
         for check_filter in App.config.filter_checks.filters:
             tl.log(f"got check filter {check_filter!r}")
 
-        for csr in [*App.config.csrs, *App.config.custom_csrs, *App.config.illegal_csrs]:
+        for csr in [
+            *App.config.csrs.configs.values(),
+            *App.config.custom_csrs,
+            *App.config.illegal_csrs,
+        ]:
             tl.log(f"got csr config {csr!r}")
 
         for pattern in App.config.sort.patterns:
