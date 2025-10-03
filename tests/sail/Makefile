@@ -39,13 +39,14 @@ generated.sv: $(RV_PROJECT) insn model/riscv_insts_base_$(INSN).sail Makefile
 	$(PYTHON) sv_rewriter.py -f $@
 
 RISCV_ROOT ?= ../..
-CONFIGURATOR := src.insns.sail_configurator
-model/%.json: model/riscv_insts_base_%.sail $(addprefix $(RISCV_ROOT)/src/insns/,sail_configurator.py wrapped_model.py)
-	cd $(RISCV_ROOT) && $(PYTHON) -m $(CONFIGURATOR) $(abspath $< $@)
+CLI_ROOT ?= $(RISCV_ROOT)/cli
+CONFIGURATOR := riscv_formal.insns.sail_configurator
+model/%.json: model/riscv_insts_base_%.sail $(addprefix $(CLI_ROOT)/riscv_formal/insns/,sail_configurator.py wrapped_model.py)
+	cd $(CLI_ROOT) && $(PYTHON) -m $(CONFIGURATOR) $(abspath $< $@)
 
-WRAPPER := src.checks.sail_wrapper
-rvfi_insn_check.sv: model/$(INSN).json insn $(addprefix $(RISCV_ROOT)/src/,checks/sail_wrapper.py insns/wrapped_model.py)
-	cd $(RISCV_ROOT) && $(PYTHON) -m $(WRAPPER) $(abspath $< $@) -f
+WRAPPER := riscv_formal.checks.sail_wrapper
+rvfi_insn_check.sv: model/$(INSN).json insn $(addprefix $(CLI_ROOT)/riscv_formal/,checks/sail_wrapper.py insns/wrapped_model.py)
+	cd $(CLI_ROOT) && $(PYTHON) -m $(WRAPPER) $(abspath $< $@) -f
 
 rvf_sail_%: rvfi_insn_check.sv generated.sv rvf_sail.sby
 	$(SBY) -f rvf_sail.sby $*
