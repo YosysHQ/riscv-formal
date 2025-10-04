@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from textwrap import dedent
 
-from . import GenericGroupChecker
+from riscv_formal.generic_checker import GenericGroupChecker
 from ..csrs import Csr
 from ..named_set import NamedSet
 

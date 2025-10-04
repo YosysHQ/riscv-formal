@@ -5,6 +5,7 @@ import shutil
 from yosys_mau import task_loop as tl
 
 from riscv_formal.config import IllegalCsrConfig, arg_parser, App, parse_config
+from riscv_formal.insns import Instruction
 
 
 def hfmt(text, **kwargs):
@@ -28,7 +29,7 @@ def print_hfmt(f, text, **kwargs):
 @tl.task_context
 class Check:
     group: str | None
-    insn: str
+    insn: Instruction
     chanidx: int
 
     csr_mode: bool = False  # TODO use fewer boolean flags
@@ -63,7 +64,7 @@ class Check:
         else:
             check = "insn"
 
-        insn = self.insn
+        insn = self.insn.name
         return [
             f"{pf}{check}",
             f"{pf}{check}_ch{chanidx:d}",
@@ -198,7 +199,7 @@ class GenInsnCheck(tl.Task):
 
         hargs = dict(Check.hargs)
 
-        hargs["insn"] = Check.insn
+        hargs["insn"] = Check.insn.name
         hargs["checkch"] = name
         hargs["channel"] = str(Check.chanidx)
         hargs["depth"] = str(depth_cfg.depths[0])
@@ -289,7 +290,6 @@ class GenInsnCheck(tl.Task):
                     sby_file,
                     """
                     : @basedir@/checks/rvfi_insn_check.sv
-                    : @basedir@/insns/insn_@insn@.v
                     """,
                     **hargs,
                 )
@@ -402,14 +402,16 @@ class GenInsnCheck(tl.Task):
                     **hargs,
                 )
             else:
+                # TODO replace "rvfi_insn_check.sv" with dynamic generation
                 print_hfmt(
                     sby_file,
                     """
                     : `include "rvfi_insn_check.sv"
-                    : `include "insn_@insn@.v"
                     """,
                     **hargs,
                 )
+
+                print(Check.insn.to_verilog(Check.hargs["xlen"]), file=sby_file)
 
             if App.config.assume:
                 print("", file=sby_file)

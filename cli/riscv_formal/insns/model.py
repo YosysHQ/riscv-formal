@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Optional, ClassVar, Callable, Iterable
 from textwrap import dedent
 
-from ..checks.generic_checker import GenericChecker
+from riscv_formal.generic_checker import GenericChecker
 from ..rvfi import Observer
 from ..named_set import NamedSet
 
@@ -155,9 +155,12 @@ class Instruction(GenericChecker):
         self._config_used_regs()
         self._config_widths()
 
-    def _v_xlen_check(self, xlen) -> None:
+    def valid_xlen(self, xlen: int) -> bool:
+        return xlen >= self.xlen_min and xlen <= self.xlen_max
+
+    def _v_xlen_check(self, xlen: int) -> None:
         # check valid xlen
-        if xlen < self.xlen_min or xlen > self.xlen_max:
+        if not self.valid_xlen(xlen):
             raise NotImplementedError(f"{xlen} not in range ({self.xlen_min}, {self.xlen_max})")
 
     def _v_modname(self) -> str:

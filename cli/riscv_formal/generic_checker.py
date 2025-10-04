@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from textwrap import indent, dedent
 from typing import Optional
 
-from ..named_set import NamedClass, NamedSet
+from riscv_formal.named_set import NamedClass, NamedSet
 
 @dataclass(kw_only=True)
 class GenericChecker(NamedClass):

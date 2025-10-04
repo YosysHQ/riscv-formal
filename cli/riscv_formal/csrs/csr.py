@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from textwrap import dedent, indent
 from typing import Optional
 
-from ..checks.generic_checker import GenericChecker
+from riscv_formal.generic_checker import GenericChecker
 from ..named_set import NamedSet
 from .behavior import Behavior
 

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from textwrap import dedent, indent
 from typing import Callable, ClassVar, Optional
 
-from . import GenericGroupChecker
+from riscv_formal.generic_checker import GenericGroupChecker
 from ..insns import Instruction
 from ..rvfi import (
     Observer,

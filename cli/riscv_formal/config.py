@@ -12,6 +12,7 @@ from yosys_mau import task_loop as tl
 from yosys_mau.source_str import report, read_file, re as ssre
 
 from riscv_formal.csr_specs import extend_config_with_csr_spec
+from riscv_formal.insns import Isa, map_ext
 
 
 def sphinx_docs_arg_parser() -> argparse.ArgumentParser:
@@ -97,24 +98,6 @@ class FlagPresent(cfg.ValueParser[bool]):  # TODO move to mau
         return True
 
 
-@dataclass
-class Isa:
-    str: str
-    xlen: int
-    compressed: bool
-    mods: list[str]
-
-    @property
-    def insns(self) -> tuple[str, ...]:
-        return isa_insns(App.base_dir, self.str)
-
-
-@cache
-def isa_insns(base_dir: Path, isa_str: str) -> tuple[str, ...]:
-    isa_file = App.base_dir / "insns" / f"isa_{isa_str}.txt"
-    return tuple(read_file(isa_file).split())
-
-
 class IsaValue(cfg.ValueParser[Isa]):
     def parse(self, input: str) -> Isa:
         matched = ssre.match(
@@ -124,9 +107,9 @@ class IsaValue(cfg.ValueParser[Isa]):
             raise report.InputError(input, "Unable to parse isa string")
         isa_dict: dict[str, Any] = matched.groupdict()
 
-        isa_mods: list[str] = [isa_dict["base"].lower(), isa_dict["width"]]
+        isa_mods: list[str] = [isa_dict["base"].upper(), isa_dict["width"]]
         for mod in isa_dict["ext"] or "":
-            isa_mods.append(mod.lower())
+            isa_mods.append(mod.upper())
         for mod in (isa_dict["multi"] or "").split("_"):
             if mod:
                 isa_mods.append(mod.title())
@@ -139,7 +122,8 @@ class IsaValue(cfg.ValueParser[Isa]):
             case other:
                 raise report.InputError(other, f"Unsupported xlen {other}")
 
-        return Isa(str=input, xlen=xlen, mods=isa_mods, compressed="c" in isa_mods)
+        insns = map_ext(isa_mods, xlen)
+        return Isa(str=input, xlen=xlen, mods=isa_mods, insns=insns)
 
 
 class RvfOptions(cfg.ConfigOptions):
