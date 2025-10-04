@@ -6,6 +6,7 @@ from yosys_mau import task_loop as tl
 
 from riscv_formal.config import IllegalCsrConfig, arg_parser, App, parse_config
 from riscv_formal.insns import Instruction
+from riscv_formal.checks.base_isa import dump_isa
 
 
 def hfmt(text, **kwargs):
@@ -102,6 +103,10 @@ class GenChecks(tl.Task):
 
         Check.instruction_checks = set()
         Check.consistency_checks = set()
+
+        defines = App.config.defines.get("", "")
+        if "`define RISCV_FORMAL_MEM_FAULT" in defines:
+            from riscv_formal.rvfi import mem_fault
 
         # TODO refactor solver selection
         if App.config.options.solver == "bmc3":
@@ -285,14 +290,6 @@ class GenInsnCheck(tl.Task):
                     """,
                     **hargs,
                 )
-            else:
-                print_hfmt(
-                    sby_file,
-                    """
-                    : @basedir@/checks/rvfi_insn_check.sv
-                    """,
-                    **hargs,
-                )
 
             print_hfmt(
                 sby_file,
@@ -402,16 +399,12 @@ class GenInsnCheck(tl.Task):
                     **hargs,
                 )
             else:
-                # TODO replace "rvfi_insn_check.sv" with dynamic generation
-                print_hfmt(
-                    sby_file,
-                    """
-                    : `include "rvfi_insn_check.sv"
-                    """,
-                    **hargs,
-                )
-
-                print(Check.insn.to_verilog(Check.hargs["xlen"]), file=sby_file)
+                print(dump_isa("insn_check",
+                               Check.insn,
+                               Check.hargs["xlen"],
+                               'verilog',
+                               Check.chanidx,
+                    ), file=sby_file)
 
             if App.config.assume:
                 print("", file=sby_file)

@@ -51,7 +51,7 @@ def base_checks() -> list[SpeculativeEvaluation]:
 
 def dump_isa(
     name: str,
-    insns: NamedSet[Instruction],
+    insns: NamedSet[Instruction] | Instruction,
     xlen: int,
     format: str,
     channel: Optional[int] = None,
@@ -74,6 +74,9 @@ def dump_isa(
     #         "rvfi.insn[14:12] == 3'b 000 && rvfi.insn[6:0] == 7'b 0000011", # lb
     #     ]
     # )
+
+    if isinstance(insns, Instruction):
+        insns = NamedSet([insns])
 
     isa_checker = InstructionChecker(
         name = name,
