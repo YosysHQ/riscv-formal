@@ -31,8 +31,14 @@ firmware.hex: firmware.elf
 testbench: testbench.sv nerv.sv
 	iverilog -g2012 -o testbench -D STALL -D NERV_DBGREGS testbench.sv nerv.sv
 
-checks:
-	python3 ../../checks/genchecks.py
+RISCV_ROOT ?= ../..
+CLI_ROOT ?= $(RISCV_ROOT)/cli
+RISCV_FORMAL ?= python3 -m riscv_formal
+checks: checks.cfg
+	$(RISCV_FORMAL) checks.cfg genchecks
+
+.PHONY: run_checks check
+run_checks: checks
 	$(MAKE) -C checks
 
 check: checks
