@@ -40,7 +40,7 @@ Updating upstream nerv with changes from riscv-formal
 From root `riscv-formal` directory:
 
 ```
-git subtree push --prefix cores/nerv git@github.com:YosysHQ/nerv.git main
+git subtree push --prefix cores/nerv git@github.com:YosysHQ/nerv.git <branch>
 ```
 
 iCEBreaker SOC example
