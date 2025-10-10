@@ -7,6 +7,7 @@ from yosys_mau import task_loop as tl
 from riscv_formal.config import IllegalCsrConfig, arg_parser, App, parse_config
 from riscv_formal.generic_checker import GenericChecker
 from riscv_formal.checks.base_isa import dump_isa
+from riscv_formal.csrs import Csr
 
 
 def hfmt(text, **kwargs):
@@ -61,18 +62,31 @@ class Check:
                 f"{pf}csr_ill_{ill_addr:03x}_ch{chanidx:d}",
             ]
         elif self.csr_mode:
-            # TODO csrc behaviors
             check = "csrw"
         else:
             check = "insn"
 
         insn = self.checker.name
-        return [
-            f"{pf}{check}",
-            f"{pf}{check}_ch{chanidx:d}",
-            f"{pf}{check}_{insn}",
-            f"{pf}{check}_{insn}_ch{chanidx:d}",
-        ]
+        
+        if isinstance(self.checker, Csr) and self.checker.behavior is not None:
+            short_name = self.checker.behavior.short_name
+            return [
+                f"{pf}{check}",
+                f"{pf}{check}_ch{chanidx:d}",
+                f"{pf}{check}_{insn}",
+                f"{pf}{check}_{insn}_ch{chanidx:d}",
+                f"{pf}csrc_{short_name}",
+                f"{pf}csrc_{short_name}_ch{chanidx:d}",
+                f"{pf}csrc_{short_name}_{insn}",
+                f"{pf}csrc_{short_name}_{insn}_ch{chanidx:d}",
+            ]
+        else:
+            return [
+                f"{pf}{check}",
+                f"{pf}{check}_ch{chanidx:d}",
+                f"{pf}{check}_{insn}",
+                f"{pf}{check}_{insn}_ch{chanidx:d}",
+            ]
 
 
 class GenChecks(tl.Task):

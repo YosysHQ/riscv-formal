@@ -12,6 +12,8 @@ class BehavioralReg(SpeculativeObserver):
     default_value: str = "0"
 
 class Behavior(metaclass=ABCMeta):
+    short_name: str
+
     @abstractmethod
     def regs(self, csr_width: str, csr_has_rvfi: bool) -> NamedSet[BehavioralReg]: pass
 
@@ -54,6 +56,8 @@ class Behavior(metaclass=ABCMeta):
         return repr(self)
 
 class AnyValue(Behavior):
+    short_name = "any"
+
     def regs(self, csr_width: str, csr_has_rvfi: bool) -> NamedSet[BehavioralReg]:
         regs = NamedSet([
             BehavioralReg("rsval_shadow", csr_width, "csr_rsval"),
@@ -99,6 +103,8 @@ class AnyValue(Behavior):
         return assign
 
 class ConstValue(Behavior):
+    short_name = "const"
+
     def __init__(self, const_value: Optional[str | int] = None):
         if isinstance(const_value, int):
             self.const_value = f"'h {const_value:X}"
@@ -139,6 +145,8 @@ class ConstValue(Behavior):
         return "csr_read_valid && csr_insn_under_test"
 
 class ZeroValue(ConstValue):
+    short_name = "zero"
+
     def __init__(self):
         super().__init__(0)
 
@@ -146,6 +154,8 @@ class ZeroValue(ConstValue):
         return ""
 
 class UpcntValue(Behavior):
+    short_name = "upcnt"
+
     def __init__(self):
         self.comparison = ">"
     
@@ -218,5 +228,7 @@ class UpcntValue(Behavior):
                 csr_written = 0;""")
 
 class IncValue(UpcntValue):
+    short_name = "inc"
+
     def __init__(self):
         self.comparison = ">="
