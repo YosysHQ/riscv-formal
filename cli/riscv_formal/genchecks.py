@@ -5,7 +5,7 @@ import shutil
 from yosys_mau import task_loop as tl
 
 from riscv_formal.config import IllegalCsrConfig, arg_parser, App, parse_config
-from riscv_formal.insns import Instruction
+from riscv_formal.generic_checker import GenericChecker
 from riscv_formal.checks.base_isa import dump_isa
 
 
@@ -30,7 +30,7 @@ def print_hfmt(f, text, **kwargs):
 @tl.task_context
 class Check:
     group: str | None
-    insn: Instruction
+    checker: GenericChecker
     chanidx: int
 
     csr_mode: bool = False  # TODO use fewer boolean flags
@@ -65,7 +65,7 @@ class Check:
         else:
             check = "insn"
 
-        insn = self.insn.name
+        insn = self.checker.name
         return [
             f"{pf}{check}",
             f"{pf}{check}_ch{chanidx:d}",
@@ -128,32 +128,33 @@ class GenChecks(tl.Task):
                     gen_check = GenInsnCheck()
                     with gen_check.as_current_task():
                         Check.group = grp
-                        Check.insn = insn
+                        Check.checker = insn
                         Check.chanidx = chanidx
                         Check.hargs = hargs
                     await gen_check.finished
 
-            for csr in sorted(App.config.csrs.configs):
+            for csr in App.config.options.csr_spec.csrs:
                 for chanidx in range(App.config.options.nret):
                     gen_check = GenInsnCheck()
                     with gen_check.as_current_task():
                         Check.group = grp
-                        Check.insn = csr
+                        Check.checker = csr
                         Check.chanidx = chanidx
                         Check.hargs = hargs
                         Check.csr_mode = True
                     await gen_check.finished
 
-            for ill_csr in sorted(App.config.illegal_csrs, key=lambda csr: csr.addr):
-                for chanidx in range(App.config.options.nret):
-                    gen_check = GenInsnCheck()
-                    with gen_check.as_current_task():
-                        Check.group = grp
-                        Check.insn = f"12'h{ill_csr.addr:03X}"
-                        Check.illegal_csr = ill_csr
-                        Check.chanidx = chanidx
-                        Check.hargs = hargs
-                    await gen_check.finished
+            # TODO re-enable illegal CSR checks
+            # for ill_csr in sorted(App.config.illegal_csrs, key=lambda csr: csr.addr):
+            #     for chanidx in range(App.config.options.nret):
+            #         gen_check = GenInsnCheck()
+            #         with gen_check.as_current_task():
+            #             Check.group = grp
+            #             Check.insn = f"12'h{ill_csr.addr:03X}"
+            #             Check.illegal_csr = ill_csr
+            #             Check.chanidx = chanidx
+            #             Check.hargs = hargs
+            #         await gen_check.finished
 
         checks = sorted(
             Check.consistency_checks | Check.instruction_checks,
@@ -204,7 +205,7 @@ class GenInsnCheck(tl.Task):
 
         hargs = dict(Check.hargs)
 
-        hargs["insn"] = Check.insn.name
+        hargs["insn"] = Check.checker.name
         hargs["checkch"] = name
         hargs["channel"] = str(Check.chanidx)
         hargs["depth"] = str(depth_cfg.depths[0])
@@ -313,10 +314,10 @@ class GenInsnCheck(tl.Task):
             if App.config.options.mode == "prove":
                 print("`define RISCV_FORMAL_UNBOUNDED", file=sby_file)
 
-            for csr in sorted(App.config.csrs.configs.keys()):
+            for csr in sorted(App.config.options.csr_spec.csrs_to_define):
                 print(f"`define RISCV_FORMAL_CSR_{csr.upper()}", file=sby_file)
 
-            if Check.csr_mode and Check.insn in ("mcycle", "minstret"):
+            if Check.csr_mode and Check.checker.name in ("mcycle", "minstret"):
                 print("`define RISCV_FORMAL_CSRWH", file=sby_file)
 
             if Check.illegal_csr:
@@ -400,7 +401,7 @@ class GenInsnCheck(tl.Task):
                 )
             else:
                 print(dump_isa("insn_check",
-                               Check.insn,
+                               Check.checker,
                                Check.hargs["xlen"],
                                'verilog',
                                Check.chanidx,

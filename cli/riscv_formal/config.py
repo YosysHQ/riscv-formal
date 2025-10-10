@@ -11,8 +11,8 @@ import yosys_mau.config_parser as cfg
 from yosys_mau import task_loop as tl
 from yosys_mau.source_str import report, read_file, re as ssre
 
-from riscv_formal.csr_specs import extend_config_with_csr_spec
 from riscv_formal.insns import Isa, map_ext
+from riscv_formal.csrs import CsrSpec
 
 
 def sphinx_docs_arg_parser() -> argparse.ArgumentParser:
@@ -126,6 +126,11 @@ class IsaValue(cfg.ValueParser[Isa]):
         return Isa(str=input, xlen=xlen, mods=isa_mods, insns=insns)
 
 
+class CsrSpecValue(cfg.ValueParser[CsrSpec]):
+    def parse(self, input: str) -> CsrSpec:
+        return CsrSpec(str=input)
+
+
 class RvfOptions(cfg.ConfigOptions):
     nret = cfg.Option(cfg.IntValue(min=1), default=1)
     isa = cfg.Option(IsaValue(), default=IsaValue().parse("rv32i"))
@@ -136,7 +141,10 @@ class RvfOptions(cfg.ConfigOptions):
     mode = cfg.Option(cfg.EnumValue("bmc", "prove", "cover"), default="bmc")
     buslen = cfg.Option(cfg.IntValue(), default=32)  # TODO valid values?
     nbus = cfg.Option(cfg.IntValue(min=1), default=1)
-    csr_spec = cfg.Option(cfg.StrValue(), default=None)  # TODO validate value?
+    csr_spec = cfg.Option(CsrSpecValue(), default=CsrSpec())
+
+    def validate(self):
+        self.csr_spec.generate(self.isa)
 
 
 def compile_re(pattern: str) -> re.Pattern[str]:
@@ -469,4 +477,5 @@ def parse_config():
     except BaseException:
         tl.log_error("Failed to parse config:", raise_error=False)
         raise
-    extend_config_with_csr_spec(App.config)
+
+    # TODO re-enable config defined CSR checks

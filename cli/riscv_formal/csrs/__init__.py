@@ -10,6 +10,11 @@ from .csr import (
     Csr,
     ShadowCsr,
     MachineCsr,
+    HpmeventCsr,
+)
+
+from .csr_spec import (
+    CsrSpec,
     base_csrs,
     hext_csrs,
     sext_csrs,
