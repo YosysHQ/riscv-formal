@@ -61,6 +61,7 @@ class Check:
                 f"{pf}csr_ill_{ill_addr:03x}_ch{chanidx:d}",
             ]
         elif self.csr_mode:
+            # TODO csrc behaviors
             check = "csrw"
         else:
             check = "insn"
@@ -283,14 +284,6 @@ class GenInsnCheck(tl.Task):
                     """,
                     **hargs,
                 )
-            elif Check.csr_mode:
-                print_hfmt(
-                    sby_file,
-                    """
-                    : @basedir@/checks/rvfi_csrw_check.sv
-                    """,
-                    **hargs,
-                )
 
             print_hfmt(
                 sby_file,
@@ -343,8 +336,7 @@ class GenInsnCheck(tl.Task):
                 print_hfmt(
                     sby_file,
                     """
-                    : `define RISCV_FORMAL_CHECKER rvfi_csrw_check
-                    : `define RISCV_FORMAL_CSRW_NAME @insn@
+                    : `define RISCV_FORMAL_CHECKER rvfi_csr_check
                     """,
                     **hargs,
                 )
@@ -392,13 +384,7 @@ class GenInsnCheck(tl.Task):
                     **hargs,
                 )
             elif Check.csr_mode:
-                print_hfmt(
-                    sby_file,
-                    """
-                    : `include "rvfi_csrw_check.sv"
-                    """,
-                    **hargs,
-                )
+                print(Check.checker.to_verilog(xlen=Check.hargs["xlen"]), file=sby_file)
             else:
                 print(dump_isa("insn_check",
                                Check.checker,

@@ -216,6 +216,8 @@ class CsrSpec:
                 for csr in self.csrs:
                     csr.behavior = csr_beh_map.get(csr.name, None)
                     csr.has_rvfi = True
+                    csr.read_insn = True
+                    csr.rw_test = True
                     self.csrs_to_define.add(csr.name)
                 
                 # TODO test restricted CSR addresses
