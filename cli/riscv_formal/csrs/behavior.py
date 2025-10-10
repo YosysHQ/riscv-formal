@@ -8,7 +8,6 @@ from ..rvfi import SpeculativeObserver
 
 @dataclass
 class BehavioralReg(SpeculativeObserver):
-    spec_value: Optional[str] = "0"
     default_value: str = "0"
 
 class Behavior(metaclass=ABCMeta):
@@ -46,8 +45,8 @@ class Behavior(metaclass=ABCMeta):
     def assign(self, csr_has_rvfi: bool) -> Optional[str]:
         return None
 
-    def _repr_args(self) -> str:
-        return ""
+    def _repr_args(self) -> Optional[str]:
+        return None
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._repr_args()})"
@@ -111,7 +110,7 @@ class ConstValue(Behavior):
         else:
             self.const_value = const_value
 
-    def _repr_args(self):
+    def _repr_args(self) -> Optional[str]:
         return self.const_value
 
     def regs(self, csr_width: str, csr_has_rvfi: bool) -> NamedSet[BehavioralReg]:

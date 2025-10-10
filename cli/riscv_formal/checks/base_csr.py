@@ -15,6 +15,8 @@ def dump_csr_ill(name: str, csrs: NamedSet[Csr], xlen: int, format: str) -> str:
         return json.dumps(csr_checker)
     elif format == "verilog":
         return csr_checker.to_verilog(xlen=xlen)
+    else:
+        raise NotImplementedError(format)
 
 @click.option('-x', '--xlen', type=int, default=32)
 @click.option('--format', type=click.Choice(['json', 'verilog']), default='json')

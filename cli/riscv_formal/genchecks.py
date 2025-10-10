@@ -8,6 +8,7 @@ from riscv_formal.config import IllegalCsrConfig, arg_parser, App, parse_config
 from riscv_formal.generic_checker import GenericChecker
 from riscv_formal.checks.base_isa import dump_isa
 from riscv_formal.csrs import Csr
+from riscv_formal.insns import Instruction
 
 
 def hfmt(text, **kwargs):
@@ -148,6 +149,7 @@ class GenChecks(tl.Task):
                         Check.hargs = hargs
                     await gen_check.finished
 
+            assert App.config.options.csr_spec.csrs is not None
             for csr in App.config.options.csr_spec.csrs:
                 for chanidx in range(App.config.options.nret):
                     gen_check = GenInsnCheck()
@@ -400,9 +402,10 @@ class GenInsnCheck(tl.Task):
             elif Check.csr_mode:
                 print(Check.checker.to_verilog(xlen=Check.hargs["xlen"]), file=sby_file)
             else:
+                assert isinstance(Check.checker, Instruction)
                 print(dump_isa("insn_check",
                                Check.checker,
-                               Check.hargs["xlen"],
+                               int(Check.hargs["xlen"]),
                                'verilog',
                                Check.chanidx,
                     ), file=sby_file)

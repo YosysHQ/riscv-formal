@@ -113,9 +113,9 @@ def uext_csrs() -> NamedSet[Csr]:
 
 def fext_csrs() -> NamedSet[Csr]:
     return NamedSet([
-        Csr("fflags",         "xlen",  None,  None,  None),
-        Csr("frm",            "xlen",  None,  None,  None),
-        Csr("fcsr",           "xlen",  None,  None,  None),
+        # Csr("fflags",         "xlen",  None,  None,  None),
+        # Csr("frm",            "xlen",  None,  None,  None),
+        # Csr("fcsr",           "xlen",  None,  None,  None),
     ])
 
 def cntr_csrs() -> NamedSet[Csr]:
@@ -146,11 +146,11 @@ def pmp_csrs(_: CsrConfig, entries: int = 64) -> NamedSet[Csr]:
     # TODO odd configs only exist for RV32
     return NamedSet([
         *(
-            MachineCsr(f"pmpcfg{i}",    "xlen", "MRW", 0x3A0 + i)
+            mcsr(f"pmpcfg{i}",    "xlen", "MRW", 0x3A0 + i)
             for i in range(entries >> 2)
         ),
         *(
-            MachineCsr(f"pmpaddr{i}",   "xlen", "MRW", 0x3B0 + i)
+            mcsr(f"pmpaddr{i}",   "xlen", "MRW", 0x3B0 + i)
             for i in range(entries)
         ),
     ])
@@ -162,7 +162,7 @@ def mask_bits(test: str, bits: "list[int]", mask_len: int, invert=False):
 @dataclass
 class CsrSpec:
     str: Optional[str] = None
-    csrs: NamedSet[Csr] = None
+    csrs: NamedSet[Csr] | None = None
     csrs_to_define: set[str] = field(default_factory=set)
 
     def generate(self, isa: Isa) -> None:
@@ -240,4 +240,6 @@ class CsrSpec:
                 raise report.InputError(spec, f"unsupported CSR spec {spec!r}")
 
     def add_csr(self, value: Csr) -> None:
+        if self.csrs is None:
+            raise NotImplementedError()
         self.csrs.add(value)

@@ -357,7 +357,7 @@ class MemoryInstruction(Instruction):
 
         return v_str + super()._v_instantiation(xlen)
 
-    def _v_spec_value(self, spec_sig: str, xlen: int) -> str:
+    def _v_spec_value(self, spec_sig: str, xlen: int) -> Optional[str]:
         if spec_sig == "mem_addr":
             return "spec_addr"
         elif spec_sig == "mem_rmask" and not self.mem_wdata:

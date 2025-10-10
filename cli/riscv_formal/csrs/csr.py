@@ -64,10 +64,12 @@ class Csr(GenericChecker):
 
     @property
     def read_write(self) -> bool:
+        assert self.privilege is not None
         return self.privilege[1:] == "RW"
 
     @property
     def min_priv(self) -> str:
+        assert self.privilege is not None
         return self.privilege[0]
 
     def _v_insn_priv_check(self) -> Optional[str]:
@@ -210,6 +212,7 @@ class Csr(GenericChecker):
 
     def _v_process(self, xlen: int) -> str:
         v_str = "// setup for testing\n"
+        assert self.behavior is not None
 
         reg_width = "64" if (self.width == "64" and xlen == 32) else "xlen"
 

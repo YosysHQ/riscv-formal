@@ -93,6 +93,8 @@ def dump_isa(
         return json.dumps(isa_checker)
     elif format == "verilog":
         return isa_checker.to_verilog(xlen=xlen)
+    else:
+        raise NotImplementedError(format)
 
 @click.option('--fault', is_flag=True)
 @click.option('--format', type=click.Choice(['json', 'verilog']), default='json')
@@ -110,7 +112,7 @@ def base_isa(fault: bool, format: str):
         if xlen > insn.xlen_max or xlen < insn.xlen_min:
             continue
         # skip M extension for NERV
-        if "M" in insn.extension:
+        if insn.extension and "M" in insn.extension:
             continue
 
         insns.add(insn)

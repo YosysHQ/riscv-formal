@@ -1,7 +1,5 @@
-from dataclasses import dataclass, asdict
-import json
-
-import json_fix
+from dataclasses import dataclass
+from typing import Optional
 
 from ..named_set import NamedClass
 
@@ -9,14 +7,6 @@ from ..named_set import NamedClass
 class Observer(NamedClass):
     name: str
     width: str
-
-    @classmethod
-    def from_json(cls, s: str):
-        mapping = json.loads(s)
-        return cls(**mapping)
-
-    def __json__(self) -> dict:
-        return asdict(self)
 
     def bitrange(self) -> str:
         if self.width == "1":
@@ -30,7 +20,7 @@ class Observer(NamedClass):
 
 @dataclass
 class SpeculativeObserver(Observer):
-    spec_value: str = "0"
+    spec_value: Optional[str] = "0"
 
 @dataclass
 class ZeroedObserver(Observer):
