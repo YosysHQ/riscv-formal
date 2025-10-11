@@ -1,12 +1,14 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Iterable
 
 from .model import (
     Instruction_format,
     Instruction,
     MemoryInstruction,
 )
-from ..named_set import NamedSet
+from .ext_mapper import register_ext_generator
+
+from riscv_formal.named_set import NamedSet
 
 FORMAT_CR = Instruction_format(
     "CR-type", [
@@ -166,27 +168,39 @@ class C_Instruction(Instruction):
 
     def _v_insn_map(self, xlen):
         v_str = super()._v_insn_map(xlen) + '\n'
+        inst_args = self._insn_part_dict.keys()
         if self.rd_reg:
             v_str += f"wire [4:0] insn_rd = 5'd{self.rd_reg};\n"
         if self.rs1_reg:
             v_str += f"wire [4:0] insn_rs1 = 5'd{self.rs1_reg};\n"
-        if "rsd" in self.inst_args:
+        if "rsd" in inst_args:
             if self.read_rsd:
                 v_str += "wire [4:0] insn_rs1 = insn_rsd;\n"
             if self.result is not None and self.rd_reg is None:
                 v_str += "wire [4:0] insn_rd = insn_rsd;\n"
-        if "crsd" in self.inst_args:
+        if "crsd" in inst_args:
             if self.read_rsd:
                 v_str += "wire [4:0] insn_rs1 = {2'b01, insn_crsd};\n"
             if self.result is not None and self.rd_reg is None:
                 v_str += "wire [4:0] insn_rd = {2'b01, insn_crsd};\n"
-        if "crd" in self.inst_args:
+        if "crd" in inst_args:
             v_str += "wire [4:0] insn_rd = {2'b01, insn_crd};\n"
-        if "crs1" in self.inst_args:
+        if "crs1" in inst_args:
             v_str += "wire [4:0] insn_rs1 = {2'b01, insn_crs1};\n"
-        if "crs2" in self.inst_args:
+        if "crs2" in inst_args:
             v_str += "wire [4:0] insn_rs2 = {2'b01, insn_crs2};\n"
         return v_str[:-1]
+
+    def included_in(self, isa_mods: Iterable[str]) -> bool:
+        isa_mods = set(isa_mods)
+        if "C" in isa_mods:
+            isa_mods.add("Zca")
+            # TODO allow Zcf in an rv64 core when ixl==32
+            if "F" in isa_mods and "32" in isa_mods:
+                isa_mods.add("Zcf")
+            if "D" in isa_mods:
+                isa_mods.add("Zcd")
+        return super().included_in(isa_mods)
 
 @dataclass(kw_only=True)
 class C_MemoryInstruction(C_Instruction, MemoryInstruction):
@@ -471,7 +485,7 @@ def insn_c_alu(insn, funct6, funct2, expr, wmode = False, extension = "Zca"):
         xlen_min = 64 if wmode else 32,
     )
 
-def cext() -> NamedSet[C_Instruction]:
+def cext(_) -> NamedSet[Instruction]:
     return NamedSet([
         # Load and Store Instructions
 
@@ -546,3 +560,5 @@ def cext() -> NamedSet[C_Instruction]:
         insn_c_alu("c_addw", "100111", "01", "rvfi_rs1_rdata[31:0] + rvfi_rs2_rdata[31:0]", wmode=True),
         insn_c_alu("c_subw", "100111", "00", "rvfi_rs1_rdata[31:0] - rvfi_rs2_rdata[31:0]", wmode=True),
     ])
+
+register_ext_generator(cext, ("C", "Zca", "Zcf", "Zcd"))

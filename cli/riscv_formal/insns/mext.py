@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from .model import AltopsInstruction
+from .model import Instruction, AltopsInstruction
 from .builtins import FORMAT_R
-from ..named_set import NamedSet
+from .ext_mapper import register_ext_generator
+
+from riscv_formal.named_set import NamedSet
 
 
 @dataclass(kw_only=True)
@@ -22,15 +24,13 @@ class M_Instruction(AltopsInstruction):
             alt_mask = self.alt_sub
             alt_op = "-"
         else:
-            alt_mask = None
-
-        if alt_mask:
-            return (f"rvfi_rs1_rdata {alt_op} rvfi_rs2_rdata", alt_mask)
-        else:
             return None
 
+        return (f"rvfi_rs1_rdata {alt_op} rvfi_rs2_rdata", alt_mask)
 
-def m_insn(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, wmode=False, extension="M"):
+def m_insn(insn: str, funct7, funct3, expr, alt_add=None, alt_sub=None, wmode=False, extension="M"):
+    if extension == "M" and insn.startswith("mul"):
+        extension = "M Zmmul"
     return M_Instruction(
         name = insn,
         insn_parts = FORMAT_R,
@@ -48,7 +48,7 @@ def m_insn(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, wmode=False, 
     )
 
 
-def mext() -> NamedSet[M_Instruction]:
+def mext(_) -> NamedSet[Instruction]:
     return NamedSet([
         m_insn("mul",    "0000001", "000", "rvfi_rs1_rdata * rvfi_rs2_rdata", alt_add=0x2cdf52a55876063e),
         m_insn("mulh",   "0000001", "001", "({{`RISCV_FORMAL_XLEN{rvfi_rs1_rdata[`RISCV_FORMAL_XLEN-1]}}, rvfi_rs1_rdata} *\n" +
@@ -83,3 +83,5 @@ def mext() -> NamedSet[M_Instruction]:
         m_insn("remuw",  "0000001", "111", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdata :
                                               rvfi_rs1_rdata[31:0] % rvfi_rs2_rdata[31:0]""", alt_sub=0xbc4402413138d0e1, wmode=True),
     ])
+
+register_ext_generator(mext, ("M", "Zmmul"))

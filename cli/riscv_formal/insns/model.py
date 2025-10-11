@@ -16,7 +16,7 @@ class Instruction_format:
 
 @dataclass(kw_only=True)
 class Instruction(GenericChecker):
-    insn_parts: list[tuple[str, int]]
+    insn_parts: list[tuple[str, int]] | Instruction_format
     opcode: str
 
     result: Optional[str] = None
@@ -134,6 +134,7 @@ class Instruction(GenericChecker):
             self.insn_parts = self.insn_parts.insn_parts
 
     def _process_insn_parts(self):
+        assert isinstance(self.insn_parts, list)
         self._insn_part_dict = dict(self.insn_parts)
 
     def _config_used_regs(self):
@@ -179,6 +180,7 @@ class Instruction(GenericChecker):
         # insn decode
         upper = self.ilen
         insn_format = "// instruction format\n"
+        assert isinstance(self.insn_parts, list)
         for part, width in self.insn_parts:
             lower = upper - width
             insn_format += f"wire [{width-1:2d}:0] insn_{part:<6} = rvfi_insn[{upper-1:2d}:{lower:2d}];\n"
@@ -307,6 +309,14 @@ class Instruction(GenericChecker):
 
     def to_verilog(self, xlen: int):
         return super().to_verilog(xlen=xlen)
+
+    def included_in(self, isa_mods: Iterable[str]) -> bool:
+        if self.extension is None:
+            return False
+        for ext in self.extension.split():
+            if ext in isa_mods:
+                return True
+        return False
 
 @dataclass(kw_only=True)
 class MemoryInstruction(Instruction):
