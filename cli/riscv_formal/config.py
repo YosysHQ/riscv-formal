@@ -227,6 +227,9 @@ class AssumeStatement:
 class AssumeStatements:
     statements: list[AssumeStatement]
 
+    def __len__(self):
+        return len(self.statements)
+
 
 @dataclass
 class CheckDepth:
