@@ -13,6 +13,7 @@ from yosys_mau.source_str import report, read_file, re as ssre
 
 from riscv_formal.insns import Isa, map_ext
 from riscv_formal.csrs import CsrSpec
+from riscv_formal.rvfi import Rvfi
 
 
 def sphinx_docs_arg_parser() -> argparse.ArgumentParser:
@@ -87,6 +88,8 @@ class App:
     base_dir: Path
 
     config: RvfConfig
+
+    rvfi: Rvfi
 
 
 class FlagPresent(cfg.ValueParser[bool]):  # TODO move to mau
@@ -482,3 +485,9 @@ def parse_config():
         raise
 
     # TODO re-enable config defined CSR checks
+
+    App.rvfi = Rvfi()
+    assert App.config.options.csr_spec.csrs is not None
+    for csr in App.config.options.csr_spec.csrs:
+        for obs in csr.make_observers():
+            App.rvfi.add_observer(obs)

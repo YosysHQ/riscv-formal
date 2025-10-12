@@ -18,7 +18,7 @@ from .model import (
     MemoryInstruction,
 )
 
-from .ext_mapper import register_ext_generator
+from .ext_mapper import register_ext_generator, register_non_insn_ext
 from riscv_formal.named_set import NamedSet
 
 FORMAT_R = Instruction_format(
@@ -288,3 +288,4 @@ def builtins(_) -> NamedSet[Instruction]:
     ])
 
 register_ext_generator(builtins, "I")
+register_non_insn_ext("Zicsr", "Zicntr", "Zihpm")

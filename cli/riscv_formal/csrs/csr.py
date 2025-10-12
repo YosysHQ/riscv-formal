@@ -3,7 +3,8 @@ from textwrap import dedent, indent
 from typing import Optional
 
 from riscv_formal.generic_checker import GenericChecker
-from ..named_set import NamedSet
+from riscv_formal.named_set import NamedSet
+from riscv_formal.rvfi import Observer
 from .behavior import Behavior
 
 WIDE_CSRS = [
@@ -58,6 +59,15 @@ class Csr(GenericChecker):
             valid_priv = False
         if not valid_priv:
             raise NotImplementedError()
+
+    def make_observers(self) -> NamedSet[Observer]:
+        if self.has_rvfi:
+            return NamedSet([
+                Observer(f"csr_{self.name}_{val}", self.width)
+                    for val in ["rmask", "wmask", "rdata", "wdata"]
+            ])
+        else:
+            return NamedSet()
 
     def _v_modname(self) -> str:
         return "rvfi_csr_check"

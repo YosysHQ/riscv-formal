@@ -5,13 +5,20 @@ from yosys_mau.source_str import report
 from .model import Instruction
 from riscv_formal.named_set import NamedSet
 
-__ext_dict: dict[str, Callable[[Iterable[str]], NamedSet[Instruction]]] = {}
-__ext_composition: dict[str, Iterable[str]] = {}
-__aliased_by: dict[Callable, set[str]] = {}
+def _empty_insn_gen(_) -> NamedSet[Instruction]:
+    return NamedSet()
+
+_ext_dict: dict[str, Callable[[Iterable[str]], NamedSet[Instruction]]] = {
+    "rv": _empty_insn_gen,
+}
+_ext_composition: dict[str, Iterable[str]] = {}
+_aliased_by: dict[Callable, set[str]] = {
+    _empty_insn_gen: set(),
+}
 
 def register_ext_composition(mod: str, composed_of: Iterable[str]) -> None:
     # e.g. B is composed of Zba + Zbb + Zbs
-    __ext_composition[mod] = composed_of
+    _ext_composition[mod] = composed_of
 
 def register_ext_generator(
     generator: Callable[[Iterable[str]], NamedSet[Instruction]],
@@ -28,8 +35,14 @@ def register_ext_generator(
     if isinstance(mods, str):
         mods = (mods,)
     for mod in mods:
-        __ext_dict[mod] = generator
-    __aliased_by[generator] = set(mods)
+        _ext_dict[mod] = generator
+    _aliased_by[generator] = set(mods)
+
+def register_non_insn_ext(*args: str) -> None:
+    # Helper for registering extensions with no instruction checks
+    for mod in args:
+        _ext_dict[mod] = _empty_insn_gen
+        _aliased_by[_empty_insn_gen].add(mod)
 
 def map_ext(isa_mods: Iterable[str], xlen: int = 32) -> NamedSet[Instruction]:
     insns: NamedSet[Instruction] = NamedSet()
@@ -42,12 +55,12 @@ def map_ext(isa_mods: Iterable[str], xlen: int = 32) -> NamedSet[Instruction]:
             continue
 
         # get composition
-        for submod in __ext_composition.get(mod, (mod,)):
+        for submod in _ext_composition.get(mod, (mod,)):
             # skip already handled mods
             if submod in handled_mods: continue
 
             try:
-                generator = __ext_dict[submod]
+                generator = _ext_dict[submod]
             except KeyError:
                 unknown_mods.add(mod)
                 continue
@@ -65,7 +78,7 @@ def map_ext(isa_mods: Iterable[str], xlen: int = 32) -> NamedSet[Instruction]:
                 insns.add(insn)
 
             # mark all aliases as handled
-            handled_mods.update(__aliased_by[generator])
+            handled_mods.update(_aliased_by[generator])
 
     for mod in unknown_mods:
         raise report.InputError(mod, f"unsupported ISA mod/extension {mod!r}")

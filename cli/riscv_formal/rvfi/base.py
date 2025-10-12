@@ -1,5 +1,7 @@
+from dataclasses import dataclass, field
+
 from .observer import Observer, SpeculativeObserver, ZeroedObserver
-from ..named_set import NamedSet
+from riscv_formal.named_set import NamedSet
 
 
 def base_observers() -> NamedSet[Observer]:
@@ -26,3 +28,11 @@ def base_observers() -> NamedSet[Observer]:
                    Observer("mem_rdata", "`RISCV_FORMAL_XLEN"),
         SpeculativeObserver("mem_wdata", "`RISCV_FORMAL_XLEN"),
     ])
+
+
+@dataclass
+class Rvfi:
+    observers: NamedSet[Observer] = field(default_factory=base_observers)
+
+    def add_observer(self, value: Observer):
+        self.observers.add(value)

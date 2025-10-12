@@ -7,9 +7,11 @@ from yosys_mau import task_loop as tl
 
 from riscv_formal.config import IllegalCsrConfig, arg_parser, App, parse_config
 from riscv_formal.generic_checker import GenericChecker
-from riscv_formal.checks.base_isa import dump_isa
+from riscv_formal.checks import InstructionChecker
+from riscv_formal.checks.base_isa import base_checks
 from riscv_formal.csrs import Csr
 from riscv_formal.insns import Instruction
+from riscv_formal.named_set import NamedSet
 
 
 def hfmt(text, **kwargs):
@@ -230,6 +232,18 @@ class GenInsnCheck(tl.Task):
         hargs["depth_plus"] = str(depth_cfg.depths[0] + 1)
         hargs["skip"] = str(depth_cfg.depths[0])
 
+        if isinstance(Check.checker, Instruction):
+            insn_check_wrapper = InstructionChecker(
+                name = "insn_check",
+                instructions = NamedSet([Check.checker]),
+                observers = App.rvfi.observers,
+                defined_checks = base_checks(),
+                channel = Check.chanidx,
+            )
+            insn_check_wrapper.configure_io()
+        else:
+            insn_check_wrapper = None
+
         if Check.illegal_csr:
             checker_src = App.base_dir / 'checks' / 'rvfi_csr_ill_check.sv'
         else:
@@ -237,15 +251,8 @@ class GenInsnCheck(tl.Task):
             (App.work_dir / checker_dir).mkdir(exist_ok=True)
             checker_src = Path(checker_dir) / (Check.checker.name + '.sv')
             with (App.work_dir / checker_src).open("w") as checker_file:
-                if isinstance(Check.checker, Instruction):
-                    print(dump_isa("insn_check",
-                                Check.checker,
-                                int(Check.hargs["xlen"]),
-                                'verilog',
-                                Check.chanidx,
-                        ), file=checker_file)
-                elif isinstance(Check.checker, Csr):
-                    print(Check.checker.to_verilog(xlen=Check.hargs["xlen"]), file=checker_file)
+                checker = insn_check_wrapper or Check.checker
+                print(checker.to_verilog(xlen=int(Check.hargs["xlen"])), file=checker_file)
 
         with (App.work_dir / f"{name}.sby").open("w") as sby_file:
             print_hfmt(
@@ -334,11 +341,19 @@ class GenInsnCheck(tl.Task):
             if App.config.options.mode == "prove":
                 print("`define RISCV_FORMAL_UNBOUNDED", file=sby_file)
 
-            for csr in sorted(App.config.options.csr_spec.csrs_to_define):
-                print(f"`define RISCV_FORMAL_CSR_{csr.upper()}", file=sby_file)
+            if Check.csr_mode:
+                csr_list = [Check.checker.name]
+            elif insn_check_wrapper is not None:
+                csr_list = set()
+                for obs in insn_check_wrapper.get_used_io().names():
+                    m = re.match(r"csr_([a-z0-9]+)_\w+", obs)
+                    if m:
+                        csr_list.add(m.group(1))
+            else:
+                csr_list = []
 
-            if Check.csr_mode and Check.checker.name in ("mcycle", "minstret"):
-                print("`define RISCV_FORMAL_CSRWH", file=sby_file)
+            for csr in sorted(csr_list):
+                print(f"`define RISCV_FORMAL_CSR_{csr.upper()}", file=sby_file)
 
             if Check.illegal_csr:
                 print_hfmt(
@@ -359,26 +374,22 @@ class GenInsnCheck(tl.Task):
                     print("`define RISCV_FORMAL_ILL_READ", file=sby_file)
                 if "w" in Check.illegal_csr.rw:
                     print("`define RISCV_FORMAL_ILL_WRITE", file=sby_file)
-            elif Check.csr_mode:
-                print_hfmt(
-                    sby_file,
-                    """
-                    : `define RISCV_FORMAL_CHECKER rvfi_csr_check
-                    """,
-                    **hargs,
-                )
             else:
+                if Check.csr_mode:
+                    checker_module = "rvfi_csr_check"
+                else:
+                    checker_module = "rvfi_insn_check"
                 print_hfmt(
                     sby_file,
-                    """
-                    : `define RISCV_FORMAL_CHECKER rvfi_insn_check
-                    : `define RISCV_FORMAL_INSN_MODEL rvfi_insn_@insn@
+                    f"""
+                    : `define RISCV_FORMAL_CHECKER {checker_module}
                     """,
                     **hargs,
                 )
 
-            if App.config.custom_csrs:
-                self.print_custom_csrs(sby_file)
+            # TODO re-enable custom CSRs
+            # if App.config.custom_csrs:
+            #     self.print_custom_csrs(sby_file)
 
             if App.config.options.blackbox:
                 print("`define RISCV_FORMAL_BLACKBOX_REGS", file=sby_file)

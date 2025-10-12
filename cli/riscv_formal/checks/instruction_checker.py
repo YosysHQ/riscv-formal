@@ -25,6 +25,13 @@ class InstructionCheckerBase(GenericGroupChecker):
             insn.select_inputs(self.observers)
             insn.select_outputs([o for o in self.observers if isinstance(o, SpeculativeObserver)])
 
+    def get_used_io(self) -> NamedSet[Observer]:
+        observers: NamedSet[Observer] = NamedSet()
+        for insn in self.instructions:
+            observers.update(insn.get_inputs())
+            observers.update(insn.get_outputs())
+        return observers
+
     @classmethod
     def register_speculator(cls,
         spec_obs: SpeculativeObserver,

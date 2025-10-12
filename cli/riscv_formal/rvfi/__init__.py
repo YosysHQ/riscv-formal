@@ -6,4 +6,7 @@ from .observer import (
 
 from .speculative_evaluation import SpeculativeEvaluation
 
-from .base import base_observers
+from .base import (
+    base_observers,
+    Rvfi,
+)
