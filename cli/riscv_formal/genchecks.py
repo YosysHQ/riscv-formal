@@ -1,6 +1,7 @@
 from __future__ import annotations
 import re
 import shutil
+from pathlib import Path
 
 from yosys_mau import task_loop as tl
 
@@ -229,6 +230,23 @@ class GenInsnCheck(tl.Task):
         hargs["depth_plus"] = str(depth_cfg.depths[0] + 1)
         hargs["skip"] = str(depth_cfg.depths[0])
 
+        if Check.illegal_csr:
+            checker_src = App.base_dir / 'checks' / 'rvfi_csr_ill_check.sv'
+        else:
+            checker_dir = 'csrs' if Check.csr_mode else 'insns'
+            (App.work_dir / checker_dir).mkdir(exist_ok=True)
+            checker_src = Path(checker_dir) / (Check.checker.name + '.sv')
+            with (App.work_dir / checker_src).open("w") as checker_file:
+                if isinstance(Check.checker, Instruction):
+                    print(dump_isa("insn_check",
+                                Check.checker,
+                                int(Check.hargs["xlen"]),
+                                'verilog',
+                                Check.chanidx,
+                        ), file=checker_file)
+                elif isinstance(Check.checker, Csr):
+                    print(Check.checker.to_verilog(xlen=Check.hargs["xlen"]), file=checker_file)
+
         with (App.work_dir / f"{name}.sby").open("w") as sby_file:
             print_hfmt(
                 sby_file,
@@ -292,14 +310,7 @@ class GenInsnCheck(tl.Task):
                 **hargs,
             )
 
-            if Check.illegal_csr:
-                print_hfmt(
-                    sby_file,
-                    """
-                    : @basedir@/checks/rvfi_csr_ill_check.sv
-                    """,
-                    **hargs,
-                )
+            print_hfmt(sby_file, str(checker_src), **hargs)
 
             print_hfmt(
                 sby_file,
@@ -391,24 +402,13 @@ class GenInsnCheck(tl.Task):
                 **hargs,
             )
 
-            if Check.illegal_csr:
-                print_hfmt(
-                    sby_file,
-                    """
-                    : `include "rvfi_csr_ill_check.sv"
-                    """,
-                    **hargs,
-                )
-            elif Check.csr_mode:
-                print(Check.checker.to_verilog(xlen=Check.hargs["xlen"]), file=sby_file)
-            else:
-                assert isinstance(Check.checker, Instruction)
-                print(dump_isa("insn_check",
-                               Check.checker,
-                               int(Check.hargs["xlen"]),
-                               'verilog',
-                               Check.chanidx,
-                    ), file=sby_file)
+            print_hfmt(
+                sby_file,
+                f"""
+                : `include "{checker_src.name}"
+                """,
+                **hargs,
+            )
 
             if App.config.assume:
                 print("", file=sby_file)
