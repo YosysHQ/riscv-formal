@@ -269,23 +269,31 @@ class CsrSpec:
                 csr_line("minstret", "inc")
                 # TODO test hpms
                 # TODO test shadow registers
-                
+
                 # TODO test restricted CSR addresses
-                # restricted_csrs = {
-                #     "medeleg": ("s", "302", []),
-                #     "mideleg": ("s", "303", []),
-                #     "mcounteren": ("u", "306", []),
-                #     "mstatush": ("32", "310", [mask_bits("zero", [4, 5], xlen, invert=True)]),
-                #     "mtinst": ("h", "34A", []),
-                #     "mtval2": ("h", "34B", []),
-                #     "menvcfg": ("u", "30A", []),
-                #     "menvcfgh": ("u", "31A", []),  # u-mode only *and* 32bit only
-                # }
-                # for name, data in restricted_csrs.items():
-                #     if data[0] in config.options.isa.mods:
-                #         csr_line(name, *data[2])
-                #     else:
-                #         illegal_csr_line(data[1], "m", "rw")
+                restricted_csrs: dict[str, tuple[str | list[str], int, list[str]]] = {
+                    "medeleg": ("s", 0x302, []),
+                    "mideleg": ("s", 0x303, []),
+                    "mcounteren": ("u", 0x306, []),
+                    # "mstatush": ("32", 0x310, [mask_bits("zero", [4, 5], xlen, invert=True)]),
+                    "mtinst": ("h", 0x34A, []),
+                    "mtval2": ("h", 0x34B, []),
+                    "menvcfg": ("u", 0x30A, []),
+                    "menvcfgh": (["u", "32"], 0x31A, []),
+                }
+                for name, (mods, addr, tests) in restricted_csrs.items():
+                    if isinstance(mods, str):
+                        mods = [mods]
+                    is_enabled = True
+                    for mod in mods:
+                        if mod not in isa.mods:
+                            is_enabled = False
+                            break
+                    if is_enabled:
+                        csr_line(name, *tests)
+                    else:
+                        self.add_csr(addr, name)
+                        self.mark_illegal(name)
 
                 for csr in self.available_csrs:
                     if isinstance(csr, MachineCsr):
@@ -298,18 +306,16 @@ class CsrSpec:
         if (address is None and csr is None) or (address is not None and csr is not None):
             raise NotImplementedError("expected exactly one of address or csr to be set")
 
-        if name is None:
-            # use the address as a fallback if there is no name
-            name = str(address)
-
         if csr is None:
             csr = Csr(
-                name = name,
+                # use the address as a fallback if there is no name
+                name = name or f"{address:3x}",
                 # only xlen-width custom CSRs are supported
                 width = "xlen",
                 index = address,
             )
 
+        name = csr.name
         try:
             self.available_csrs.add(csr)
         except KeyError:
@@ -317,7 +323,7 @@ class CsrSpec:
         else:
             self.custom_csrs.add(name)
 
-    def config_csr(self, csr_config: CsrConfig) -> None:
+    def config_csr(self, csr_config: CsrConfig, legal: bool = True) -> None:
         name = csr_config.name
         try:
             csr = self.available_csrs[name]
@@ -325,7 +331,8 @@ class CsrSpec:
             raise report.InputError(name, f"unrecognised CSR {name!r}")
 
         # set CSR-under-test flags
-        csr.has_rvfi = True
+        csr.has_rvfi = legal
+        csr.is_accessible = legal
         csr.read_insn = True
         # TODO fix RW tests for wide CSRs
         csr.rw_test = csr.width == "xlen"
@@ -333,3 +340,10 @@ class CsrSpec:
         # override any existing config
         self.csr_configs[name] = csr_config
 
+    def mark_illegal(self, name_or_address: str | int):
+        if isinstance(name_or_address, int):
+            name = f"{name_or_address:3x}"
+        else:
+            name = name_or_address
+
+        self.config_csr(CsrConfig(name, {}), legal=False)

@@ -441,9 +441,9 @@ def parse_config():
         App.config.options.csr_spec.add_csr(csr.addr, csr.name)
         App.config.options.csr_spec.config_csr(csr)
 
-    # TODO config illegal csrs
     for csr in App.config.illegal_csrs:
         App.config.options.csr_spec.add_csr(csr.addr)
+        App.config.options.csr_spec.mark_illegal(csr.addr)
 
     App.rvfi = Rvfi()
     for csr in App.config.options.csr_spec.csrs:

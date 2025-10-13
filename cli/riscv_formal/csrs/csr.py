@@ -25,6 +25,7 @@ class Csr(GenericChecker):
     rw_test: bool = False
 
     behavior: Optional[Behavior] = None
+    is_accessible: bool = True
 
     @property
     def min_priv_level(self) -> int:
@@ -115,18 +116,21 @@ class Csr(GenericChecker):
             wire csr_read = rvfi.insn[11:7] != 0;
             wire csr_write_valid = csr_write && csr_insn_valid && !rvfi.trap;
             wire csr_read_valid = csr_read && csr_insn_valid && !rvfi.trap;
-
-            wire [1:0] csr_mode = rvfi.insn[13:12];
-            wire [{xlen-1}:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
-
-            wire [{xlen-1}:0] csr_insn_smask =
-                /* CSRRW, CSRRWI */ (rvfi.insn[13:12] == 1) ? csr_rsval :
-                /* CSRRS, CSRRSI */ (rvfi.insn[13:12] == 2) ? csr_rsval : 0;
-
-            wire [{xlen-1}:0] csr_insn_cmask =
-                /* CSRRW, CSRRWI */ (rvfi.insn[13:12] == 1) ? ~csr_rsval :
-                /* CSRCS, CSRRCI */ (rvfi.insn[13:12] == 3) ? csr_rsval : 0;
         """)
+
+        if self.is_accessible:
+            v_str += dedent(f"""\
+                wire [1:0] csr_mode = rvfi.insn[13:12];
+                wire [{xlen-1}:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
+
+                wire [{xlen-1}:0] csr_insn_smask =
+                    /* CSRRW, CSRRWI */ (rvfi.insn[13:12] == 1) ? csr_rsval :
+                    /* CSRRS, CSRRSI */ (rvfi.insn[13:12] == 2) ? csr_rsval : 0;
+
+                wire [{xlen-1}:0] csr_insn_cmask =
+                    /* CSRRW, CSRRWI */ (rvfi.insn[13:12] == 1) ? ~csr_rsval :
+                    /* CSRCS, CSRRCI */ (rvfi.insn[13:12] == 3) ? csr_rsval : 0;
+            """)
 
         v_str += self._v_access_check()
 
@@ -149,19 +153,19 @@ class Csr(GenericChecker):
             v_str += self._v_rvfi_assign(val, xlen)
         return v_str
 
-    def _v_signal_map(self, xlen: int) -> str:
-        v_str = dedent("""\
-            // setup for csrs
-            localparam [11:0] csr_none = 12'hFFF;
-            """)
-
-        if self.has_rvfi:
-            v_str += "\n" + self._v_rvfi_map(xlen)
-
-        if self.read_insn:
-            v_str += "\n" + self._v_insn_check(xlen)
-
-        return v_str
+    def _v_ill_test(self) -> str:
+        # TODO maybe legal accesses?
+        return dedent(f"""\
+            // no legal accesses
+            always @* begin
+                if (!reset && check) begin
+                    assume (csr_insn_valid);
+                    assume (csr_access);
+                    assert (!csr_write_valid);
+                    assert (!csr_read_valid);
+                end
+            end
+        """)
 
     def _v_rw_test(self, xlen: int) -> str:
         csr_illacc = f"rvfi.mode < {self.min_priv_level}"
@@ -216,7 +220,7 @@ class Csr(GenericChecker):
                     assert (rvfi.mem_wmask == 0);
                 end
             end
-            """)
+        """)
         
         return v_str
 
@@ -278,16 +282,22 @@ class Csr(GenericChecker):
                     end
                 end
             end
-            """)
+        """)
         return v_str
 
     def _v_body(self, xlen: int) -> str:
         v_str = self._v_format_block(self._v_rvfi_channel())
-        v_str += self._v_format_block(self._v_signal_map(xlen))
+        if self.has_rvfi:
+            v_str += self._v_format_block(self._v_rvfi_map(xlen))
+        if self.read_insn:
+            v_str += self._v_format_block(self._v_insn_check(xlen))
         if self.rw_test:
-            if not self.has_rvfi:
+            if not self.is_accessible:
+                v_str += self._v_format_block(self._v_ill_test())
+            elif self.has_rvfi:
+                v_str += self._v_format_block(self._v_rw_test(xlen))
+            else:
                 raise NotImplementedError()
-            v_str += self._v_format_block(self._v_rw_test(xlen))
         if self.behavior:
             v_str += self._v_format_block(self._v_process(xlen))
         return v_str
@@ -377,7 +387,7 @@ class HpmeventCsr(Csr):
                     end
                 end
             end
-            """)
+        """)
 
     def _v_body(self, xlen: int) -> str:
         v_str = super()._v_body(xlen)

@@ -40,9 +40,6 @@ class Check:
     checker: GenericChecker
     chanidx: int
 
-    csr_mode: bool = False  # TODO use fewer boolean flags
-    illegal_csr: IllegalCsrConfig | None = None
-
     hargs: dict[str, str]
 
     instruction_checks: set[str]
@@ -59,16 +56,15 @@ class Check:
     @property
     def filter_names(self) -> list[str]:
         pf, chanidx = self.prefix, self.chanidx
-        if self.illegal_csr:
-            ill_addr = self.illegal_csr.addr
-            return [
-                f"{pf}csr_ill",
-                f"{pf}csr_ill_ch{chanidx:d}",
-                f"{pf}csr_ill_{ill_addr:03x}",
-                f"{pf}csr_ill_{ill_addr:03x}_ch{chanidx:d}",
-            ]
-        elif self.csr_mode:
-            check = "csrw"
+
+        if isinstance(self.checker, Csr):
+            if self.checker.behavior is not None:
+                short_name = self.checker.behavior.short_name
+                check = f"csrc_{short_name}"
+            elif self.checker.is_accessible:
+                check = "csrw"
+            else:
+                check = "csr_ill"
         else:
             check = "insn"
 
@@ -144,39 +140,18 @@ class GenChecks(tl.Task):
 
         for grp in App.config.groups:
             tl.log_debug(f"instructions for group {grp!r}")
-            for insn in App.config.options.isa.insns:
+            for checker in [
+                *App.config.options.isa.insns,
+                *App.config.options.csr_spec.csrs,
+            ]:
                 for chanidx in range(App.config.options.nret):
                     gen_check = GenInsnCheck()
                     with gen_check.as_current_task():
                         Check.group = grp
-                        Check.checker = insn
+                        Check.checker = checker
                         Check.chanidx = chanidx
                         Check.hargs = hargs
                     await gen_check.finished
-
-            assert App.config.options.csr_spec.csrs is not None
-            for csr in App.config.options.csr_spec.csrs:
-                for chanidx in range(App.config.options.nret):
-                    gen_check = GenInsnCheck()
-                    with gen_check.as_current_task():
-                        Check.group = grp
-                        Check.checker = csr
-                        Check.chanidx = chanidx
-                        Check.hargs = hargs
-                        Check.csr_mode = True
-                    await gen_check.finished
-
-            # TODO re-enable illegal CSR checks
-            # for ill_csr in sorted(App.config.illegal_csrs, key=lambda csr: csr.addr):
-            #     for chanidx in range(App.config.options.nret):
-            #         gen_check = GenInsnCheck()
-            #         with gen_check.as_current_task():
-            #             Check.group = grp
-            #             Check.insn = f"12'h{ill_csr.addr:03X}"
-            #             Check.illegal_csr = ill_csr
-            #             Check.chanidx = chanidx
-            #             Check.hargs = hargs
-            #         await gen_check.finished
 
         checks = sorted(
             Check.consistency_checks | Check.instruction_checks,
@@ -243,22 +218,25 @@ class GenInsnCheck(tl.Task):
                 channel = Check.chanidx,
             )
             insn_check_wrapper.configure_io()
+            checker_module = "rvfi_insn_check"
+            checker_dir = "insns"
+            legal_csr = None
         else:
+            assert isinstance(Check.checker, Csr)
             insn_check_wrapper = None
+            checker_module = "rvfi_csr_check"
+            checker_dir = "csrs"
+            legal_csr = Check.checker.is_accessible
 
-        if Check.illegal_csr:
-            checker_src = App.base_dir / 'checks' / 'rvfi_csr_ill_check.sv'
-        else:
-            checker_dir = 'csrs' if Check.csr_mode else 'insns'
-            (App.work_dir / checker_dir).mkdir(exist_ok=True)
-            checker_name = Check.checker.name + '.sv'
-            if isinstance(checker_name, SourceStr):
-                # convert SourceStr to str
-                checker_name = checker_name.as_plain_str()
-            checker_src = Path(checker_dir) / checker_name
-            with (App.work_dir / checker_src).open("w") as checker_file:
-                checker = insn_check_wrapper or Check.checker
-                print(checker.to_verilog(xlen=int(Check.hargs["xlen"])), file=checker_file)
+        (App.work_dir / checker_dir).mkdir(exist_ok=True)
+        checker_name = Check.checker.name + '.sv'
+        if isinstance(checker_name, SourceStr):
+            # convert SourceStr to str
+            checker_name = checker_name.as_plain_str()
+        checker_src = Path(checker_dir) / checker_name
+        with (App.work_dir / checker_src).open("w") as checker_file:
+            checker = insn_check_wrapper or Check.checker
+            print(checker.to_verilog(xlen=int(Check.hargs["xlen"])), file=checker_file)
 
         with (App.work_dir / f"{name}.sby").open("w") as sby_file:
             print_hfmt(
@@ -347,61 +325,56 @@ class GenInsnCheck(tl.Task):
             if App.config.options.mode == "prove":
                 print("`define RISCV_FORMAL_UNBOUNDED", file=sby_file)
 
-            if Check.csr_mode:
-                csr_list = [Check.checker.name]
-            elif insn_check_wrapper is not None:
+            if insn_check_wrapper is not None:
                 csr_list = set()
                 for obs in insn_check_wrapper.get_used_io().names():
                     m = re.match(r"csr_([a-z0-9]+)_\w+", obs)
                     if m:
                         csr_list.add(m.group(1))
             else:
-                csr_list = []
+                # TODO do we need an option to always define all enabled CSRs
+                # e.g. if someone has hardcoded their interfaces instead of using the macros
+                csr_list = [Check.checker.name]
 
             custom_csrs: set[str] = set()
             for csr in sorted(csr_list):
                 if csr in App.config.options.csr_spec.custom_csrs:
-                    custom_csrs.add(csr)
+                    if legal_csr:
+                        custom_csrs.add(csr)
                 else:
                     print(f"`define RISCV_FORMAL_CSR_{csr.upper()}", file=sby_file)
 
-            print_custom_csrs(custom_csrs, sby_file)
+            if custom_csrs:
+                print_custom_csrs(custom_csrs, sby_file)
 
-            if Check.illegal_csr:
-                print_hfmt(
-                    sby_file,
-                    """
-                    : `define RISCV_FORMAL_CHECKER rvfi_csr_ill_check
-                    : `define RISCV_FORMAL_ILL_CSR_ADDR @insn@
-                    """,
-                    **hargs,
-                )
-                if "m" in Check.illegal_csr.modes:
-                    print("`define RISCV_FORMAL_ILL_MMODE", file=sby_file)
-                if "s" in Check.illegal_csr.modes:
-                    print("`define RISCV_FORMAL_ILL_SMODE", file=sby_file)
-                if "u" in Check.illegal_csr.modes:
-                    print("`define RISCV_FORMAL_ILL_UMODE", file=sby_file)
-                if "r" in Check.illegal_csr.rw:
-                    print("`define RISCV_FORMAL_ILL_READ", file=sby_file)
-                if "w" in Check.illegal_csr.rw:
-                    print("`define RISCV_FORMAL_ILL_WRITE", file=sby_file)
-            else:
-                if Check.csr_mode:
-                    checker_module = "rvfi_csr_check"
-                else:
-                    checker_module = "rvfi_insn_check"
-                print_hfmt(
-                    sby_file,
-                    f"""
-                    : `define RISCV_FORMAL_CHECKER {checker_module}
-                    """,
-                    **hargs,
-                )
+            # TODO figure out illegal csr modes
+            # if Check.illegal_csr:
+            #     print_hfmt(
+            #         sby_file,
+            #         """
+            #         : `define RISCV_FORMAL_CHECKER rvfi_csr_ill_check
+            #         : `define RISCV_FORMAL_ILL_CSR_ADDR @insn@
+            #         """,
+            #         **hargs,
+            #     )
+            #     if "m" in Check.illegal_csr.modes:
+            #         print("`define RISCV_FORMAL_ILL_MMODE", file=sby_file)
+            #     if "s" in Check.illegal_csr.modes:
+            #         print("`define RISCV_FORMAL_ILL_SMODE", file=sby_file)
+            #     if "u" in Check.illegal_csr.modes:
+            #         print("`define RISCV_FORMAL_ILL_UMODE", file=sby_file)
+            #     if "r" in Check.illegal_csr.rw:
+            #         print("`define RISCV_FORMAL_ILL_READ", file=sby_file)
+            #     if "w" in Check.illegal_csr.rw:
+            #         print("`define RISCV_FORMAL_ILL_WRITE", file=sby_file)
 
-            # TODO re-enable custom CSRs
-            # if App.config.custom_csrs:
-            #     self.print_custom_csrs(sby_file)
+            print_hfmt(
+                sby_file,
+                f"""
+                : `define RISCV_FORMAL_CHECKER {checker_module}
+                """,
+                **hargs,
+            )
 
             if App.config.options.blackbox:
                 print("`define RISCV_FORMAL_BLACKBOX_REGS", file=sby_file)
