@@ -435,7 +435,15 @@ def parse_config():
     for csr in App.config.csrs:
         App.config.options.csr_spec.config_csr(csr)
 
-    # TODO custom and illegal csrs
+    # TODO what happens to the privilege levels on custom CSRs?
+    # Csr class auto determines based on address range
+    for csr in App.config.custom_csrs:
+        App.config.options.csr_spec.add_csr(csr.addr, csr.name)
+        App.config.options.csr_spec.config_csr(csr)
+
+    # TODO config illegal csrs
+    for csr in App.config.illegal_csrs:
+        App.config.options.csr_spec.add_csr(csr.addr)
 
     App.rvfi = Rvfi()
     for csr in App.config.options.csr_spec.csrs:

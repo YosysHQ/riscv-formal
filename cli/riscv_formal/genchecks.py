@@ -2,8 +2,10 @@ from __future__ import annotations
 import re
 import shutil
 from pathlib import Path
+from typing import TextIO, Iterable
 
 from yosys_mau import task_loop as tl
+from yosys_mau.source_str import SourceStr
 
 from riscv_formal.config import IllegalCsrConfig, arg_parser, App, parse_config
 from riscv_formal.generic_checker import GenericChecker
@@ -249,7 +251,11 @@ class GenInsnCheck(tl.Task):
         else:
             checker_dir = 'csrs' if Check.csr_mode else 'insns'
             (App.work_dir / checker_dir).mkdir(exist_ok=True)
-            checker_src = Path(checker_dir) / (Check.checker.name + '.sv')
+            checker_name = Check.checker.name + '.sv'
+            if isinstance(checker_name, SourceStr):
+                # convert SourceStr to str
+                checker_name = checker_name.as_plain_str()
+            checker_src = Path(checker_dir) / checker_name
             with (App.work_dir / checker_src).open("w") as checker_file:
                 checker = insn_check_wrapper or Check.checker
                 print(checker.to_verilog(xlen=int(Check.hargs["xlen"])), file=checker_file)
@@ -352,8 +358,14 @@ class GenInsnCheck(tl.Task):
             else:
                 csr_list = []
 
+            custom_csrs: set[str] = set()
             for csr in sorted(csr_list):
-                print(f"`define RISCV_FORMAL_CSR_{csr.upper()}", file=sby_file)
+                if csr in App.config.options.csr_spec.custom_csrs:
+                    custom_csrs.add(csr)
+                else:
+                    print(f"`define RISCV_FORMAL_CSR_{csr.upper()}", file=sby_file)
+
+            print_custom_csrs(custom_csrs, sby_file)
 
             if Check.illegal_csr:
                 print_hfmt(
@@ -428,34 +440,23 @@ class GenInsnCheck(tl.Task):
                     if statement.is_enabled(name):
                         print(statement.sv_statement, file=sby_file)
 
-    def print_custom_csrs(self, sby_file):
-        fstrings = {
-            "inputs": "  ,input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal} \\",
-            "wires": "  (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal}; \\",
-            "conn": "  ,.rvfi_csr_{csr}_{signal} (rvfi_csr_{csr}_{signal}) \\",
-            "channel": "  wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_{csr}_{signal} = rvfi_csr_{csr}_{signal} [(_idx)*(`RISCV_FORMAL_XLEN) +: `RISCV_FORMAL_XLEN]; \\",
-            "signals": "`RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN, csr_{csr}_{signal}) \\",
-            "outputs": "  ,output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal} \\",
-            "indices": "  localparam [11:0] csr_{level}index_{name} = 12'h{index:03X}; \\",
-        }
-        for macro, fstring in fstrings.items():
-            if macro == "channel":
-                print(f"`define RISCV_FORMAL_CUSTOM_CSR_{macro.upper()}(_idx) \\", file=sby_file)
-            else:
-                print(f"`define RISCV_FORMAL_CUSTOM_CSR_{macro.upper()} \\", file=sby_file)
-            for custom_csr in App.config.custom_csrs:
-                name = custom_csr.name
-                addr = custom_csr.addr
-                levels = custom_csr.modes
-                if macro == "indices":
-                    for level in ["m", "s", "u"]:
-                        if level in levels:
-                            macro_string = fstring.format(level=level, name=name, index=addr)
-                        else:
-                            macro_string = fstring.format(level=level, name=name, index=0xFFF)
-                        print(macro_string, file=sby_file)
-                else:
-                    for signal in ["rmask", "wmask", "rdata", "wdata"]:
-                        macro_string = fstring.format(csr=name, signal=signal)
-                        print(macro_string, file=sby_file)
-            print("", file=sby_file)
+
+def print_custom_csrs(custom_csrs: Iterable[str], sby_file: TextIO):
+    fstrings = {
+        "inputs": "  ,input [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal} \\",
+        "wires": "  (* keep *) wire [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal}; \\",
+        "conn": "  ,.rvfi_csr_{csr}_{signal} (rvfi_csr_{csr}_{signal}) \\",
+        "channel": "  wire [`RISCV_FORMAL_XLEN - 1 : 0] csr_{csr}_{signal} = rvfi_csr_{csr}_{signal} [(_idx)*(`RISCV_FORMAL_XLEN) +: `RISCV_FORMAL_XLEN]; \\",
+        "signals": "`RISCV_FORMAL_CHANNEL_SIGNAL(`RISCV_FORMAL_NRET, `RISCV_FORMAL_XLEN, csr_{csr}_{signal}) \\",
+        "outputs": "  ,output [`RISCV_FORMAL_NRET * `RISCV_FORMAL_XLEN - 1 : 0] rvfi_csr_{csr}_{signal} \\",
+    }
+    for macro, fstring in fstrings.items():
+        if macro == "channel":
+            print(f"`define RISCV_FORMAL_CUSTOM_CSR_{macro.upper()}(_idx) \\", file=sby_file)
+        else:
+            print(f"`define RISCV_FORMAL_CUSTOM_CSR_{macro.upper()} \\", file=sby_file)
+        for name in custom_csrs:
+            for signal in ["rmask", "wmask", "rdata", "wdata"]:
+                macro_string = fstring.format(csr=name, signal=signal)
+                print(macro_string, file=sby_file)
+        print("", file=sby_file)

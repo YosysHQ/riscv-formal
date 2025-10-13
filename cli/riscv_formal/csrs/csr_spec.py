@@ -197,6 +197,7 @@ class CsrSpec:
     str: Optional[str] = None
     available_csrs: NamedSet[Csr] = field(default_factory=NamedSet)
     csr_configs: NamedSet[CsrConfig] = field(init=False)
+    custom_csrs: set[str] = field(init=False)
 
     @property
     def csrs(self) -> Iterable[Csr]:
@@ -224,6 +225,7 @@ class CsrSpec:
 
     def __post_init__(self) -> None:
         self.csr_configs = NamedSet()
+        self.custom_csrs = set()
 
     def generate(self, isa: Isa) -> None:
         self.available_csrs = NamedSet()
@@ -292,6 +294,29 @@ class CsrSpec:
             case spec:
                 raise report.InputError(spec, f"unsupported CSR spec {spec!r}")
 
+    def add_csr(self, address: Optional[int] = None, name: Optional[str] = None, csr: Optional[Csr] = None):
+        if (address is None and csr is None) or (address is not None and csr is not None):
+            raise NotImplementedError("expected exactly one of address or csr to be set")
+
+        if name is None:
+            # use the address as a fallback if there is no name
+            name = str(address)
+
+        if csr is None:
+            csr = Csr(
+                name = name,
+                # only xlen-width custom CSRs are supported
+                width = "xlen",
+                index = address,
+            )
+
+        try:
+            self.available_csrs.add(csr)
+        except KeyError:
+            raise report.InputError(name, f"CSR {name!r} already exists")
+        else:
+            self.custom_csrs.add(name)
+
     def config_csr(self, csr_config: CsrConfig) -> None:
         name = csr_config.name
         try:
@@ -307,3 +332,4 @@ class CsrSpec:
 
         # override any existing config
         self.csr_configs[name] = csr_config
+
