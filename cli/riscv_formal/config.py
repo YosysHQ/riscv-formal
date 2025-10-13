@@ -12,8 +12,9 @@ from yosys_mau import task_loop as tl
 from yosys_mau.source_str import report, read_file, re as ssre
 
 from riscv_formal.insns import Isa, map_ext
-from riscv_formal.csrs import CsrSpec
+from riscv_formal.csrs import CsrSpec, CsrConfig
 from riscv_formal.rvfi import Rvfi
+from riscv_formal.named_set import NamedSet
 
 
 def sphinx_docs_arg_parser() -> argparse.ArgumentParser:
@@ -278,60 +279,6 @@ class CheckDepths:
                     return depth
 
 
-@dataclass
-class CsrConfig:
-    name: str
-    tests: dict[str, str | None]
-
-    @classmethod
-    def parse(cls, line: str, **kwds) -> Self:
-        match line.split(maxsplit=1):
-            case [name]:
-                return cls(name, {}, **kwds)
-            case [name, tests_str]:
-                new = cls(name, {}, **kwds)
-
-                for test_str in ssre.findall(r"((?:\S*?\"[^\"]*\")+|\S+)", tests_str):
-                    new.parse_and_add_test(test_str)
-                return new
-            case _:
-                raise report.InputError(
-                    line, "expected a csr name followed by an optional list of csr tests"
-                )
-
-    def parse_and_add_test(self, test_str):
-        if "=" in test_str:
-            test_name, test_arg = test_str.split("=", 1)
-            test_arg = test_arg.strip('"')
-        else:
-            test_name = test_str
-            test_arg = None
-        self.add_test(test_name, test_arg)
-
-    def add_test(self, test_name: str, test_param: str | None):
-        if test_name in self.tests:
-            previous_name = next(name for name in self.tests.keys() if name == test_name)
-            raise report.InputError(
-                test_name + previous_name,
-                f"test {test_name!r} for CSR {self.name!r} is defined multiple times",
-            )
-        self.tests[test_name] = test_param
-
-
-@dataclass
-class CsrConfigs:
-    configs: dict[str, CsrConfig]
-
-    def __init__(self, csrs: Iterable[CsrConfig]):
-        self.configs = {}
-        for csr in csrs:
-            self.append(csr)
-
-    def append(self, csr: CsrConfig):
-        if csr.name in self.configs:
-            self.configs[csr.name].tests
-
-
 def parse_csr_addr_and_mode(
     addr_str: str, modes_str: str
 ) -> tuple[int, set[Literal["m", "s", "u"]]]:
@@ -422,8 +369,8 @@ class RvfConfig(cfg.ConfigParser):
     @cfg.postprocess_section(
         cfg.FilesSection()
     )  # TODO there should be a separate LinesSection in mau
-    def csrs(self, lines: list[str]) -> CsrConfigs:
-        return CsrConfigs(CsrConfig.parse(line) for line in lines)
+    def csrs(self, lines: list[str]) -> list[CsrConfig]:
+        return [CsrConfig.parse(line) for line in lines]
 
     @cfg.postprocess_section(
         cfg.FilesSection()
@@ -484,10 +431,13 @@ def parse_config():
         tl.log_error("Failed to parse config:", raise_error=False)
         raise
 
-    # TODO re-enable config defined CSR checks
+    # add config defined CSRs to CSR spec
+    for csr in App.config.csrs:
+        App.config.options.csr_spec.config_csr(csr)
+
+    # TODO custom and illegal csrs
 
     App.rvfi = Rvfi()
-    assert App.config.options.csr_spec.csrs is not None
     for csr in App.config.options.csr_spec.csrs:
         for obs in csr.make_observers():
             App.rvfi.add_observer(obs)

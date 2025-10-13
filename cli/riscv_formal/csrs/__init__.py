@@ -14,6 +14,7 @@ from .csr import (
 )
 
 from .csr_spec import (
+    CsrConfig,
     CsrSpec,
     base_csrs,
     hext_csrs,

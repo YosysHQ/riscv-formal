@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import functools
-from typing import Optional
+from typing import Optional, ClassVar, Iterable, Callable, Self
 
-from yosys_mau.source_str import report
+from yosys_mau.source_str import report, re as ssre
 
 from .csr import (
     Csr,
@@ -19,14 +19,47 @@ from .behavior import (
     UpcntValue,
     IncValue,
 )
-from riscv_formal.named_set import NamedSet
+from riscv_formal.named_set import NamedSet, NamedClass
 from riscv_formal.insns import Isa
 
 
 @dataclass
-class CsrConfig:
-    include_behavior: bool = False
-    include_shadows: bool = True
+class CsrConfig(NamedClass):
+    tests: dict[str, Optional[str]]
+
+    @classmethod
+    def parse(cls, line: str, **kwds) -> Self:
+        match line.split(maxsplit=1):
+            case [name]:
+                return cls(name, {}, **kwds)
+            case [name, tests_str]:
+                new = cls(name, {}, **kwds)
+
+                for test_str in ssre.findall(r"((?:\S*?\"[^\"]*\")+|\S+)", tests_str):
+                    new.parse_and_add_test(test_str)
+                return new
+            case _:
+                raise report.InputError(
+                    line, "expected a csr name followed by an optional list of csr tests"
+                )
+
+    def parse_and_add_test(self, test_str):
+        if "=" in test_str:
+            test_name, test_arg = test_str.split("=", 1)
+            test_arg = test_arg.strip('"')
+        else:
+            test_name = test_str
+            test_arg = None
+        self.add_test(test_name, test_arg)
+
+    def add_test(self, test_name: str, test_param: str | None):
+        if test_name in self.tests:
+            previous_name = next(name for name in self.tests.keys() if name == test_name)
+            raise report.InputError(
+                test_name + previous_name,
+                f"test {test_name!r} for CSR {self.name!r} is defined multiple times",
+            )
+        self.tests[test_name] = test_param
     
 
 def csr(name: str, width: str, privilege: str, index: int, indexh: Optional[int] = None, behavior: Optional[Behavior] = None) -> Csr:
@@ -142,7 +175,7 @@ def hpm_csrs() -> NamedSet[Csr]:
         ))
     return NamedSet(csr_list)
 
-def pmp_csrs(_: CsrConfig, entries: int = 64) -> NamedSet[Csr]:
+def pmp_csrs(entries: int = 64) -> NamedSet[Csr]:
     # TODO odd configs only exist for RV32
     return NamedSet([
         *(
@@ -162,63 +195,78 @@ def mask_bits(test: str, bits: "list[int]", mask_len: int, invert=False):
 @dataclass
 class CsrSpec:
     str: Optional[str] = None
-    csrs: NamedSet[Csr] | None = None
-    csrs_to_define: set[str] = field(default_factory=set)
+    available_csrs: NamedSet[Csr] = field(default_factory=NamedSet)
+    csr_configs: NamedSet[CsrConfig] = field(init=False)
+
+    @property
+    def csrs(self) -> Iterable[Csr]:
+        for csr in self.available_csrs:
+            if csr.name in self.csr_configs:
+                yield csr
+
+    registered_generators: ClassVar[dict[str, Callable[[], NamedSet[Csr]]]] = {
+        "I": base_csrs,
+        "H": hext_csrs,
+        "S": sext_csrs,
+        "U": uext_csrs,
+        "F": fext_csrs,
+        "Zicntr": cntr_csrs,
+        "Zihpm": hpm_csrs,
+        # TODO pmp_csrs?
+    }
+
+    @classmethod
+    def register_generator(cls,
+        ext: str,
+        gen: Callable[[], NamedSet[Csr]]
+    ):
+        cls.registered_generators[ext] = gen
+
+    def __post_init__(self) -> None:
+        self.csr_configs = NamedSet()
 
     def generate(self, isa: Isa) -> None:
+        self.available_csrs = NamedSet()
+        for csr_ext, csr_generator in self.registered_generators.items():
+            if csr_ext in isa.mods:
+                self.available_csrs.update(csr_generator())
+
+        def csr_line(name: str, test: Optional[str] = None):
+            csr_config = CsrConfig(name, {test: None} if test else {})
+            self.config_csr(csr_config)
+
         match self.str:
             case None:
-                self.csrs = NamedSet()
-                return
+                self.csr_configs = NamedSet()
             case "1.12":
-                csr_ext_map = {
-                    "I": base_csrs,
-                    "H": hext_csrs,
-                    "S": sext_csrs,
-                    "U": uext_csrs,
-                    "F": fext_csrs,
-                    "Zicntr": cntr_csrs,
-                    "Zihpm": hpm_csrs,
-                    # TODO pmp_csrs?
-                }
-
-                # get CSRs
-                self.csrs = NamedSet()
-                for csr_ext, csr_generator in csr_ext_map.items():
-                    if csr_ext in isa.mods:
-                        self.csrs.update(csr_generator())
-
-                csr_beh_map = {
-                    "mvendorid": ConstValue(),
-                    "marchid": ConstValue(),
-                    "mimpid": ConstValue(),
-                    "mhartid": ConstValue(),
-                    "mconfigptr": ConstValue(),
-                    # TODO test reserved bits in mstatus and misa
-                    # "mstatus": mask_bits(
-                    #     "zero",
-                    #     [0, 2, 4, *range(23, 31)] + ([31, *range(38, 63)] if xlen == 64 else []),
-                    #     xlen,
-                    # ),
-                    # "misa": mask_bits(
-                    #     "zero",
-                    #     [6, 10, 11, 14, 17, 19, 22, 24, 25, *range(26, xlen - 2)],
-                    #     xlen,
-                    # ),
-                    "mscratch": AnyValue(),
-                    "mcycle": IncValue(),
-                    "minstret": IncValue(),
-                    # TODO test hpms
-                    # TODO test shadow registers
-                }
-
-                # provide CSR behaviors
-                for csr in self.csrs:
-                    csr.behavior = csr_beh_map.get(csr.name, None)
-                    csr.has_rvfi = True
-                    csr.read_insn = True
-                    csr.rw_test = True
-                    self.csrs_to_define.add(csr.name)
+                self.csr_configs = NamedSet()
+                csr_line("mvendorid", "const")
+                csr_line("marchid", "const")
+                csr_line("mimpid", "const")
+                csr_line("mhartid", "const")
+                csr_line("mconfigptr", "const")
+                # TODO test reserved bits in mstatus and misa
+                # csr_line(
+                #     "mstatus",
+                #     mask_bits(
+                #         "zero",
+                #         [0, 2, 4, *range(23, 31)] + ([31, *range(38, 63)] if xlen == 64 else []),
+                #         xlen,
+                #     ),
+                # )
+                # csr_line(
+                #     "misa",
+                #     mask_bits(
+                #         "zero",
+                #         [6, 10, 11, 14, 17, 19, 22, 24, 25, *range(26, xlen - 2)],
+                #         xlen,
+                #     ),
+                # )
+                csr_line("mscratch", "any")
+                csr_line("mcycle", "inc")
+                csr_line("minstret", "inc")
+                # TODO test hpms
+                # TODO test shadow registers
                 
                 # TODO test restricted CSR addresses
                 # restricted_csrs = {
@@ -236,10 +284,26 @@ class CsrSpec:
                 #         csr_line(name, *data[2])
                 #     else:
                 #         illegal_csr_line(data[1], "m", "rw")
+
+                for csr in self.available_csrs:
+                    if isinstance(csr, MachineCsr):
+                        if csr.name not in self.csr_configs:
+                            csr_line(csr.name)
             case spec:
                 raise report.InputError(spec, f"unsupported CSR spec {spec!r}")
 
-    def add_csr(self, value: Csr) -> None:
-        if self.csrs is None:
-            raise NotImplementedError()
-        self.csrs.add(value)
+    def config_csr(self, csr_config: CsrConfig) -> None:
+        name = csr_config.name
+        try:
+            csr = self.available_csrs[name]
+        except KeyError:
+            raise report.InputError(name, f"unrecognised CSR {name!r}")
+
+        # set CSR-under-test flags
+        csr.has_rvfi = True
+        csr.read_insn = True
+        # TODO fix RW tests for wide CSRs
+        csr.rw_test = csr.width == "xlen"
+
+        # override any existing config
+        self.csr_configs[name] = csr_config

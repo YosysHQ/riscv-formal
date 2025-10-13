@@ -96,7 +96,7 @@ class SetupTask(tl.Task):
             tl.log(f"got check filter {check_filter!r}")
 
         for csr in [
-            *App.config.csrs.configs.values(),
+            *App.config.csrs,
             *App.config.custom_csrs,
             *App.config.illegal_csrs,
         ]:
