@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 from pathlib import Path
 import traceback
+import importlib.util
 
 import yosys_mau.task_loop.job_server as job
 from yosys_mau import task_loop as tl
@@ -27,6 +28,26 @@ def main() -> None:
 
     App.raw_args = args
 
+    # Need to load user provided modules before we enter the task loop
+    for extension in App.extensions:
+        # we don't need to keep references to the module once loaded, but we do
+        # need to execute the script in the current namespace for registering
+        # callbacks
+        spec = importlib.util.spec_from_file_location(extension.name, extension)
+        if spec is None or spec.loader is None:
+            # Function returns None instead of raising an error
+            print(f"'{extension}' must be a valid python script/module")
+            exit(1)
+        module = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(module)
+        except BaseException as e:
+            print(f"Encountered exception while loading '{extension}':")
+            if App.debug or App.debug_events:
+                traceback.print_exc()
+            else:
+                print(e)
+            exit(1)
     try:
         tl.run_task_loop(task_loop_main)
     except tl.TaskCancelled:

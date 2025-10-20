@@ -46,6 +46,16 @@ def arg_parser(sphinx_docs=False) -> argparse.ArgumentParser:
         default=None,
     )
 
+    global_argument(
+        "--load",
+        metavar="EXTENSION",
+        type=Path,
+        action="append",
+        dest="extensions",
+        help="python script for loading custom ISA extension, can be specified multiple times",
+        default=[],
+    )
+
     parents = [] if sphinx_docs else [global_options]
 
     parser.add_argument(
@@ -83,6 +93,8 @@ class App:
     debug_events: bool = False
 
     command: Literal["setup"]
+
+    extensions: list[Path]
 
     cfg_file: Path
     work_dir: Path
