@@ -17,8 +17,6 @@
  *
  */
 
-`define NERV_CSR
-
 `ifdef NERV_CSR
 	/**********************
 	 *  CSR DECLARATIONS  *
@@ -166,10 +164,10 @@
 	`NERV_CSR_VAL_MRW(pmpaddr62,         12'h 3EE, 32'h 0000_0000)			\
 	`NERV_CSR_VAL_MRW(pmpaddr63,         12'h 3EF, 32'h 0000_0000)
 
-`else
+`else // !NERV_PMP
 `define NERV_PMP_CFG_CSRS
 `define NERV_PMP_ADDR_CSRS
-`endif
+`endif // NERV_PMP
 
 `define NERV_COUNTER_CSRS /* Machine Counter/Timers CSRs */				\
 	`NERV_CSR_ARR_DEF(hpm_counter, 32)						\
@@ -293,7 +291,7 @@
 	`NERV_COUNTER_CSRS		\
 	`NERV_COUNTER_SETUP_CSRS	\
 	`NERV_CUSTOM_CSRS
-`endif
+`endif // NERV_CSR
 
 module nerv #(
 	parameter [31:0] RESET_ADDR = 32'h 0000_0000,
@@ -349,7 +347,7 @@ module nerv #(
 `undef NERV_CSR_VAL_MRO
 `undef NERV_CSR_ARR_DEF
 `undef NERV_CSR_ARR_MRW
-`endif
+`endif // NERV_CSR
 
 	output reg [31:0] rvfi_mem_addr,
 	output reg [ 3:0] rvfi_mem_rmask,
@@ -361,8 +359,8 @@ module nerv #(
 	output reg        rvfi_mem_fault,
 	output reg [ 3:0] rvfi_mem_fault_rmask,
 	output reg [ 3:0] rvfi_mem_fault_wmask,
-`endif
-`endif
+`endif // NERV_FAULT
+`endif // NERV_RVFI
 
 	// we have 2 external memories
 	// one is instruction memory
@@ -379,7 +377,7 @@ module nerv #(
 `ifdef NERV_FAULT
 	input         imem_fault,
 	input         dmem_fault,
-`endif
+`endif // NERV_FAULT
 	// interrupt inputs
 	input  [31:0] irq
 );
@@ -387,7 +385,7 @@ module nerv #(
 `ifndef NERV_FAULT
 	wire imem_fault = 0;
 	wire dmem_fault = 0;
-`endif
+`endif // NERV_FAULT
 
 	reg mem_wr_enable;
 	reg [31:0] mem_wr_addr;
@@ -548,7 +546,7 @@ module nerv #(
 
 `ifdef NERV_FAULT
 	reg cycle_dmem_fault;
-`endif
+`endif // NERV_FAULT
 
 	assign trap = cycle_trap;
 
@@ -623,7 +621,11 @@ module nerv #(
 
 	wire [31:0] irq_en;
 	reg [4:0] irq_num;
+`ifdef NERV_CSR
 	assign irq_en = irq & csr_mie_value;
+`else // !NERV_CSR
+	assign irq_en = irq;
+`endif // NERV_CSR
 
 	// resolve interrupt priority
 	always @* begin
@@ -662,7 +664,7 @@ module nerv #(
 		cycle_late_wr = 0;
 `ifdef NERV_FAULT
 		cycle_dmem_fault = 0;
-`endif
+`endif // NERV_FAULT
 		wr_rd = insn_rd;
 
 		illinsn = 0;
@@ -1067,14 +1069,16 @@ module nerv #(
 					end
 				endcase
 			end
-`endif
+`endif // NERV_CSR
 			default: illinsn = 1;
 		endcase
 
 		if (reset || reset_q) begin
 			// reset has the highest priority
 			npc = RESET_ADDR;
+`ifdef NERV_CSR
 			csr_mstatus_next[3] = 0; // MIE
+`endif // NERV_CSR
 		end else if (stall) begin
 			// if this is a stall cycle, don't perform any action
 			npc = pc;
@@ -1084,12 +1088,14 @@ module nerv #(
 
 			if (dmem_fault) begin
 				cycle_dmem_fault = 1;
+`ifdef NERV_CSR
 				csr_mepc_next[31:2] = pc[31:2];
 				npc = csr_mtvec_value & ~3;
 				csr_mcause_next = mem_wr_enable_q ? MCAUSE_STORE_ACCESS_FAULT : MCAUSE_LOAD_ACCESS_FAULT;
 				csr_mcause_wdata = csr_mcause_next;
 				csr_mstatus_next[7] = csr_mstatus_value[3];  // save MIE to MPIE
 				csr_mstatus_next[3] = 0; // MIE to 0
+`endif // NERV_CSR
 			end else begin
 				cycle_late_wr = 1;
 
@@ -1098,16 +1104,17 @@ module nerv #(
 					next_rd = mem_rdata;
 				end
 			end
-`else
+`else // !NERV_FAULT
 		end else if (mem_rd_enable_q) begin
 			// if last cycle was a memory read, then this cycle is the 2nd part of it and imem_data will not be a valid instruction
 			npc = pc;
 			cycle_late_wr = 1;
 			wr_rd = mem_rd_reg_q;
 			next_rd = mem_rdata;
-`endif
+`endif // NERV_FAULT
 		end else if (irq_num!=0) begin
 			// if there's a pending IRQ, take it
+`ifdef NERV_CSR
 			csr_mepc_next = { pc[31:2], 2'b00 };
 			csr_mcause_next = 1 << 31 | irq_num;
 			if (csr_mtvec_value & 1)
@@ -1116,17 +1123,20 @@ module nerv #(
 				npc = csr_mtvec_value & ~3;
 			csr_mstatus_next[7] = 1; // MPIE to 1
 			csr_mstatus_next[3] = 0; // MIE to 0
+`endif // NERV_CSR
 
 			cycle_intr = 1;
 		end else if (imem_fault || illinsn) begin
 			// instruction fetch memory fault
 			cycle_trap = 1;
+`ifdef NERV_CSR
 			csr_mepc_next[31:2] = pc[31:2];
 			npc = csr_mtvec_value & ~3;
 			csr_mcause_next = imem_fault ? MCAUSE_INSN_ACCESS_FAULT : MCAUSE_INVALID_INSTRUCTION;
 			csr_mcause_wdata = csr_mcause_next;
 			csr_mstatus_next[7] = csr_mstatus_value[3];  // save MIE to MPIE
 			csr_mstatus_next[3] = 0; // MIE to 0
+`endif // NERV_CSR
 		end else begin
 			// the instruction is valid and nothing else has priority
 			cycle_insn = 1;
@@ -1146,11 +1156,11 @@ module nerv #(
 
 `ifdef NERV_FAULT
 	wire next_rvfi_valid = (cycle_insn && !mem_rd_enable && !mem_wr_enable) || cycle_trap || cycle_dmem_fault || cycle_late_wr;
-`else
+`else // !NERV_FAULT
 	wire next_rvfi_valid = (cycle_insn && !mem_rd_enable) || cycle_trap || cycle_late_wr;
-`endif
+`endif // NERV_FAULT
 
-`endif
+`endif // NERV_RVFI
 
 	// mem read functions: Lower and Upper Bytes, signed and unsigned
 	always @* begin
@@ -1222,7 +1232,7 @@ module nerv #(
 			rvfi_mem_fault <= imem_fault;
 			rvfi_mem_fault_rmask <= 0;
 			rvfi_mem_fault_wmask <= 0;
-`endif
+`endif // NERV_FAULT
 		end
 
 `ifdef NERV_FAULT
@@ -1239,7 +1249,7 @@ module nerv #(
 			rvfi_mem_rmask <= 0;
 			rvfi_mem_wmask <= 0;
 		end
-`endif
+`endif // NERV_FAULT
 
 		if (next_rvfi_valid) begin
 `ifdef NERV_CSR
@@ -1268,9 +1278,9 @@ module nerv #(
 `undef NERV_CSR_VAL_MRO
 `undef NERV_CSR_ARR_DEF
 `undef NERV_CSR_ARR_MRW
-`endif
+`endif // NERV_CSR
 		end
-`endif
+`endif // NERV_RVFI
 
 		// reset
 		if (reset || reset_q) begin
@@ -1280,7 +1290,7 @@ module nerv #(
 			rvfi_valid <= 0;
 			rvfi_order <= 0;
 			rvfi_trap <= 0;
-`endif
+`endif // NERV_RVFI
 		end
 	end
 
@@ -1318,5 +1328,5 @@ module nerv #(
 	wire [31:0] dbg_reg_x29 = regfile[29];
 	wire [31:0] dbg_reg_x30 = regfile[30];
 	wire [31:0] dbg_reg_x31 = regfile[31];
-`endif
+`endif // NERV_DBGREGS
 endmodule
