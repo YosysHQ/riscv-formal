@@ -953,12 +953,18 @@ module nerv #(
 					10'b 0100000_101 /* SRAI  */: begin next_wr = 1; next_rd = $signed(rs1_value) >>> insn[24:20]; end
 					// Zbb: Basic bit-manipulation
 					10'b 0110000_001: begin
-						casez (insn[24:20])
-							5'b 00000 /* CLZ    */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = rs1_value[i] ? 0 : next_rd + 1; end
-							5'b 00001 /* CTZ    */: begin next_wr = 1; next_rd = 0; for (int i=32; i>0; i=i-1) next_rd = rs1_value[i-1] ? 0 : next_rd + 1; end
-							5'b 00010 /* CPOP   */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = next_rd + rs1_value[i]; end
-							5'b 00100 /* SEXT.B */: begin next_wr = 1; next_rd = $signed(rs1_value[7:0]); end
-							5'b 00101 /* SEXT.H */: begin next_wr = 1; next_rd = $signed(rs1_value[15:0]); end
+						casez (
+					`ifdef NERV_CSR
+							{insn[24:20], csr_misa_value[1]}
+					`else
+							{insn[24:20], 1'b1}
+					`endif
+						)
+							6'b 00000_1 /* CLZ    */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = rs1_value[i] ? 0 : next_rd + 1; end
+							6'b 00001_1 /* CTZ    */: begin next_wr = 1; next_rd = 0; for (int i=32; i>0; i=i-1) next_rd = rs1_value[i-1] ? 0 : next_rd + 1; end
+							6'b 00010_1 /* CPOP   */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = next_rd + rs1_value[i]; end
+							6'b 00100_1 /* SEXT.B */: begin next_wr = 1; next_rd = $signed(rs1_value[7:0]); end
+							6'b 00101_1 /* SEXT.H */: begin next_wr = 1; next_rd = $signed(rs1_value[15:0]); end
 							default: illinsn = 1;
 						endcase
 					end
