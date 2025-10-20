@@ -26,6 +26,7 @@ class Csr(GenericChecker):
 
     behavior: Optional[Behavior] = None
     is_accessible: bool = True
+    has_macro_define: bool = False
 
     @property
     def min_priv_level(self) -> int:
@@ -179,6 +180,9 @@ class Csr(GenericChecker):
 
             // CSR accesses are (currently) only valid in non-C instructions and never jump
             wire [{xlen-1}:0] spec_pc_wdata = rvfi.pc_rdata + 4;
+
+            // CSR address 0xFFF is always treated as an illegal access in riscv-formal
+            localparam csr_none = 12'h FFF;
 
             always @* begin
                 if (!reset && check) begin

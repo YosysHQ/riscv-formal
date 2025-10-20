@@ -1,7 +1,9 @@
 from .model import (
+    Instruction_format,
     Instruction,
     MemoryInstruction,
     AltopsInstruction,
+    CsrInstruction,
 )
 
 from .wrapped_model import WrappedInstruction

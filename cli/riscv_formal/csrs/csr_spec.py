@@ -70,6 +70,7 @@ def csr(name: str, width: str, privilege: str, index: int, indexh: Optional[int]
         index = index,
         indexh = indexh,
         behavior = behavior,
+        has_macro_define = True,
     )
 
 def mcsr(name: str, width: str, privilege: str, index: int, indexh: Optional[int] = None, behavior: Optional[Behavior] = None) -> MachineCsr:
@@ -80,6 +81,7 @@ def mcsr(name: str, width: str, privilege: str, index: int, indexh: Optional[int
         index = index,
         indexh = indexh,
         behavior = behavior,
+        has_macro_define = True,
     )
 
 def mcsr_with_shadow(mname: str, width: str,  mprivilege: str, mindex: int, mindexh: Optional[int],
@@ -336,6 +338,10 @@ class CsrSpec:
         csr.read_insn = True
         # TODO fix RW tests for wide CSRs
         csr.rw_test = csr.width == "xlen"
+
+        # CSRs without a macro define need to be included in RISCV_FORMAL_CUSTOM_CSR_*
+        if not csr.has_macro_define:
+            self.custom_csrs.add(csr.name)
 
         # override any existing config
         self.csr_configs[name] = csr_config

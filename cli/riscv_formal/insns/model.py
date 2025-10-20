@@ -424,3 +424,14 @@ class AltopsInstruction(Instruction):
             `else
                 {result_str}
             `endif""")
+
+@dataclass(kw_only=True)
+class CsrInstruction(Instruction):
+    csrs_accessed: Iterable[str] = field(default_factory=list)
+
+    def _inputs_used(self) -> set[str]:
+        inputs = super()._inputs_used()
+        for csr in self.csrs_accessed:
+            for field in ["rmask", "wmask", "rdata", "wdata"]:
+                inputs.add(f"csr_{csr}_{field}")
+        return inputs

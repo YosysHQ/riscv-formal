@@ -220,7 +220,7 @@ class GenInsnCheck(tl.Task):
             insn_check_wrapper.configure_io()
             checker_module = "rvfi_insn_check"
             checker_dir = "insns"
-            legal_csr = None
+            legal_csr = True
         else:
             assert isinstance(Check.checker, Csr)
             insn_check_wrapper = None
