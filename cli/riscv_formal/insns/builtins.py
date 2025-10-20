@@ -18,7 +18,7 @@ from .model import (
     MemoryInstruction,
 )
 
-from .ext_mapper import register_ext_generator, register_non_insn_ext
+from .isa import Isa
 from riscv_formal.named_set import NamedSet
 
 FORMAT_R = Instruction_format(
@@ -287,5 +287,5 @@ def builtins(_) -> NamedSet[Instruction]:
         insn_alu("sraw", "0100000", "101", "$signed(rvfi_rs1_rdata[31:0]) >>> shamt", shamt=True, wmode=True),
     ])
 
-register_ext_generator(builtins, "I")
-register_non_insn_ext("Zicsr", "Zicntr", "Zihpm")
+Isa.register_generator(builtins, "I")
+Isa.register_non_insn_ext("Zicsr", "Zicntr", "Zihpm")

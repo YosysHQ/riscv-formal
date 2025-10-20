@@ -106,7 +106,7 @@ def hpm_csr(ename: str, ewidth: str, eprivilege: str, eindex: int,
     shadow_csr = counter_csr.shadow(sname, sprivilege, sindex, sindexh)
     return (event_csr, counter_csr, shadow_csr)
 
-def base_csrs() -> NamedSet[Csr]:
+def base_csrs(isa_mods: Iterable[str]) -> NamedSet[Csr]:
     return NamedSet([
         mcsr("mvendorid",     "xlen", "MRO", 0xF11),
         mcsr("marchid",       "xlen", "MRO", 0xF12),
@@ -127,33 +127,33 @@ def base_csrs() -> NamedSet[Csr]:
         # mcsr("mcountinhibit", "xlen", "MRW", 0x320),
     ])
 
-def hext_csrs() -> NamedSet[Csr]:
+def hext_csrs(isa_mods: Iterable[str]) -> NamedSet[Csr]:
     return NamedSet([
         mcsr("mtinst",        "xlen", "MRW", 0x34A),
         mcsr("mtval2",        "xlen", "MRW", 0x34B),
     ])
 
-def sext_csrs() -> NamedSet[Csr]:
+def sext_csrs(isa_mods: Iterable[str]) -> NamedSet[Csr]:
     return NamedSet([
         mcsr("medeleg",       "xlen", "MRW", 0x302),
         mcsr("mideleg",       "xlen", "MRW", 0x303),
     ])
 
-def uext_csrs() -> NamedSet[Csr]:
+def uext_csrs(isa_mods: Iterable[str]) -> NamedSet[Csr]:
     return NamedSet([
         mcsr("mcounteren",    "xlen", "MRW", 0x306),
         mcsr("menvcfg",       "xlen", "MRW", 0x30A),
         mcsr("menvcfgh",      "xlen", "MRW", 0x31A),
     ])
 
-def fext_csrs() -> NamedSet[Csr]:
+def fext_csrs(isa_mods: Iterable[str]) -> NamedSet[Csr]:
     return NamedSet([
         # Csr("fflags",         "xlen",  None,  None,  None),
         # Csr("frm",            "xlen",  None,  None,  None),
         # Csr("fcsr",           "xlen",  None,  None,  None),
     ])
 
-def cntr_csrs() -> NamedSet[Csr]:
+def cntr_csrs(isa_mods: Iterable[str]) -> NamedSet[Csr]:
     return NamedSet([
         *mcsr_with_shadow(
             "mcycle",           "64", "MRW", 0xB00, 0xB80,
@@ -166,7 +166,7 @@ def cntr_csrs() -> NamedSet[Csr]:
         ),
     ])
 
-def hpm_csrs() -> NamedSet[Csr]:
+def hpm_csrs(isa_mods: Iterable[str]) -> NamedSet[Csr]:
     max_idx = 32
     csr_list: list[Csr] = []
     for i in range(3, max_idx):
@@ -177,7 +177,7 @@ def hpm_csrs() -> NamedSet[Csr]:
         ))
     return NamedSet(csr_list)
 
-def pmp_csrs(entries: int = 64) -> NamedSet[Csr]:
+def pmp_csrs(isa_mods: Iterable[str], entries: int = 64) -> NamedSet[Csr]:
     # TODO odd configs only exist for RV32
     return NamedSet([
         *(
@@ -194,6 +194,7 @@ def mask_bits(test: str, bits: "list[int]", mask_len: int, invert=False):
     mask = functools.reduce(lambda x, y: x | 1 << y, bits, 0)
     return f"{test}_mask={'~' if invert else ''}{mask_len}'b{mask:0{mask_len}b}"
 
+
 @dataclass
 class CsrSpec:
     str: Optional[str] = None
@@ -201,29 +202,24 @@ class CsrSpec:
     csr_configs: NamedSet[CsrConfig] = field(init=False)
     custom_csrs: set[str] = field(init=False)
 
+    _generators: ClassVar[dict[str, Callable[[Iterable[str]], NamedSet[Csr]]]] = {}
+    _aliased_by: ClassVar[dict[Callable, set[str]]] = {}
+
     @property
     def csrs(self) -> Iterable[Csr]:
         for csr in self.available_csrs:
             if csr.name in self.csr_configs:
                 yield csr
 
-    registered_generators: ClassVar[dict[str, Callable[[], NamedSet[Csr]]]] = {
-        "I": base_csrs,
-        "H": hext_csrs,
-        "S": sext_csrs,
-        "U": uext_csrs,
-        "F": fext_csrs,
-        "Zicntr": cntr_csrs,
-        "Zihpm": hpm_csrs,
-        # TODO pmp_csrs?
-    }
-
     @classmethod
     def register_generator(cls,
-        ext: str,
-        gen: Callable[[], NamedSet[Csr]]
+        generator: Callable[[Iterable[str]], NamedSet[Csr]],
+        *mods: str,
     ):
-        cls.registered_generators[ext] = gen
+        # Unlike insn generators, csr generators should not over specify
+        for mod in mods:
+            cls._generators[mod] = generator
+        cls._aliased_by[generator] = set(mods)
 
     def __post_init__(self) -> None:
         self.csr_configs = NamedSet()
@@ -231,9 +227,21 @@ class CsrSpec:
 
     def generate(self, isa: Isa) -> None:
         self.available_csrs = NamedSet()
-        for csr_ext, csr_generator in self.registered_generators.items():
-            if csr_ext in isa.mods:
-                self.available_csrs.update(csr_generator())
+        handled_mods: set[str] = set()
+
+        for mod in isa.mods:
+            if mod in handled_mods: continue
+
+            try:
+                generator = self._generators[mod]
+            except KeyError:
+                # Not all extensions have CSRs
+                continue
+
+            self.available_csrs.update(generator(isa.mods))
+
+            # mark all aliases as handled
+            handled_mods.update(self._aliased_by[generator])
 
         def csr_line(name: str, test: Optional[str] = None):
             csr_config = CsrConfig(name, {test: None} if test else {})
@@ -353,3 +361,18 @@ class CsrSpec:
             name = name_or_address
 
         self.config_csr(CsrConfig(name, {}), legal=False)
+
+
+builtins_map = {
+    "Zicsr": base_csrs,
+    "H": hext_csrs,
+    "S": sext_csrs,
+    "U": uext_csrs,
+    "F": fext_csrs,
+    "Zicntr": cntr_csrs,
+    "Zihpm": hpm_csrs,
+    # TODO pmp_csrs?
+}
+
+for mod, gen in builtins_map.items():
+    CsrSpec.register_generator(gen, mod)

@@ -13,10 +13,7 @@ from .builtins import (
     insn_shimm,
 )
 
-from .ext_mapper import (
-    register_ext_composition,
-    register_ext_generator,
-)
+from .isa import Isa
 
 from riscv_formal.named_set import NamedSet
 
@@ -326,5 +323,5 @@ def bext(_) -> NamedSet[Instruction]:
 
     ])
 
-register_ext_composition("B", ("Zba", "Zbb", "Zbs"))
-register_ext_generator(bext, ("Zba", "Zbb", "Zbc", "Zbs", "Zbkb", "Zbkc", "Zbkx"))
+Isa.register_composition("B", ("Zba", "Zbb", "Zbs"))
+Isa.register_generator(bext, "Zba", "Zbb", "Zbc", "Zbs", "Zbkb", "Zbkc", "Zbkx")

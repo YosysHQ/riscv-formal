@@ -6,7 +6,7 @@ from .model import (
     Instruction,
     MemoryInstruction,
 )
-from .ext_mapper import register_ext_generator
+from .isa import Isa
 
 from riscv_formal.named_set import NamedSet
 
@@ -561,4 +561,4 @@ def cext(_) -> NamedSet[Instruction]:
         insn_c_alu("c_subw", "100111", "00", "rvfi_rs1_rdata[31:0] - rvfi_rs2_rdata[31:0]", wmode=True),
     ])
 
-register_ext_generator(cext, ("C", "Zca", "Zcf", "Zcd"))
+Isa.register_generator(cext, "C", "Zca", "Zcf", "Zcd")

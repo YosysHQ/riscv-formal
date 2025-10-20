@@ -3,7 +3,7 @@ from typing import Optional
 
 from .model import Instruction, AltopsInstruction
 from .builtins import FORMAT_R
-from .ext_mapper import register_ext_generator
+from .isa import Isa
 
 from riscv_formal.named_set import NamedSet
 
@@ -84,4 +84,4 @@ def mext(_) -> NamedSet[Instruction]:
                                               rvfi_rs1_rdata[31:0] % rvfi_rs2_rdata[31:0]""", alt_sub=0xbc4402413138d0e1, wmode=True),
     ])
 
-register_ext_generator(mext, ("M", "Zmmul"))
+Isa.register_generator(mext, "M", "Zmmul")

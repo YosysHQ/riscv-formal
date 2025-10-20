@@ -11,10 +11,9 @@ import yosys_mau.config_parser as cfg
 from yosys_mau import task_loop as tl
 from yosys_mau.source_str import report, read_file, re as ssre
 
-from riscv_formal.insns import Isa, map_ext
+from riscv_formal.insns import Isa
 from riscv_formal.csrs import CsrSpec, CsrConfig
 from riscv_formal.rvfi import Rvfi
-from riscv_formal.named_set import NamedSet
 
 
 def sphinx_docs_arg_parser() -> argparse.ArgumentParser:
@@ -116,30 +115,7 @@ class FlagPresent(cfg.ValueParser[bool]):  # TODO move to mau
 
 class IsaValue(cfg.ValueParser[Isa]):
     def parse(self, input: str) -> Isa:
-        matched = ssre.match(
-            r"rv(?P<width>\d+)(?P<base>[ie])(?P<ext>[a-v]*)(?P<multi>_?[SZX]\w+)?$", input, ssre.I
-        )
-        if matched is None:
-            raise report.InputError(input, "Unable to parse isa string")
-        isa_dict: dict[str, Any] = matched.groupdict()
-
-        isa_mods: list[str] = [isa_dict["base"].upper(), isa_dict["width"]]
-        for mod in isa_dict["ext"] or "":
-            isa_mods.append(mod.upper())
-        for mod in (isa_dict["multi"] or "").split("_"):
-            if mod:
-                isa_mods.append(mod.title())
-
-        match isa_dict["width"]:
-            case "64":
-                xlen = 64
-            case "32":
-                xlen = 32
-            case other:
-                raise report.InputError(other, f"Unsupported xlen {other}")
-
-        insns = map_ext(isa_mods, xlen)
-        return Isa(str=input, xlen=xlen, mods=isa_mods, insns=insns)
+        return Isa(str=input)
 
 
 class CsrSpecValue(cfg.ValueParser[CsrSpec]):
@@ -149,7 +125,7 @@ class CsrSpecValue(cfg.ValueParser[CsrSpec]):
 
 class RvfOptions(cfg.ConfigOptions):
     nret = cfg.Option(cfg.IntValue(min=1), default=1)
-    isa = cfg.Option(IsaValue(), default=IsaValue().parse("rv32i"))
+    isa = cfg.Option(IsaValue(), default=Isa("rv32i"))
     blackbox = cfg.Option(FlagPresent(), default=False)
     solver = cfg.Option(cfg.StrValue(), default="boolector")
     dumpsmt2 = cfg.Option(FlagPresent(), default=False)
@@ -160,6 +136,7 @@ class RvfOptions(cfg.ConfigOptions):
     csr_spec = cfg.Option(CsrSpecValue(), default=CsrSpec())
 
     def validate(self):
+        self.isa.generate()
         self.csr_spec.generate(self.isa)
 
 
