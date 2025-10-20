@@ -323,5 +323,5 @@ def bext(_) -> NamedSet[Instruction]:
 
     ])
 
-Isa.register_composition("B", ("Zba", "Zbb", "Zbs"))
+Isa.register_composition("B", "Zba", "Zbb", "Zbs")
 Isa.register_generator(bext, "Zba", "Zbb", "Zbc", "Zbs", "Zbkb", "Zbkc", "Zbkx")

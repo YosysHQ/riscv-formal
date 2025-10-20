@@ -376,3 +376,6 @@ builtins_map = {
 
 for mod, gen in builtins_map.items():
     CsrSpec.register_generator(gen, mod)
+
+Isa.register_dependency("Zicntr", "Zicsr")
+Isa.register_dependency("Zihpm", "Zicsr")

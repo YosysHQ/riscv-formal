@@ -20,6 +20,7 @@ class Isa:
     _insns: NamedSet[Instruction] | None = None
 
     _compositions: ClassVar[dict[str, Iterable[str]]] = {}
+    _dependencies: ClassVar[dict[str, Iterable[str]]] = {}
     _generators: ClassVar[dict[str, Callable[[Iterable[str]], NamedSet[Instruction]]]] = {
         "rv": _empty_insn_gen,
     }
@@ -51,19 +52,24 @@ class Isa:
     @property
     def mods(self) -> Iterable[str]:
         if self._mods is None:
+            self._mods = set()
+            def add_mods(*mods: str):
+                assert self._mods is not None
+                for mod in mods:
+                    # prevent infinite recursion by only adding if we haven't already
+                    if mod not in self._mods:
+                        self._mods.add(mod.title())
+                        for submod in self._compositions.get(mod, []):
+                            add_mods(submod)
+
             # Only multi can have a value of None, so these are safe to treat as str
             base: str = self.isa_dict["base"] # type: ignore
             width: str = self.isa_dict["width"] # type: ignore
             ext: str = self.isa_dict["ext"] # type: ignore
-            self._mods = set((base.upper(), width))
-            for mod in ext:
-                self._mods.add(mod.upper())
-            for mod in (self.isa_dict["multi"] or "").split("_"):
-                if mod:
-                    self._mods.add(mod.title())
-            for mod in self._mods:
-                for submod in self._compositions.get(mod, []):
-                    self._mods.add(submod)
+            add_mods(base.upper(), width, *ext)
+            multi = self.isa_dict["multi"]
+            if multi is not None:
+                add_mods(*multi.split("_"))
         return self._mods
 
     @property
@@ -76,9 +82,14 @@ class Isa:
         return "c" in self.mods
 
     @classmethod
-    def register_composition(cls, mod: str, composed_of: Iterable[str]) -> None:
+    def register_composition(cls, mod: str, *composed_of: str) -> None:
         # e.g. B is composed of Zba + Zbb + Zbs
         cls._compositions[mod] = composed_of
+
+    @classmethod
+    def register_dependency(cls, mod: str, *depends_on: str) -> None:
+        # e.g. Zicntr depends on Zicsr
+        cls._dependencies[mod] = depends_on
 
     @classmethod
     def register_generator(cls,
@@ -106,7 +117,6 @@ class Isa:
 
     def generate(self) -> None:
         self._insns = NamedSet()
-        unknown_mods: set[str] = set()
         handled_mods: set[str] = set()
 
         for mod in self.mods:
@@ -114,14 +124,18 @@ class Isa:
                 # skip xlen mods
                 continue
 
+            # check for dependencies
+            for submod in self._dependencies.get(mod, []):
+                if submod not in self.mods:
+                    raise report.InputError(mod, f"ISA mod/extension {mod!r} depends on {submod}")
+
             # skip already handled mods
             if mod in handled_mods: continue
 
             try:
                 generator = self._generators[mod]
             except KeyError:
-                unknown_mods.add(mod)
-                continue
+                raise report.InputError(mod, f"unsupported ISA mod/extension {mod!r}")
 
             for insn in generator(self.mods):
                 # generators can over specify
@@ -137,6 +151,3 @@ class Isa:
 
             # mark all aliases as handled
             handled_mods.update(self._aliased_by[generator])
-
-        for mod in unknown_mods:
-            raise report.InputError(mod, f"unsupported ISA mod/extension {mod!r}")
