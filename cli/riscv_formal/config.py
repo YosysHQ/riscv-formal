@@ -137,7 +137,11 @@ class RvfOptions(cfg.ConfigOptions):
 
     def validate(self):
         self.isa.generate()
-        self.csr_spec.generate(self.isa)
+        if "Zicsr" in self.isa.mods:
+            self.csr_spec.generate(self.isa)
+        elif self.csr_spec.str is not None:
+            # TODO can we input error on the option rather than the value?
+            raise report.InputError(self.isa.str, "isa must include Zicsr to enable csr checks")
 
 
 def compile_re(pattern: str) -> re.Pattern[str]:
@@ -404,6 +408,17 @@ class RvfConfig(cfg.ConfigParser):
     )  # TODO there should be a separate LinesSection in mau
     def depth(self, lines: list[str]) -> CheckDepths:
         return CheckDepths([CheckDepth.parse(line) for line in lines])
+
+    def validate(self):
+        # there shouldn't be any csr sections if the core doesn't have Zicsr
+        if "Zicsr" not in self.options.isa.mods:
+            for csr in [
+                *self.csrs,
+                *self.custom_csrs,
+                *self.illegal_csrs,
+            ]:
+                # TODO what is the correct way to report this?  Can we InputError on two locations?
+                raise report.InputError(self.options.isa.str, "isa must include Zicsr to enable csr checks")
 
 
 def parse_config():
