@@ -1,8 +1,22 @@
 from dataclasses import dataclass
 from textwrap import indent, dedent
-from typing import Optional, TypeVar, Generic
+from typing import Optional, TypeVar, Generic, ClassVar, Iterable
 
 from riscv_formal.named_set import NamedClass, NamedSet
+
+
+class MissingVerilogArgError(Exception):
+    cls: type
+    missing_arg: str
+
+    def __init__(self, cls: type, missing_arg: str, *args: object) -> None:
+        super().__init__(*args)
+        self.cls = cls
+        self.missing_arg = missing_arg
+
+    def __str__(self) -> str:
+        return f"{self.cls.__name__}.to_verilog() called without setting required argument {self.missing_arg!r}"
+
 
 @dataclass(kw_only=True)
 class GenericChecker(NamedClass):
@@ -11,6 +25,20 @@ class GenericChecker(NamedClass):
 
     channel: Optional[int] = None
     channelized: bool = False
+
+    _required_v_args: ClassVar[set[str]] = set(("xlen",))
+    xlen: ClassVar[int]
+
+    @classmethod
+    def __init_subclass__(cls, required_v_args: Iterable[str] = [], **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+        cls._required_v_args = cls._required_v_args.union(required_v_args)
+
+    @classmethod
+    def check_v_args(cls) -> None:
+        for arg in cls._required_v_args:
+            if not hasattr(cls, arg):
+                raise MissingVerilogArgError(cls, arg)
 
     def __post_init__(self):
         if self.channel is not None:
@@ -35,8 +63,8 @@ class GenericChecker(NamedClass):
     def _v_format_block(self, s: str) -> str:
         return indent(s, '    ') + '\n'
 
-    def _v_checks(self, **kwargs) -> None:
-        pass
+    def _v_checks(self) -> None:
+        self.check_v_args()
 
     def _v_body(self) -> str:
         # module body
@@ -53,16 +81,17 @@ class GenericChecker(NamedClass):
             v_str += body
         return v_str
 
-    def to_verilog(self, **kwargs) -> str:
-        self._v_checks(**kwargs)
+    def to_verilog(self) -> str:
+        self._v_checks()
         v_str = f"module {self._v_modname()} (\n{self._v_format_block(self._v_io())});\n\n"
-        body = self._v_body(**kwargs)
+        body = self._v_body()
         if self.channelized:
             v_str += self._v_channelizer(body)
         else:
             v_str += body
         v_str += "endmodule"
         return v_str
+
 
 CT = TypeVar("CT", bound=GenericChecker)
 
@@ -72,8 +101,8 @@ class GenericGroupChecker(GenericChecker, Generic[CT]):
     def _subchecks(self) -> NamedSet[CT]:
         raise NotImplementedError()
 
-    def to_verilog(self, **kwargs):
+    def to_verilog(self):
         v_str = ""
         for check in self._subchecks():
-            v_str += check.to_verilog(**kwargs) + '\n\n'
+            v_str += check.to_verilog() + '\n\n'
         return v_str + super().to_verilog()

@@ -109,7 +109,7 @@ class Csr(GenericChecker):
         v_str += f"wire {prefix}_insn_under_test = {prefix}_access && {self._v_insn_priv_check()};\n"
         return v_str
 
-    def _v_insn_check(self, xlen: int) -> str:
+    def _v_insn_check(self) -> str:
         v_str = dedent(f"""\
             // insn mapping
             wire csr_insn_valid = rvfi.valid && (rvfi.insn[6:0] == 7'b 1110011) && (rvfi.insn[13:12] != 0) && ((rvfi.insn >> 16 >> 16) == 0);
@@ -124,13 +124,13 @@ class Csr(GenericChecker):
         if self.is_accessible:
             v_str += dedent(f"""\
                 wire [1:0] csr_mode = rvfi.insn[13:12];
-                wire [{xlen-1}:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
+                wire [{self.xlen-1}:0] csr_rsval = rvfi.insn[14] ? rvfi.insn[19:15] : rvfi.rs1_rdata;
 
-                wire [{xlen-1}:0] csr_insn_smask =
+                wire [{self.xlen-1}:0] csr_insn_smask =
                     /* CSRRW, CSRRWI */ (rvfi.insn[13:12] == 1) ? csr_rsval :
                     /* CSRRS, CSRRSI */ (rvfi.insn[13:12] == 2) ? csr_rsval : 0;
 
-                wire [{xlen-1}:0] csr_insn_cmask =
+                wire [{self.xlen-1}:0] csr_insn_cmask =
                     /* CSRRW, CSRRWI */ (rvfi.insn[13:12] == 1) ? ~csr_rsval :
                     /* CSRCS, CSRRCI */ (rvfi.insn[13:12] == 3) ? csr_rsval : 0;
             """)
@@ -139,21 +139,21 @@ class Csr(GenericChecker):
 
         return v_str
 
-    def _normalized_width(self, xlen: int) -> int:
-        return 64 if (self.width == "64" and xlen == 32) else xlen
+    def _v_normalized_width(self) -> int:
+        return 64 if (self.width == "64" and self.xlen == 32) else self.xlen
 
-    def _v_rvfi_assign(self, val: str, xlen: int, prefix: str = "csr_insn") -> str:
-        width = self._normalized_width(xlen)
-        if self.name in WIDE_CSRS or self.width == "xlen" or xlen > 32:
+    def _v_rvfi_assign(self, val: str, prefix: str = "csr_insn") -> str:
+        width = self._v_normalized_width()
+        if self.name in WIDE_CSRS or self.width == "xlen" or self.xlen > 32:
             rhs = f"rvfi.csr_{self.name}_{val}"
         else:
             raise NotImplementedError()
         return f"wire [{width-1}:0] {prefix}_{val} = {rhs};\n"
 
-    def _v_rvfi_map(self, xlen: int) -> str:
+    def _v_rvfi_map(self) -> str:
         v_str = "// rvfi mapping\n"
         for val in ["rmask", "wmask", "rdata", "wdata"]:
-            v_str += self._v_rvfi_assign(val, xlen)
+            v_str += self._v_rvfi_assign(val)
         return v_str
 
     def _v_ill_test(self) -> str:
@@ -170,18 +170,18 @@ class Csr(GenericChecker):
             end
         """)
 
-    def _v_rw_test(self, xlen: int) -> str:
+    def _v_rw_test(self) -> str:
         csr_illacc = f"rvfi.mode < {self.min_priv_level}"
         if not self.read_write:
             csr_illacc += " || csr_write"
         v_str = dedent(f"""\
             // read/write testing
             wire csr_illacc = csr_insn_valid && ({csr_illacc});
-            wire [{xlen-1}:0] effective_csr_insn_wmask = csr_insn_rmask | csr_insn_wmask;
-            wire [{xlen-1}:0] effective_csr_insn_wdata = (csr_insn_wdata & csr_insn_wmask) | (csr_insn_rdata & ~csr_insn_wmask);
+            wire [{self.xlen-1}:0] effective_csr_insn_wmask = csr_insn_rmask | csr_insn_wmask;
+            wire [{self.xlen-1}:0] effective_csr_insn_wdata = (csr_insn_wdata & csr_insn_wmask) | (csr_insn_rdata & ~csr_insn_wmask);
 
             // CSR accesses are (currently) only valid in non-C instructions and never jump
-            wire [{xlen-1}:0] spec_pc_wdata = rvfi.pc_rdata + 4;
+            wire [{self.xlen-1}:0] spec_pc_wdata = rvfi.pc_rdata + 4;
 
             // CSR address 0xFFF is always treated as an illegal access in riscv-formal
             localparam csr_none = 12'h FFF;
@@ -212,7 +212,7 @@ class Csr(GenericChecker):
                         if (rvfi.rd_addr == 0) begin
                             assert (rvfi.rd_wdata == 0);
                         end else begin
-                            assert (csr_insn_rmask == {{{xlen}{{1'b1}}}});
+                            assert (csr_insn_rmask == {{{self.xlen}{{1'b1}}}});
                             assert (csr_insn_rdata == rvfi.rd_wdata);
                         end
 
@@ -230,11 +230,11 @@ class Csr(GenericChecker):
         
         return v_str
 
-    def _v_process(self, xlen: int) -> str:
+    def _v_process(self) -> str:
         v_str = "// setup for testing\n"
         assert self.behavior is not None
 
-        reg_width = "64" if (self.width == "64" and xlen == 32) else "xlen"
+        reg_width = "64" if (self.width == "64" and self.xlen == 32) else "xlen"
 
         resets: list[str] = []
         assigns: list[str] = []
@@ -291,21 +291,21 @@ class Csr(GenericChecker):
         """)
         return v_str
 
-    def _v_body(self, xlen: int) -> str:
+    def _v_body(self) -> str:
         v_str = self._v_format_block(self._v_rvfi_channel())
         if self.has_rvfi:
-            v_str += self._v_format_block(self._v_rvfi_map(xlen))
+            v_str += self._v_format_block(self._v_rvfi_map())
         if self.read_insn:
-            v_str += self._v_format_block(self._v_insn_check(xlen))
+            v_str += self._v_format_block(self._v_insn_check())
         if self.rw_test:
             if not self.is_accessible:
                 v_str += self._v_format_block(self._v_ill_test())
             elif self.has_rvfi:
-                v_str += self._v_format_block(self._v_rw_test(xlen))
+                v_str += self._v_format_block(self._v_rw_test())
             else:
                 raise NotImplementedError()
         if self.behavior:
-            v_str += self._v_format_block(self._v_process(xlen))
+            v_str += self._v_format_block(self._v_process())
         return v_str
 
 @dataclass(kw_only=True)
@@ -340,19 +340,19 @@ class HpmeventCsr(Csr):
 
     event_counter_map: dict[str, str] = field(default_factory=dict)
 
-    def _v_insn_check(self, xlen):
-        v_str = super()._v_insn_check(xlen)
+    def _v_insn_check(self):
+        v_str = super()._v_insn_check()
         v_str += self.counter._v_access_check("hpmcounter")
         return v_str
 
-    def _v_rvfi_map(self, xlen: int) -> str:
-        v_str = super()._v_rvfi_map(xlen)
-        v_str += self.counter._v_rvfi_assign("rdata", xlen, "hpmcounter")
+    def _v_rvfi_map(self) -> str:
+        v_str = super()._v_rvfi_map()
+        v_str += self.counter._v_rvfi_assign("rdata", "hpmcounter")
         return v_str
 
-    def _v_hpm_check(self, xlen: int) -> str:
-        event_width = self._normalized_width(xlen)
-        counter_width = self.counter._normalized_width(xlen)
+    def _v_hpm_check(self) -> str:
+        event_width = self._v_normalized_width()
+        counter_width = self.counter._v_normalized_width()
         valid_events: list[str] = []
         counter_checks: list[str] = []
         for cond, check in self.event_counter_map.items():
@@ -395,8 +395,8 @@ class HpmeventCsr(Csr):
             end
         """)
 
-    def _v_body(self, xlen: int) -> str:
-        v_str = super()._v_body(xlen)
+    def _v_body(self) -> str:
+        v_str = super()._v_body()
         if self.event_counter_map:
-            v_str += self._v_format_block(self._v_hpm_check(xlen))
+            v_str += self._v_format_block(self._v_hpm_check())
         return v_str

@@ -47,9 +47,11 @@ MISA_MAP["Zcf"] = MISA_MAP["C"] | MISA_MAP["F"]
 
 def misa_rmask_speculator(insn: Instruction) -> Optional[str]:
     ext = insn.extension
+    if ext is None:
+        return None
     try:
         misa_bit = MISA_MAP[ext.capitalize()]
-    except (KeyError, AttributeError):
+    except KeyError:
         return None
     else:
         return f"'b{misa_bit:026b}"

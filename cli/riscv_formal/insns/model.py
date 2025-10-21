@@ -159,11 +159,6 @@ class Instruction(GenericChecker):
     def valid_xlen(self, xlen: int) -> bool:
         return xlen >= self.xlen_min and xlen <= self.xlen_max
 
-    def _v_xlen_check(self, xlen: int) -> None:
-        # check valid xlen
-        if not self.valid_xlen(xlen):
-            raise NotImplementedError(f"{xlen} not in range ({self.xlen_min}, {self.xlen_max})")
-
     def _v_modname(self) -> str:
         # module name
         return f"rvfi_insn_{self.name}"
@@ -190,19 +185,19 @@ class Instruction(GenericChecker):
 
         return insn_format
 
-    def _v_insn_map(self, xlen: int) -> str:
+    def _v_insn_map(self) -> str:
         # combined instruction mapping
         insn_map = "// insn map\n"
 
         # shamt
         if self.shamt:
-            result_width = self._result_width or xlen
+            result_width = self._result_width or self.xlen
             shift_width = (result_width-1).bit_length()
             insn_map += f"wire [{shift_width-1}:0] shamt = rvfi_rs2_rdata[{shift_width-1}:0];\n"
 
         # imm
         if self.imm:
-            insn_map += f"wire [{xlen-1}:0] insn_imm = {self.imm};\n"
+            insn_map += f"wire [{self.xlen-1}:0] insn_imm = {self.imm};\n"
 
         insn_map += f"wire illinsn = "
         op_value_checks = []
@@ -224,9 +219,9 @@ class Instruction(GenericChecker):
     def _v_result(self, result_width: int, result: str) -> str:
         return f"wire [{result_width-1}:0] result = {result};"
 
-    def _v_instantiation(self, xlen: int) -> str:
+    def _v_instantiation(self) -> str:
         instantiation = ""
-        result_width = self._result_width or xlen
+        result_width = self._result_width or self.xlen
 
         # raw code injection
         for code_line in self.raw_code:
@@ -235,11 +230,11 @@ class Instruction(GenericChecker):
         if self.result:
             instantiation += self._v_result(result_width, self.result) + "\n"
         if self.next_pc:
-            instantiation += f"wire [{xlen-1}:0] next_pc = {self.next_pc};\n"
+            instantiation += f"wire [{self.xlen-1}:0] next_pc = {self.next_pc};\n"
 
         return instantiation
 
-    def _v_spec_value(self, spec_sig: str, xlen: int) -> Optional[str]:
+    def _v_spec_value(self, spec_sig: str) -> Optional[str]:
         if spec_sig == "pc_wdata":
             if self.next_pc:
                 return "next_pc"
@@ -262,7 +257,7 @@ class Instruction(GenericChecker):
         else:
             return "0"
 
-    def _v_spec_mapping(self, xlen: int) -> str:
+    def _v_spec_mapping(self) -> str:
         # map spec values
         spec_mapping = "// spec mapping\n"
         spec_map: dict[str, str] = self.spec_map.copy()
@@ -287,7 +282,7 @@ class Instruction(GenericChecker):
 
         for spec_sig in spec_sigs:
             if spec_sig not in spec_map:
-                spec_value = self._v_spec_value(spec_sig, xlen)
+                spec_value = self._v_spec_value(spec_sig)
                 if spec_value is not None:
                     spec_map[spec_sig] = spec_value
 
@@ -296,19 +291,18 @@ class Instruction(GenericChecker):
 
         return spec_mapping
 
-    def _v_checks(self, xlen: int) -> None:
+    def _v_checks(self) -> None:
         super()._v_checks()
-        self._v_xlen_check(xlen)
+        # check valid xlen
+        if not self.valid_xlen(self.xlen):
+            raise NotImplementedError(f"{self.xlen} not in range ({self.xlen_min}, {self.xlen_max})")
 
-    def _v_body(self, xlen: int) -> str:
+    def _v_body(self) -> str:
         v_str = self._v_format_block(self._v_insn_fmt())
-        v_str += self._v_format_block(self._v_insn_map(xlen))
-        v_str += self._v_format_block(self._v_instantiation(xlen))
-        v_str += self._v_format_block(self._v_spec_mapping(xlen))
+        v_str += self._v_format_block(self._v_insn_map())
+        v_str += self._v_format_block(self._v_instantiation())
+        v_str += self._v_format_block(self._v_spec_mapping())
         return v_str
-
-    def to_verilog(self, xlen: int):
-        return super().to_verilog(xlen=xlen)
 
     def included_in(self, isa_mods: Iterable[str]) -> bool:
         if self.extension is None:
@@ -341,23 +335,23 @@ class MemoryInstruction(Instruction):
             outputs.add("mem_rmask")
         return outputs
 
-    def _v_instantiation(self, xlen: int):
-        result_width = self._result_width or xlen
+    def _v_instantiation(self) -> str:
+        result_width = self._result_width or self.xlen
 
         # memory alignment
         v_str = "`ifdef RISCV_FORMAL_ALIGNED_MEM\n"
-        v_str += f"wire [{xlen-1}:0] addr = {self.mem_addr};\n"
-        v_str += f"wire [{xlen-1}:0] spec_addr = addr & ~({xlen}/8-1);\n"
-        v_str += f"wire [{int(xlen/8)-1}:0] spec_mem_mask = ((1 << {self.mem_bytes})-1) << (addr-spec_addr);\n"
+        v_str += f"wire [{self.xlen-1}:0] addr = {self.mem_addr};\n"
+        v_str += f"wire [{self.xlen-1}:0] spec_addr = addr & ~({self.xlen}/8-1);\n"
+        v_str += f"wire [{int(self.xlen/8)-1}:0] spec_mem_mask = ((1 << {self.mem_bytes})-1) << (addr-spec_addr);\n"
         v_str += f"wire trap = (addr & ({self.mem_bytes}-1)) != 0;\n"
         if self.mem_wdata:
-            v_str += f"wire [{xlen-1}:0] mem_wdata = {self.mem_wdata} << (8*(addr-spec_addr));\n"
+            v_str += f"wire [{self.xlen-1}:0] mem_wdata = {self.mem_wdata} << (8*(addr-spec_addr));\n"
         else:
             v_str += f"wire [{result_width-1}:0] mem_rdata = rvfi_mem_rdata >> (8*(addr-spec_addr));\n"
         v_str += "`else\n"
-        v_str += f"wire [{xlen-1}:0] addr = {self.mem_addr};\n"
-        v_str += f"wire [{xlen-1}:0] spec_addr = addr;\n"
-        v_str += f"wire [{int(xlen/8)-1}:0] spec_mem_mask = ((1 << {self.mem_bytes})-1);\n"
+        v_str += f"wire [{self.xlen-1}:0] addr = {self.mem_addr};\n"
+        v_str += f"wire [{self.xlen-1}:0] spec_addr = addr;\n"
+        v_str += f"wire [{int(self.xlen/8)-1}:0] spec_mem_mask = ((1 << {self.mem_bytes})-1);\n"
         v_str += f"wire trap = 0;\n"
         if self.mem_wdata:
             v_str += f"wire [{self.mem_bytes*8-1}:0] mem_wdata = {self.mem_wdata};\n"
@@ -365,9 +359,9 @@ class MemoryInstruction(Instruction):
             v_str += f"wire [{result_width-1}:0] mem_rdata = rvfi_mem_rdata;\n"
         v_str += "`endif\n"
 
-        return v_str + super()._v_instantiation(xlen)
+        return v_str + super()._v_instantiation()
 
-    def _v_spec_value(self, spec_sig: str, xlen: int) -> Optional[str]:
+    def _v_spec_value(self, spec_sig: str) -> Optional[str]:
         if spec_sig == "mem_addr":
             return "spec_addr"
         elif spec_sig == "mem_rmask" and not self.mem_wdata:
@@ -379,7 +373,7 @@ class MemoryInstruction(Instruction):
         elif spec_sig == "trap":
             return "trap"
         else:
-            return super()._v_spec_value(spec_sig, xlen)
+            return super()._v_spec_value(spec_sig)
 
 @dataclass(kw_only=True)
 class AltopsInstruction(Instruction):

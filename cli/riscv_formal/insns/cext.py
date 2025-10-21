@@ -166,8 +166,8 @@ class C_Instruction(Instruction):
         if self.rd_reg:
             self._used_regs.append("rd")
 
-    def _v_insn_map(self, xlen):
-        v_str = super()._v_insn_map(xlen) + '\n'
+    def _v_insn_map(self):
+        v_str = super()._v_insn_map() + '\n'
         inst_args = self._insn_part_dict.keys()
         if self.rd_reg:
             v_str += f"wire [4:0] insn_rd = 5'd{self.rd_reg};\n"

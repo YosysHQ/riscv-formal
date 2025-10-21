@@ -5,6 +5,7 @@ from typing import Callable, Iterable, ClassVar, Optional
 
 from yosys_mau.source_str import report, re as ssre
 
+from riscv_formal.generic_checker import GenericChecker
 from .model import Instruction
 from riscv_formal.named_set import NamedSet
 
@@ -122,6 +123,7 @@ class Isa:
         for mod in self.mods:
             if mod.isnumeric():
                 # skip xlen mods
+                GenericChecker.xlen = int(mod)
                 continue
 
             # check for dependencies

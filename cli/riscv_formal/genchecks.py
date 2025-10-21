@@ -236,7 +236,7 @@ class GenInsnCheck(tl.Task):
         checker_src = Path(checker_dir) / checker_name
         with (App.work_dir / checker_src).open("w") as checker_file:
             checker = insn_check_wrapper or Check.checker
-            print(checker.to_verilog(xlen=int(Check.hargs["xlen"])), file=checker_file)
+            print(checker.to_verilog(), file=checker_file)
 
         with (App.work_dir / f"{name}.sby").open("w") as sby_file:
             print_hfmt(
