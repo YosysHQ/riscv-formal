@@ -124,8 +124,9 @@ def assign_padding(self: Instruction) -> str:
         raise NotImplementedError(self.ilen)
     return assignment
 
-Instruction.register_assign("padding", assign_padding)
-Instruction.register_check("!insn_padding")
+def inject_padding_check():
+    Instruction.register_assign("padding", assign_padding)
+    Instruction.register_check("!insn_padding")
 
 @dataclass(kw_only=True)
 class C_Instruction(Instruction):
@@ -486,6 +487,7 @@ def insn_c_alu(insn, funct6, funct2, expr, wmode = False, extension = "Zca"):
     )
 
 def cext(_) -> NamedSet[Instruction]:
+    inject_padding_check()
     return NamedSet([
         # Load and Store Instructions
 
@@ -561,4 +563,7 @@ def cext(_) -> NamedSet[Instruction]:
         insn_c_alu("c_subw", "100111", "00", "rvfi_rs1_rdata[31:0] - rvfi_rs2_rdata[31:0]", wmode=True),
     ])
 
+# TODO how to describe conditional C composition
 Isa.register_generator(cext, "C", "Zca", "Zcf", "Zcd")
+Isa.register_dependency("Zcf", "Zca", "F")
+Isa.register_dependency("Zcd", "Zca", "D")
