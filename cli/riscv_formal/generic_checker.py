@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from textwrap import indent, dedent
-from typing import Optional
+from typing import Optional, TypeVar, Generic
 
 from riscv_formal.named_set import NamedClass, NamedSet
 
@@ -64,10 +64,12 @@ class GenericChecker(NamedClass):
         v_str += "endmodule"
         return v_str
 
-@dataclass
-class GenericGroupChecker(GenericChecker):
+CT = TypeVar("CT", bound=GenericChecker)
 
-    def _subchecks(self) -> NamedSet[GenericChecker]:
+@dataclass
+class GenericGroupChecker(GenericChecker, Generic[CT]):
+
+    def _subchecks(self) -> NamedSet[CT]:
         raise NotImplementedError()
 
     def to_verilog(self, **kwargs):

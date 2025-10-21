@@ -400,11 +400,11 @@ class AltopsInstruction(Instruction):
         return None
 
     def _mask_alt_result(self) -> Optional[str]:
-        try:
-            alt_result, alt_mask = self._get_alt_result_and_mask()
-        except ValueError:
+        alt_result_and_mask = self._get_alt_result_and_mask()
+        if alt_result_and_mask is None:
             return None
-        
+        alt_result, alt_mask = alt_result_and_mask
+
         if isinstance(alt_mask, str):
             alt_mask = int(alt_mask, 16)
 

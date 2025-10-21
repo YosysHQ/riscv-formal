@@ -15,8 +15,8 @@ from ..named_set import NamedSet
 
 @dataclass(kw_only=True)
 class InstructionCheckerBase(GenericGroupChecker):
-    instructions: NamedSet[Instruction] = field(default_factory=NamedSet)
-    observers: NamedSet[Observer] = field(default_factory=NamedSet)
+    instructions: NamedSet[Instruction] = field(default_factory=NamedSet) # type: ignore
+    observers: NamedSet[Observer] = field(default_factory=NamedSet) # type: ignore
 
     registered_speculators: ClassVar[dict[str, tuple[SpeculativeObserver, Callable[[Instruction], Optional[str]]]]] = {}
 

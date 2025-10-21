@@ -198,7 +198,7 @@ def mask_bits(test: str, bits: "list[int]", mask_len: int, invert=False):
 @dataclass
 class CsrSpec:
     str: Optional[str] = None
-    available_csrs: NamedSet[Csr] = field(default_factory=NamedSet)
+    available_csrs: NamedSet[Csr] = field(default_factory=NamedSet) # type: ignore
     csr_configs: NamedSet[CsrConfig] = field(init=False)
     custom_csrs: set[str] = field(init=False)
 

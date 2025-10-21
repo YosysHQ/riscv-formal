@@ -53,6 +53,8 @@ class Csr(GenericChecker):
                 self.privilege = auto_priv
 
         # check privilege
+        if self.privilege is None:
+            raise NotImplementedError()
         try:
             valid_priv = (
                 self.privilege[0] in ["U", "S", "H", "M"] and
@@ -313,7 +315,7 @@ class ShadowCsr(Csr):
 
 @dataclass(kw_only=True)
 class MachineCsr(Csr):
-    shadows: NamedSet[ShadowCsr] = field(default_factory=NamedSet)
+    shadows: NamedSet[ShadowCsr] = field(default_factory=NamedSet) # type: ignore
 
     def shadow(self, name: str, privilege: str,
                index: int, indexh: Optional[int] = None,

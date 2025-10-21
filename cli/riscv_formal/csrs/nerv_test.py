@@ -1,6 +1,7 @@
 import click
 
 from .csr import MachineCsr, Csr
+from .csr_spec import hpm_csr
 from .behavior import (
     AnyValue,
     ConstValue,
@@ -55,7 +56,6 @@ def mhpmcounter5_csr(rvfi: bool, rw_test: bool):
         behavior = IncValue(),
     )
 
-from .csr import hpm_csr
 def mhpmevent5_csr(rvfi: bool, rw_test: bool):
     hpm5 = hpm_csr(
         "mhpmevent5", "xlen", "MRW", 0x325,
