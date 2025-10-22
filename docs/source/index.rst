@@ -20,5 +20,6 @@ or used as-is.
    csrs
    config
    procedure
+   custom_isa
    examplebugs
    references
