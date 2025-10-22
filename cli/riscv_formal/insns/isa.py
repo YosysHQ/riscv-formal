@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterable, ClassVar, Optional
 
 from yosys_mau.source_str import report, re as ssre
+import yosys_mau.task_loop as tl
 
 from riscv_formal.generic_checker import GenericChecker
 from .model import Instruction
@@ -108,6 +109,8 @@ class Isa:
         for mod in mods:
             cls._generators[mod] = generator
         cls._aliased_by[generator] = set(mods)
+        mods_str = ", ".join(mods)
+        tl.log_debug(f"Registered instruction callback for extensions: {mods_str}")
 
     @classmethod
     def register_non_insn_ext(cls, *args: str) -> None:

@@ -5,6 +5,7 @@ import functools
 from typing import Optional, ClassVar, Iterable, Callable, Self
 
 from yosys_mau.source_str import report, re as ssre
+import yosys_mau.task_loop as tl
 
 from .csr import (
     Csr,
@@ -220,6 +221,8 @@ class CsrSpec:
         for mod in mods:
             cls._generators[mod] = generator
         cls._aliased_by[generator] = set(mods)
+        mods_str = ", ".join(mods)
+        tl.log_debug(f"Registered csr callback for extensions: {mods_str}")
 
     def __post_init__(self) -> None:
         self.csr_configs = NamedSet()

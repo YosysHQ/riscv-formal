@@ -10,6 +10,7 @@ from yosys_mau import task_loop as tl
 
 from riscv_formal.config import arg_parser, App, parse_config
 from riscv_formal.genchecks import GenChecks
+from riscv_formal.exceptions import BadExtensionError, LoadingExtensionError
 
 
 def main() -> None:
@@ -28,26 +29,6 @@ def main() -> None:
 
     App.raw_args = args
 
-    # Need to load user provided modules before we enter the task loop
-    for extension in App.extensions:
-        # we don't need to keep references to the module once loaded, but we do
-        # need to execute the script in the current namespace for registering
-        # callbacks
-        spec = importlib.util.spec_from_file_location(extension.name, extension)
-        if spec is None or spec.loader is None:
-            # Function returns None instead of raising an error
-            print(f"'{extension}' must be a valid python script/module")
-            exit(1)
-        module = importlib.util.module_from_spec(spec)
-        try:
-            spec.loader.exec_module(module)
-        except BaseException as e:
-            print(f"Encountered exception while loading '{extension}':")
-            if App.debug or App.debug_events:
-                traceback.print_exc()
-            else:
-                print(e)
-            exit(1)
     try:
         tl.run_task_loop(task_loop_main)
     except tl.TaskCancelled:
@@ -61,6 +42,23 @@ def main() -> None:
 
 async def task_loop_main() -> None:
     early_log = setup_logging()
+
+    # Load user extensions
+    for extension in App.extensions:
+        # we don't need to keep references to the module once loaded, but we do
+        # need to execute the script in the current namespace for registering
+        # callbacks
+        spec = importlib.util.spec_from_file_location(extension.name, extension)
+        if spec is None or spec.loader is None:
+            # Function returns None instead of raising an error
+            raise BadExtensionError(extension)
+        tl.log(f"executing '{extension.absolute()}'")
+        module = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(module)
+        except BaseException as e:
+            raise LoadingExtensionError(extension) from e
+
     parse_config()
     tl.log("running command", App.command)
 
