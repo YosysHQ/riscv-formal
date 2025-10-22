@@ -34,14 +34,16 @@ testbench: testbench.sv nerv.sv
 RISCV_ROOT ?= ../..
 CLI_ROOT ?= $(RISCV_ROOT)/cli
 RISCV_FORMAL ?= python3 -m riscv_formal
+RVF_OPTS ?=
 checks: checks.cfg
-	$(RISCV_FORMAL) checks.cfg genchecks
+	$(RISCV_FORMAL) checks.cfg genchecks --load nerv_extn.py $(RVF_OPTS)
 
-.PHONY: run_checks check
 run_checks: checks
 	$(MAKE) -C checks
+	@touch $@
 
-check: checks
+.PHONY: check
+check: run_checks
 	bash cexdata.sh
 	cat cexdata/warnings.txt
 	cat cexdata/status.txt

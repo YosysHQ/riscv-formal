@@ -278,8 +278,8 @@
 	`NERV_CSR_ARR_MRW(hpm_event, 31, mhpmevent31,        12'h 33F)
  
 `define NERV_CUSTOM_CSRS /* Custom CSR for testing */					\
-	`NERV_CSR_REG_MRW(custom,            12'h BC0, 32'h 0000_0000)			\
-	`NERV_CSR_VAL_MRO(custom_ro,         12'h FC0, 32'h dead_beef)
+	`NERV_CSR_REG_MRW(dummy,            12'h BC0, 32'h 0000_0000)			\
+	`NERV_CSR_VAL_MRO(dummy_ro,         12'h FC0, 32'h dead_beef)
 
 `define NERV_CSRS			\
 	`NERV_MACHINE_CSRS		\
@@ -1075,6 +1075,14 @@ module nerv #(
 					end
 				endcase
 			end
+`ifdef NERV_EXT
+			OPCODE_CUSTOM_0: begin
+				case (insn_funct3)
+					3'b 000 /* dummy_test */: begin next_wr = 1; next_rd = $signed(csr_dummy_value) + $signed({insn[31:15], 4'b0}); end
+					default: illinsn = 1;
+				endcase
+			end
+`endif // NERV_EXT
 `endif // NERV_CSR
 			default: illinsn = 1;
 		endcase
