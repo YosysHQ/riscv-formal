@@ -36,7 +36,7 @@ def insn_count(insn, funct5, trailing=False, pop=False, wmode=False, extension =
 
     return Instruction(
         name = insn,
-        insn_parts = FORMAT_I,
+        insn_format = FORMAT_I,
         opcode = "0011011" if wmode else "0010011",
         extension = extension, 
         xlen_min = 64 if wmode else 32,
@@ -63,7 +63,7 @@ def insn_ext(insn, funct5, signed=False, bmode=False, extension = "B"):
     extend_from = 8 if bmode else 16
     return Instruction(
         name = insn,
-        insn_parts = FORMAT_I,
+        insn_format = FORMAT_I,
         opcode = "0010011" if signed else "{3'b 011, `RISCV_FORMAL_XLEN != 32, 3'b 011}",
         result = "rvfi_rs1_rdata",
         extension = extension,
@@ -80,7 +80,7 @@ def insn_bit(insn, funct6, funct3, expr, imode=False, extension = "B"):
 
     instr = Instruction(
         name = insn,
-        insn_parts = FORMAT_I_SHIFT if imode else FORMAT_R,
+        insn_format = FORMAT_I_SHIFT if imode else FORMAT_R,
         opcode = "0010011" if imode else "0110011",
         result = expr,
         extension = extension,
@@ -113,7 +113,7 @@ def insn_bytes(insn, funct12, funct3, expr, bitwise=False, extension = "B"):
                     result[i*8+:8] = {expr};"""
     return Instruction(
         name = insn,
-        insn_parts = FORMAT_I,
+        insn_format = FORMAT_I,
         opcode = "0010011",
         extension = extension,
         op_values = {
@@ -140,7 +140,7 @@ def insn_pack(insn="pack", funct3="100", result_width: Optional[int] = None, sig
         xlen_min = 32
     return Instruction(
         name = insn,
-        insn_parts = FORMAT_R,
+        insn_format = FORMAT_R,
         opcode = "0111011" if signed else "0110011",
         extension = extension,
         raw_code = ["localparam INPUT_WIDTH = %RESULT_WIDTH%/2;"],
@@ -165,7 +165,7 @@ def insn_zip(insn, funct3, unzip=False, extension = "B"):
                     result[2*i + 1] = rvfi_rs1_rdata[i + %RESULT_WIDTH%/2];"""
     return Instruction(
         name = insn,
-        insn_parts = FORMAT_I,
+        insn_format = FORMAT_I,
         opcode = "0010011",
         extension = extension,
         op_values = {
@@ -196,7 +196,7 @@ def insn_clmul(insn, funct3, expr, index1=False, extension = "B"):
         i_last = "%RESULT_WIDTH%"
     return Instruction(
         name = insn,
-        insn_parts = FORMAT_R,
+        insn_format = FORMAT_R,
         opcode = "0110011",
         extension = extension,
         op_values = {
@@ -223,7 +223,7 @@ def insn_clmul(insn, funct3, expr, index1=False, extension = "B"):
 def insn_xperm(insn, funct3, width, extension = "Zbkx"):
     return Instruction(
         name = insn,
-        insn_parts = FORMAT_R,
+        insn_format = FORMAT_R,
         opcode = "0110011",
         extension = extension,
         op_values = {

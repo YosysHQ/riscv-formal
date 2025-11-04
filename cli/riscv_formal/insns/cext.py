@@ -219,7 +219,7 @@ def insn_c_l(insn, funct3, numbytes, is_float = False, extension = "Zca"):
         raise NotImplementedError(numbytes)
     return C_MemoryInstruction(
         name = insn,
-        insn_parts = FORMAT_CL,
+        insn_format = FORMAT_CL,
         opcode = "00",
         extension = extension,
         op_values = {
@@ -246,7 +246,7 @@ def insn_c_s(insn, funct3, numbytes, is_float = False, extension = "Zca"):
         raise NotImplementedError(numbytes)
     return C_MemoryInstruction(
         name = insn,
-        insn_parts = FORMAT_CS,
+        insn_format = FORMAT_CS,
         opcode = "00",
         extension = extension,
         op_values = {
@@ -272,7 +272,7 @@ def insn_c_lsp(insn, funct3, numbytes, is_float = False, extension = "Zca"):
         raise NotImplementedError(numbytes)
     instr = C_MemoryInstruction(
         name = insn,
-        insn_parts = FORMAT_CI,
+        insn_format = FORMAT_CI,
         opcode = "10",
         extension = extension,
         op_values = {
@@ -305,7 +305,7 @@ def insn_c_ssp(insn, funct3, numbytes, is_float = False, extension = "Zca"):
         raise NotImplementedError(numbytes)
     return C_MemoryInstruction(
         name = insn,
-        insn_parts = FORMAT_CSS,
+        insn_format = FORMAT_CSS,
         opcode = "10",
         extension = extension,
         op_values = {
@@ -323,7 +323,7 @@ def insn_c_ssp(insn, funct3, numbytes, is_float = False, extension = "Zca"):
 def insn_c_j(insn, funct3, link = False, extension = "Zca"):
     return C_Instruction(
         name = insn,
-        insn_parts = FORMAT_CJ,
+        insn_format = FORMAT_CJ,
         opcode = "01",
         extension = extension,
         op_values = {
@@ -340,7 +340,7 @@ def insn_c_j(insn, funct3, link = False, extension = "Zca"):
 def insn_c_jr(insn, funct4, link = False, extension = "Zca"):
     return C_Instruction(
         name = insn,
-        insn_parts = FORMAT_CR,
+        insn_format = FORMAT_CR,
         opcode = "10",
         extension = extension,
         op_values = {
@@ -357,7 +357,7 @@ def insn_c_jr(insn, funct4, link = False, extension = "Zca"):
 def insn_c_b(insn, funct3, expr, extension = "Zca"):
     return C_Instruction(
         name = insn,
-        insn_parts = FORMAT_CB,
+        insn_format = FORMAT_CB,
         opcode = "01",
         extension = extension,
         op_values = {
@@ -372,7 +372,7 @@ def insn_c_b(insn, funct3, expr, extension = "Zca"):
 def insn_c_li(insn, funct3, umode, extension = "Zca"):
     instr = C_Instruction(
         name = insn,
-        insn_parts = FORMAT_CI,
+        insn_format = FORMAT_CI,
         opcode = "01",
         extension = extension,
         op_values = {
@@ -392,7 +392,7 @@ def insn_c_li(insn, funct3, umode, extension = "Zca"):
 def insn_c_addi(insn, sp_mult = None, wmode = False, extension = "Zca"):
     instr = C_Instruction(
         name = insn,
-        insn_parts = FORMAT_CIW if sp_mult == 4 else FORMAT_CI,
+        insn_format = FORMAT_CIW if sp_mult == 4 else FORMAT_CI,
         opcode = "00" if sp_mult == 4 else "01",
         extension = extension,
         op_values = {
@@ -417,7 +417,7 @@ def insn_c_addi(insn, sp_mult = None, wmode = False, extension = "Zca"):
 def insn_c_shimm(insn, funct2, expr, extension = "Zca"):
     instr = C_Instruction(
         name = insn,
-        insn_parts = FORMAT_CB7 if funct2 else FORMAT_CI,
+        insn_format = FORMAT_CB7 if funct2 else FORMAT_CI,
         opcode = "01" if funct2 else "10",
         extension = extension,
         op_values = {
@@ -441,7 +441,7 @@ def insn_c_shimm(insn, funct2, expr, extension = "Zca"):
 def insn_c_andi(insn, extension = "Zca"):
     return C_Instruction(
         name = insn,
-        insn_parts = FORMAT_CB7,
+        insn_format = FORMAT_CB7,
         opcode = "01",
         extension = extension,
         op_values = {
@@ -456,7 +456,7 @@ def insn_c_andi(insn, extension = "Zca"):
 def insn_c_mvadd(insn, funct4, add, extension = "Zca"):
     return C_Instruction(
         name = insn,
-        insn_parts = FORMAT_CR,
+        insn_format = FORMAT_CR,
         opcode = "10",
         extension = extension,
         op_values = {
@@ -473,7 +473,7 @@ def insn_c_mvadd(insn, funct4, add, extension = "Zca"):
 def insn_c_alu(insn, funct6, funct2, expr, wmode = False, extension = "Zca"):
     return C_Instruction(
         name = insn,
-        insn_parts = FORMAT_CA,
+        insn_format = FORMAT_CA,
         opcode = "01",
         extension = extension,
         op_values = {

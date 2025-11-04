@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Any
+from typing import Optional
 from textwrap import dedent
 
 from .model import Instruction

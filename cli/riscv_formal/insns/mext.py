@@ -33,7 +33,7 @@ def m_insn(insn: str, funct7, funct3, expr, alt_add=None, alt_sub=None, wmode=Fa
         extension = "M Zmmul"
     return M_Instruction(
         name = insn,
-        insn_parts = FORMAT_R,
+        insn_format = FORMAT_R,
         opcode = "0111011" if wmode else "0110011",
         result = expr,
         extension = extension,

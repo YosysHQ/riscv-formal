@@ -105,7 +105,7 @@ FORMAT_J = Instruction_format(
 def insn_b(insn, funct3, expr, extension = "I"):
     return Instruction(
         name = insn,
-        insn_parts = FORMAT_B,
+        insn_format = FORMAT_B,
         opcode = "1100011",
         extension = extension,
         op_values = {
@@ -120,7 +120,7 @@ def insn_l(insn, funct3, numbytes, signext, extension = "I"):
     result_width = numbytes*8
     return MemoryInstruction(
         name = insn,
-        insn_parts = FORMAT_I,
+        insn_format = FORMAT_I,
         opcode = "0000011",
         mem_addr = "rvfi_rs1_rdata + insn_imm",
         mem_bytes = numbytes,
@@ -139,7 +139,7 @@ def insn_s(insn, funct3, numbytes, extension = "I"):
     result_width = numbytes*8
     return MemoryInstruction(
         name = insn,
-        insn_parts = FORMAT_S,
+        insn_format = FORMAT_S,
         opcode = "0100011",
         mem_addr = "rvfi_rs1_rdata + insn_imm",
         mem_bytes = numbytes,
@@ -158,7 +158,7 @@ def insn_alu(insn, funct7, funct3, expr, shamt=False, wmode=False, uwmode=False,
 
     return Instruction(
         name = insn,
-        insn_parts = FORMAT_R,
+        insn_format = FORMAT_R,
         opcode = "0111011" if uwmode or wmode else "0110011",
         result = expr,
         extension = extension,
@@ -174,7 +174,7 @@ def insn_alu(insn, funct7, funct3, expr, shamt=False, wmode=False, uwmode=False,
 def insn_imm(insn, funct3, expr, wmode=False, extension = "I"):
     return Instruction(
         name = insn,
-        insn_parts = FORMAT_I,
+        insn_format = FORMAT_I,
         opcode = "0011011" if wmode else "0010011",
         result = expr,
         extension = extension,
@@ -192,7 +192,7 @@ def insn_shimm(insn, funct6, funct3, expr, wmode=False, uwmode=False, extension 
 
     instr = Instruction(
         name = insn,
-        insn_parts = FORMAT_I_SHIFT,
+        insn_format = FORMAT_I_SHIFT,
         opcode = "0011011" if wmode or uwmode else "0010011",
         result = expr,
         extension = extension,
@@ -216,19 +216,19 @@ def builtins(_) -> NamedSet[Instruction]:
         # Base Integer ISA (I)
 
         Instruction(
-            name = "lui", insn_parts = FORMAT_U, opcode = "0110111", extension = "I",
+            name = "lui", insn_format = FORMAT_U, opcode = "0110111", extension = "I",
             result = "insn_imm", imm = True,
         ),
         Instruction(
-            name = "auipc", insn_parts = FORMAT_U, opcode = "0010111", extension = "I",
+            name = "auipc", insn_format = FORMAT_U, opcode = "0010111", extension = "I",
             result = "rvfi_pc_rdata + insn_imm", imm = True, read_pc = True,
         ),
         Instruction(
-            name = "jal", insn_parts = FORMAT_J, opcode = "1101111", extension = "I",
+            name = "jal", insn_format = FORMAT_J, opcode = "1101111", extension = "I",
             result = "rvfi_pc_rdata + 4", next_pc = "rvfi_pc_rdata + insn_imm", imm = True, read_pc = True,
         ),
         Instruction(
-            name = "jalr", insn_parts = FORMAT_I, opcode = "1100111", extension = "I", op_values = { "funct3": "000" },
+            name = "jalr", insn_format = FORMAT_I, opcode = "1100111", extension = "I", op_values = { "funct3": "000" },
             result = "rvfi_pc_rdata + 4", next_pc = "(rvfi_rs1_rdata + insn_imm) & ~1", imm = True, read_pc = True,
         ),
 

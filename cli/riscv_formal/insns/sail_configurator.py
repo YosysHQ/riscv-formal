@@ -7,7 +7,6 @@ from pathlib import Path
 import re
 import click
 
-from .model import Instruction_format
 from .wrapped_model import WrappedInstruction
 from riscv_formal.named_set import NamedClass, NamedSet
 
@@ -33,8 +32,6 @@ def check_wrapped_insn(insn: WrappedInstruction) -> None:
         mnemonics = [insn.name]
     click.echo(f"{insn.checker_module} -> {mnemonics}")
     if insn.opcode == "":
-        if isinstance(insn.insn_parts, Instruction_format):
-            raise NotImplementedError(insn.insn_parts)
         part_name, part_size = insn.insn_parts.pop()
         if part_name != "part_0" or part_size != 7:
             raise NotImplementedError((part_name, part_size))
@@ -136,8 +133,6 @@ def configure(sail: Path, out_file: Path):
                     insn.opcode = maybe_opcode[2:]
                     parts[-1] = "opcode"
                 part_idx = 0
-                if isinstance(insn.insn_parts, Instruction_format):
-                    raise NotImplementedError()
                 has_insn_parts = len(insn.insn_parts) != 0
                 binary_parts: list[str] = []
                 binary_part_names: list[str] = []
@@ -338,7 +333,8 @@ def configure(sail: Path, out_file: Path):
                         elif args or bits:
                             raise NotImplementedError(f"assembly {in_assembly!r} {args} {bits}")
                     if single_mnemonic:
-                        insn.name = mnemonic # type: ignore
+                        # single_mnemonic implies that mnemonic must be bound
+                        insn.name = mnemonic # pyright: ignore[reportPossiblyUnboundVariable]
                         parsed = sail_parse_helpers[in_assembly]
                         encdec = sail_encdec_helpers.get(parsed.op_type)
                         if insn.op_value_switch is not None and encdec:
