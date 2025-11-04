@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict
-from typing import Collection, Iterable, Iterator, Any, TypeVar
+from typing import Collection, Iterable, Iterator, Any, TypeVar, overload
 import json
 
 import json_fix
@@ -104,3 +104,15 @@ class NamedSet(Collection[T]):
     def update(self, other: "NamedSet[T]") -> None:
         for val in other:
             self[val.name] = val
+
+    @overload
+    def get(self, key: str) -> T | None: ...
+    @overload
+    def get(self, key: str, default: T) -> T: ...
+    @overload
+    def get(self, key: str, default: T | None) -> T | None: ...
+    def get(self, key: str, default: T | None = None) -> T | None:
+        try:
+            return self[key]
+        except KeyError:
+            return default
