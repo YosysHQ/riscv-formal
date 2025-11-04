@@ -44,6 +44,9 @@ CONFIGURATOR := riscv_formal.insns.sail_configurator
 model/%.json: model/riscv_insts_base_%.sail $(addprefix $(CLI_ROOT)/riscv_formal/insns/,sail_configurator.py wrapped_model.py)
 	cd $(CLI_ROOT) && $(PYTHON) -m $(CONFIGURATOR) $(abspath $< $@)
 
+model/insts_%.json: $(SAIL_RISCV_DIR) $(addprefix $(CLI_ROOT)/riscv_formal/insns/,sail_configurator.py wrapped_model.py)
+	cd $(CLI_ROOT) && $(PYTHON) -m $(CONFIGURATOR) $(abspath $^/model/riscv_insts_$*.sail $@)
+
 WRAPPER := riscv_formal.checks.sail_wrapper
 rvfi_insn_check.sv: model/$(INSN).json insn $(addprefix $(CLI_ROOT)/riscv_formal/,checks/sail_wrapper.py insns/wrapped_model.py)
 	cd $(CLI_ROOT) && $(PYTHON) -m $(WRAPPER) $(abspath $< $@) -f

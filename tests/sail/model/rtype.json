@@ -1,118 +1,127 @@
-{
-    "name": "rtype",
-    "insn_parts": [
-        [
-            "part_0",
-            7
+[
+    {
+        "name": "rtype",
+        "channelized": false,
+        "insn_parts": [
+            [
+                "part_0",
+                7
+            ],
+            [
+                "rs2",
+                5
+            ],
+            [
+                "rs1",
+                5
+            ],
+            [
+                "part_1",
+                3
+            ],
+            [
+                "rd",
+                5
+            ],
+            [
+                "opcode",
+                7
+            ]
         ],
-        [
+        "opcode": "0110011",
+        "xlen_min": 32,
+        "xlen_max": 128,
+        "ilen": 32,
+        "opcode_width": 7,
+        "_default_pc_increment": "rvfi_pc_rdata + 4",
+        "_next_pc_check": "next_pc[1:0] != 0",
+        "checker_module": "execute_RTYPE",
+        "inst_args": [
             "rs2",
-            5
-        ],
-        [
             "rs1",
-            5
-        ],
-        [
-            "part_1",
-            3
-        ],
-        [
             "rd",
-            5
+            "op"
         ],
-        [
-            "opcode",
-            7
-        ]
-    ],
-    "inst_args": [
-        "rs2",
-        "rs1",
-        "rd",
-        "op"
-    ],
-    "wrap_x_in": true,
-    "wrap_x_out": true,
-    "wrap_pc": false,
-    "wrap_next_pc": false,
-    "x_upper": 31,
-    "x_lower": 1,
-    "r_bits": 5,
-    "extra_sig1": [
-        [
-            "t_ExecutionResult",
-            "sail_return_2",
-            null
-        ]
-    ],
-    "extra_sig2": [
-        [
-            "bit",
-            "sail_have_exception_2",
-            null
+        "wrap_x_in": true,
+        "wrap_x_out": true,
+        "wrap_pc": false,
+        "wrap_next_pc": false,
+        "x_upper": 31,
+        "x_lower": 1,
+        "r_bits": 5,
+        "extra_sig1": [
+            [
+                "t_ExecutionResult",
+                "sail_return_2",
+                null
+            ]
         ],
-        [
-            "t_exception",
-            "sail_current_exception_2",
-            null
-        ]
-    ],
-    "op_name": "op",
-    "op_type_enum": "t_rop",
-    "op_values": [
-        [
-            "add",
-            "ADD",
-            "0000000_000"
+        "extra_sig2": [
+            [
+                "bit",
+                "sail_have_exception_2",
+                null
+            ],
+            [
+                "t_exception",
+                "sail_current_exception_2",
+                null
+            ]
         ],
-        [
-            "slt",
-            "SLT",
-            "0000000_010"
+        "op_name": "op",
+        "op_values_list": [
+            [
+                "add",
+                "ADD",
+                "0000000_000"
+            ],
+            [
+                "slt",
+                "SLT",
+                "0000000_010"
+            ],
+            [
+                "sltu",
+                "SLTU",
+                "0000000_011"
+            ],
+            [
+                "and",
+                "AND",
+                "0000000_111"
+            ],
+            [
+                "or",
+                "OR",
+                "0000000_110"
+            ],
+            [
+                "xor",
+                "XOR",
+                "0000000_100"
+            ],
+            [
+                "sll",
+                "SLL",
+                "0000000_001"
+            ],
+            [
+                "srl",
+                "SRL",
+                "0000000_101"
+            ],
+            [
+                "sub",
+                "SUB",
+                "0100000_000"
+            ],
+            [
+                "sra",
+                "SRA",
+                "0100000_101"
+            ]
         ],
-        [
-            "sltu",
-            "SLTU",
-            "0000000_011"
-        ],
-        [
-            "and",
-            "AND",
-            "0000000_111"
-        ],
-        [
-            "or",
-            "OR",
-            "0000000_110"
-        ],
-        [
-            "xor",
-            "XOR",
-            "0000000_100"
-        ],
-        [
-            "sll",
-            "SLL",
-            "0000000_001"
-        ],
-        [
-            "srl",
-            "SRL",
-            "0000000_101"
-        ],
-        [
-            "sub",
-            "SUB",
-            "0100000_000"
-        ],
-        [
-            "sra",
-            "SRA",
-            "0100000_101"
-        ]
-    ],
-    "op_value_switch": "part_0 part_1",
-    "checker_module": "execute_RTYPE",
-    "opcode": "0110011"
-}
+        "op_type_enum": "t_rop",
+        "op_value_switch": "part_0 part_1"
+    }
+]
