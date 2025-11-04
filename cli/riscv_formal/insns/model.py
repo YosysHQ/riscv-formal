@@ -246,7 +246,9 @@ class Instruction(GenericChecker):
                 opcode = f"{self.opcode_width}'b {self.opcode}"
             except ValueError:
                 opcode = self.opcode
-            val = f"rvfi_valid && !illinsn && insn_opcode == {opcode}"
+            val = "rvfi_valid && !illinsn"
+            if opcode:
+                val += f" && insn_opcode == {opcode}"
             for check in self.check_valid:
                 val += f" && ({check})"
             for check in self.registered_checks:
