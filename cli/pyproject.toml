@@ -9,6 +9,13 @@ dependencies = [
     "yosys-mau",
 ]
 
+[dependency-groups]
+docs = [
+    "Sphinx",
+    "sphinx-toolbox",
+    "furo-ys",
+]
+
 [project.scripts]
 riscv_formal = "riscv_formal.__main__:main"
 
@@ -17,6 +24,7 @@ package = true
 
 [tool.uv.sources]
 yosys-mau = { git = "https://github.com/YosysHQ/mau.git" }
+furo-ys = { git = "https://github.com/YosysHQ/furo-ys" }
 
 [tool.ruff]
 line-length = 100
