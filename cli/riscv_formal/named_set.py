@@ -5,21 +5,26 @@ import json
 import json_fix
 
 class KeyMismatchError(Exception):
-    rhs: str
-    lhs: str
-    def __init__(self, rhs, lhs, *args):
-        self.rhs = rhs
-        self.lhs = lhs
+    """Mapping key does not match value.name."""
+    name: str
+    key: str
+    def __init__(self, name, key, *args):
+        self.name = name
+        self.key = key
         super().__init__(*args)
 
     def __str__(self) -> str:
-        return f"rhs ({self.rhs!r}) must match lhs ({self.lhs!r})"
+        return f"value.name of rhs ({self.name!r}) must match key of lhs ({self.key!r})"
 
 class KeyExistsError(KeyError):
+    """Mapping key already exists in collection."""
     pass
 
 def skip_empty_factory(mapping: list[tuple[str, Any]]) -> dict:
-    """dictionary factory which skips empty values"""
+    """Dictionary factory which skips empty values.
+
+    :meta private:
+    """
     result = {}
     for key, val in mapping:
         if isinstance(val, bool):
@@ -32,6 +37,7 @@ def skip_empty_factory(mapping: list[tuple[str, Any]]) -> dict:
 
 @dataclass
 class NamedClass:
+    """A dataclass which supports json conversion and has a name property."""
     name: str
 
     @classmethod
@@ -48,40 +54,45 @@ class NamedClass:
     def to_json(self, skip_empty: bool = True, indent: int | str | None = None) -> str:
         return json.dumps(self.__json__(skip_empty), indent=indent)
 
-
-T = TypeVar('T', bound=NamedClass)
+#: Type for collections of :class:`NamedClass` or a subclass of it.
+NC = TypeVar('NC', bound=NamedClass)
 
 @dataclass
 class ValuedClass(NamedClass):
+    """A :class:`NamedClass` with a value, mostly used for testing."""
     val: Any
 
+class NamedSet(Collection[NC]):
+    """A collection of values that can be accessed by name."""
+    _store: dict[str, NC]
 
-class NamedSet(Collection[T]):
-    _store: dict[str, T]
-
-    def __init__(self, iterable: Iterable[T] = ()) -> None:
+    def __init__(self, iterable: Iterable[NC] = ()) -> None:
+        """
+        :param iterable: Collection of values to initialize set with,
+            defaults to an empty set
+        """
         self._store = {o.name: o for o in iterable}
 
     def __contains__(self, item: object) -> bool:
         return item in self._store
 
-    def __iter__(self) -> Iterator[T]:
+    def __iter__(self) -> Iterator[NC]:
         return iter(self._store.values())
 
     def __len__(self) -> int:
         return len(self._store)
 
-    def __getitem__(self, key: str) -> T:
-        return self._store[key]
+    def __getitem__(self, name: str) -> NC:
+        return self._store[name]
 
-    def __setitem__(self, key: str, value: T) -> None:
-        if value.name == key:
-            self._store[key] = value
+    def __setitem__(self, name: str, value: NC) -> None:
+        if value.name == name:
+            self._store[name] = value
         else:
-            raise KeyMismatchError(value.name, key)
+            raise KeyMismatchError(value.name, name)
 
-    def __delitem__(self, key: str) -> None:
-        del self._store[key]
+    def __delitem__(self, name: str) -> None:
+        del self._store[name]
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({list(self)!r})"
@@ -89,7 +100,13 @@ class NamedSet(Collection[T]):
     def __json__(self) -> list:
         return list(self)
 
-    def add(self, value: T) -> None:
+    def add(self, value: NC) -> None:
+        """Add value to collection.
+
+        :param value: Value to add
+        :raises KeyExistsError: value.name already exists in collection, and
+            content does not match
+        """
         try:
             is_equal = self[value.name] == value
         except KeyError:
@@ -99,20 +116,31 @@ class NamedSet(Collection[T]):
                 raise KeyExistsError(value.name)
 
     def names(self) -> Iterator[str]:
+        """Get an iterator for all names in collection."""
         return iter(self._store.keys())
 
-    def update(self, other: "NamedSet[T]") -> None:
+    def update(self, other: "Iterable[NC]") -> None:
+        """Update values in collection.
+
+        :param other: Collection to update values from.
+        """
         for val in other:
             self[val.name] = val
 
     @overload
-    def get(self, key: str) -> T | None: ...
+    def get(self, name: str) -> NC | None: ...
     @overload
-    def get(self, key: str, default: T) -> T: ...
+    def get(self, name: str, default: NC) -> NC: ...
     @overload
-    def get(self, key: str, default: T | None) -> T | None: ...
-    def get(self, key: str, default: T | None = None) -> T | None:
+    def get(self, name: str, default: NC | None) -> NC | None: ...
+    def get(self, name: str, default: NC | None = None) -> NC | None:
+        """Try return the named value if one exists, or default if not.
+
+        :param name: The name to search for
+        :param default: The value to return if none found, defaults to None
+        :return: value or default
+        """
         try:
-            return self[key]
+            return self[name]
         except KeyError:
             return default
