@@ -1,19 +1,45 @@
 #!/usr/bin/env python3
+from typing import Any
+
+# -- Project information --------------
+
 project = 'RISC-V Formal'
 copyright = '2025, YosysHQ GmbH'
 author = 'YosysHQ GmbH'
 
-# select HTML theme
-html_theme = 'furo-ys'
-html_css_files = ['custom.css']
-html_theme_options: dict[str, any] = {}
+# -- General configuration ------------
 
-# These folders are copied to the documentation's HTML output
+extensions: list[str] = [
+    'sphinx.ext.autosectionlabel',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',
+    'sphinx_toolbox.more_autodoc.typevars',
+    'sphinx_toolbox.more_autodoc.typehints',
+]
+
+# -- Options for HTML output ----------
+
+html_theme = 'furo-ys'
 html_static_path = ['_static']
 
-# generate section labels from their heading
-extensions = ['sphinx.ext.autosectionlabel']
+html_css_files = ['custom.css']
 
-# ensure that autosectionlabel will produce unique names
+html_theme_options: dict[str, Any] = {}
+
+# -- Options for autosectionlabel -----
+
 autosectionlabel_prefix_document = True
 autosectionlabel_maxdepth = 1
+
+# -- Options for autodoc --------------
+
+autodoc_typehints = 'description'
+autoclass_content = 'both'
+autodoc_member_order = 'bysource'
+
+# -- Options for intersphinx ----------
+
+intersphinx_mapping = {
+    "sphinx": ("https://www.sphinx-doc.org/en/master", None),
+    "py": ("https://docs.python.org/3", None),
+}
