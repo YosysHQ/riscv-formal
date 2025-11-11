@@ -23,3 +23,4 @@ or used as-is.
    custom_isa
    examplebugs
    references
+   python/index
