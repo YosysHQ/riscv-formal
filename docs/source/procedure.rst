@@ -256,13 +256,15 @@ Verbatim sections
 A number of sections are included in the sby script essentially as-is.
 These sections are formatted with a few keyword substitutions. If using
 these substitutions, the keywords should be prepended and appended with
-a ``@`` symbol, e.g. \ ``@basedir@/cores/@core@/wrapper.sv`` is using
-the ``basedir`` and ``core`` keywords to define the path.
+a ``@`` symbol, e.g. \ ``@coredir@/@core@.sv`` is using
+the ``coredir`` and ``core`` keywords to define the path.
 
 Possible keywords include:
 
--  basedir: the root directory of riscv-formal
--  core: the name of the directory from which the script is executed
+-  cfgdir: the directory of the current config file
+-  pkgdir: the root directory of the riscv-formal package
+-  coredir: the riscv core directory
+-  core: the riscv core name
 -  ilang_file: filename of intermediary output
 -  channel: the current rvfi channel
 -  check: the current check, e.g. \ ``csrc``

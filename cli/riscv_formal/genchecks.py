@@ -102,11 +102,13 @@ class GenChecks(tl.Task):
             shutil.rmtree(App.work_dir)
         App.work_dir.mkdir()
 
-        corename = App.cfg_file.parent.resolve().relative_to((App.base_dir / "cores").resolve())
-
         hargs = dict()
+        # TODO error on basedir
         hargs["basedir"] = App.base_dir
-        hargs["core"] = corename
+        hargs["cfgdir"] = App.cfg_file.resolve().parent
+        hargs["pkgdir"] = App.pkg_dir
+        hargs["coredir"] = App.core_dir
+        hargs["core"] = App.core_name
         hargs["nret"] = App.config.options.nret
         hargs["xlen"] = App.config.options.isa.xlen
         hargs["ilen"] = 32
@@ -128,15 +130,15 @@ class GenChecks(tl.Task):
         # TODO refactor solver selection
         if App.config.options.solver == "bmc3":
             hargs["engine"] = "abc bmc3"
-            hargs["ilang_file"] = f"{corename}-gates.il"
+            hargs["ilang_file"] = f"{App.core_name}-gates.il"
         elif App.config.options.solver == "btormc":
             hargs["engine"] = "btor btormc"
-            hargs["ilang_file"] = f"{corename}-hier.il"
+            hargs["ilang_file"] = f"{App.core_name}-hier.il"
         else:
             hargs["engine"] = (
                 f"smtbmc {'--dumpsmt2 ' if App.config.options.dumpsmt2 else ''}{App.config.options.solver}"
             )
-            hargs["ilang_file"] = f"{corename}-hier.il"
+            hargs["ilang_file"] = f"{App.core_name}-hier.il"
 
         for grp in App.config.groups:
             tl.log_debug(f"instructions for group {grp!r}")
@@ -295,8 +297,8 @@ class GenInsnCheck(tl.Task):
                 :
                 : [files]
                 : @basedir@/checks/rvfi_macros.vh
-                : @basedir@/checks/rvfi_channel.sv
-                : @basedir@/checks/rvfi_testbench.sv
+                : @pkgdir@/checks/rvfi_channel.sv
+                : @pkgdir@/checks/rvfi_testbench.sv
                 """,
                 **hargs,
             )

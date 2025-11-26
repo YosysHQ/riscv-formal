@@ -18,9 +18,9 @@ def main() -> None:
 
     job.global_client(args.jobs)
 
-    # TODO make it possible to override base_dir and come up with a way to handle
-    # running when this python project is installed
+    # TODO remove base_dir
     App.base_dir = Path(__file__).parent.parent.parent
+    App.pkg_dir = Path(__file__).parent
 
     # Move command line arguments into the App context
     for name in dir(args):
@@ -28,6 +28,12 @@ def main() -> None:
             setattr(App, name, getattr(args, name))
 
     App.raw_args = args
+
+    # Use local dir if coredir not set
+    App.core_dir = (args.coredir or Path.cwd()).resolve()
+
+    # Use core_dir name if core not set
+    App.core_name = args.core or App.core_dir.name
 
     try:
         tl.run_task_loop(task_loop_main)
@@ -42,6 +48,7 @@ def main() -> None:
 
 async def task_loop_main() -> None:
     early_log = setup_logging()
+    tl.log_debug(f"Using core {App.core_name!r} in {App.core_dir}")
 
     # Load user extensions
     for extension in App.extensions:

@@ -36,6 +36,9 @@ def arg_parser(sphinx_docs=False) -> argparse.ArgumentParser:
     global_argument("--debug", action="store_true", help="enable debug logging")
     global_argument("--debug-events", action="store_true", help="enable debug event logging")
 
+    global_argument("--coredir", help="riscv core directory, defaults to cwd", type=Path, default=None)
+    global_argument("--core", help="riscv core name, defaults to name of coredir", type=str, default=None)
+
     global_argument(
         "-j",
         metavar="<N>",
@@ -98,6 +101,10 @@ class App:
     cfg_file: Path
     work_dir: Path
     base_dir: Path
+    pkg_dir: Path
+
+    core_dir: Path
+    core_name: str
 
     config: RvfConfig
 
