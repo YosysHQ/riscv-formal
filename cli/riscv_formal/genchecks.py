@@ -14,6 +14,7 @@ from riscv_formal.checks.base_isa import base_checks
 from riscv_formal.csrs import Csr
 from riscv_formal.insns import Instruction
 from riscv_formal.named_set import NamedSet
+from riscv_formal.cons import ConsSpec, Cons
 
 
 def hfmt(text, **kwargs):
@@ -65,6 +66,11 @@ class Check:
                 check = "csrw"
             else:
                 check = "csr_ill"
+        elif isinstance(self.checker, Cons):
+            return [
+                f"{pf}{self.checker.name}",
+                f"{pf}{self.checker.name}_ch{chanidx:d}",
+            ]
         else:
             check = "insn"
 
@@ -155,6 +161,19 @@ class GenChecks(tl.Task):
                         Check.hargs = hargs
                     await gen_check.finished
 
+            tl.log_debug(f"consistency checks for group {grp!r}")
+            cons_spec = ConsSpec()
+            cons_spec.generate(App.config.options.isa)
+            for checker in cons_spec.cons:
+                for chanidx in range(App.config.options.nret):
+                    gen_check = GenConsCheck()
+                    with gen_check.as_current_task():
+                        Check.group = grp
+                        Check.checker = checker
+                        Check.chanidx = chanidx
+                        Check.hargs = hargs
+                    await gen_check.finished
+
         checks = sorted(
             Check.consistency_checks | Check.instruction_checks,
             key=lambda name: App.config.sort.sort_key(name),
@@ -178,9 +197,37 @@ class GenChecks(tl.Task):
                     print(f"\t{sbycmd} {check}.sby", file=mkfile)
                 print(f".PHONY: {check}", file=mkfile)
 
-        tl.log_warning("generation of consistency checks not yet implemented!")
+        tl.log(f"Generated {len(checks)} checks.")
 
-        tl.log(f"Generated {len(Check.consistency_checks) + len(Check.instruction_checks)} checks.")
+
+class GenConsCheck(tl.Task):
+    async def on_prepare(self) -> None:
+        tl.LogContext.scope = f"genchecks[{Check.name}]"
+
+    async def on_run(self):
+        filter_names = Check.filter_names
+        name = filter_names[-1]
+        depth_cfg = App.config.depth[filter_names]
+        if depth_cfg is None:
+            tl.log_debug(f"no depth configured")
+            return
+
+        assert isinstance(Check.checker, Cons)
+        expect_depth = 1
+        if Check.checker.has_start:
+            expect_depth += 1
+        if Check.checker.has_trig:
+            expect_depth += 1
+        if len(depth_cfg.depths) != expect_depth:
+            depth_cfg.incorrect_depths(expect_depth)
+
+        if not App.config.filter_checks.is_enabled(name):
+            tl.log_debug(f"disabled by filter")
+            return
+
+        tl.log_warning("not yet configured")
+
+        return
 
 
 class GenInsnCheck(tl.Task):
