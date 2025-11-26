@@ -19,6 +19,10 @@ docs = [
 [project.scripts]
 riscv_formal = "riscv_formal.__main__:main"
 
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm[simple]>=8"]
+build-backend = "setuptools.build_meta"
+
 [tool.uv]
 package = true
 
