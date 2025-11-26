@@ -435,7 +435,7 @@ def parse_config():
         # the old genchecks.py unconditionally appends '.cfg'
         App.cfg_file = App.cfg_file.with_suffix(".cfg")
 
-    App.work_dir = App.cfg_file.with_suffix("")
+    App.work_dir = Path.cwd() / App.cfg_file.stem
     try:
         App.config = RvfConfig(read_file(App.cfg_file))
     except BaseException:
