@@ -2,12 +2,13 @@ from __future__ import annotations
 import re
 import shutil
 from pathlib import Path
-from typing import TextIO, Iterable
+from textwrap import dedent
+from typing import TextIO, Iterable, Callable
 
 from yosys_mau import task_loop as tl
 from yosys_mau.source_str import SourceStr
 
-from riscv_formal.config import IllegalCsrConfig, arg_parser, App, parse_config
+from riscv_formal.config import App, CheckDepth
 from riscv_formal.generic_checker import GenericChecker
 from riscv_formal.checks import InstructionChecker
 from riscv_formal.checks.base_isa import base_checks
@@ -17,7 +18,7 @@ from riscv_formal.named_set import NamedSet
 from riscv_formal.cons import ConsSpec, Cons
 
 
-def hfmt(text, **kwargs):
+def hfmt(text: str | Iterable[str], **kwargs: str):
     lines = []
     text_lines = text.split("\n") if isinstance(text, str) else text
     for line in text_lines:
@@ -30,7 +31,7 @@ def hfmt(text, **kwargs):
     return lines
 
 
-def print_hfmt(f, text, **kwargs):
+def print_hfmt(f: TextIO, text: str | Iterable[str], **kwargs: str):
     for line in hfmt(text, **kwargs):
         print(line, file=f)
 
@@ -49,6 +50,10 @@ class Check:
     @property
     def prefix(self) -> str:
         return "" if self.group is None else f"{self.group}_"
+
+    @property
+    def check(self) -> str:
+        return self.filter_names[-2]
 
     @property
     def name(self) -> str:
@@ -174,6 +179,9 @@ class GenChecks(tl.Task):
                         Check.hargs = hargs
                     await gen_check.finished
 
+                # TODO CSR consistency checks
+                # TODO non-channelized checks (e.g.) cover
+
         checks = sorted(
             Check.consistency_checks | Check.instruction_checks,
             key=lambda name: App.config.sort.sort_key(name),
@@ -200,267 +208,362 @@ class GenChecks(tl.Task):
         tl.log(f"Generated {len(checks)} checks.")
 
 
-class GenConsCheck(tl.Task):
+class GenShared(tl.Task):
+    sby_file: TextIO
+    hargs: dict[str, str]
+    def print_hfmt(self, text: str | Iterable[str]):
+        print_hfmt(self.sby_file, text, **self.hargs)
+
     async def on_prepare(self) -> None:
         tl.LogContext.scope = f"genchecks[{Check.name}]"
 
-    async def on_run(self):
-        filter_names = Check.filter_names
-        name = filter_names[-1]
-        depth_cfg = App.config.depth[filter_names]
+    @property
+    def _expected_depth(self) -> int:
+        return 1
+
+    @property
+    def _register(self) -> Callable[[str], None]:
+        raise NotImplementedError()
+
+    def _config_hargs(self, depth_cfg: CheckDepth):
+        self.hargs = dict(Check.hargs)
+        self.hargs.update({
+            "checkch": Check.name,
+            "channel": str(Check.chanidx),
+            "depth": str(depth_cfg.depths[-1]),
+            "depth_plus": str(depth_cfg.depths[-1] + 1),
+            "skip": str(depth_cfg.depths[-1]),
+            "start": "1",
+        })
+
+    def _options_section(self) -> None:
+        self.print_hfmt(dedent("""
+            mode @mode@
+            expect pass,fail
+            append @append@
+            depth @depth_plus@
+            #skip @skip@
+        """))
+
+    def _engines_section(self) -> None:
+        return self.print_hfmt("@engine@")
+
+    def _script_section(self) -> None:
+        # [script-defines]
+        if "" in App.config.script_defines:
+            self.print_hfmt(App.config.script_defines[""].rstrip())
+        filter_names = list(Check.filter_names)
+        filter_names.reverse()
+        # [script-defines <check>]
+        # most-specific match only
+        for check_name in filter_names:
+            if check_name in App.config.script_defines:
+                self.print_hfmt(App.config.script_defines[check_name].rstrip())
+                break
+
+        # read [verilog-files] and [vhdl-files]
+        sv_files = [
+            f"{Check.name}.sv",
+            *App.config.verilog_files,
+        ]
+        vhdl_files = [
+            *App.config.vhdl_files,
+        ]
+        if sv_files:
+            self.print_hfmt(f"read -sv {' '.join(sv_files)}")
+        if vhdl_files:
+            self.print_hfmt(f"read -vhdl {' '.join(sv_files)}")
+
+        # [script-sources] before prep
+        self.print_hfmt(App.config.script_sources.rstrip())
+        self.print_hfmt("prep -flatten -nordff -top rvfi_testbench")
+
+        # [script-link] before chformal
+        self.print_hfmt(App.config.script_link.rstrip())
+        self.print_hfmt("chformal -early")
+
+    def _files_section(self) -> None:
+        self.print_hfmt(dedent("""
+            @basedir@/checks/rvfi_macros.vh
+            @pkgdir@/cons/rvfi_channel.sv
+            @pkgdir@/cons/rvfi_testbench.sv
+        """))
+
+    @property
+    def _sby_section_map(self) -> dict[str, Callable[[], None]]:
+        return {
+            "options": self._options_section,
+            "engines": self._engines_section,
+            "script": self._script_section,
+            "files": self._files_section,
+        }
+
+    def _define_csrs(self) -> tuple[Iterable[str], Iterable[str]]:
+        # TODO custom CSRs in consistency checks?
+        return ([], [])
+
+    def _file_defines_section(self) -> None:
+        # base riscv-formal defines
+        self.print_hfmt(dedent("""
+            `define RISCV_FORMAL
+            `define RISCV_FORMAL_NRET @nret@
+            `define RISCV_FORMAL_XLEN @xlen@
+            `define RISCV_FORMAL_ILEN @ilen@
+            `define RISCV_FORMAL_CHECKER rvfi_@check@_check
+            `define RISCV_FORMAL_RESET_CYCLES @start@
+            `define RISCV_FORMAL_CHECK_CYCLE @depth@
+            `define RISCV_FORMAL_CHANNEL_IDX @channel@
+        """))
+
+        # use assumptions
+        if App.config.assume:
+            self.print_hfmt("`define RISCV_FORMAL_ASSUME\n")
+
+        # unbounded model checking
+        if App.config.options.mode == "prove":
+            self.print_hfmt("`define RISCV_FORMAL_UNBOUNDED\n")
+
+        # csrs
+        standard_csrs, custom_csrs = self._define_csrs()
+        for csr in standard_csrs:
+            self.print_hfmt(f"`define RISCV_FORMAL_CSR_{csr.upper()}")
+        if custom_csrs:
+            print_custom_csrs(custom_csrs, self.sby_file)
+
+        # control blackboxes
+        if App.config.options.blackbox:
+            if Check.check != "liveness":
+                self.print_hfmt("`define RISCV_FORMAL_BLACKBOX_ALU\n")
+            if Check.check != "reg":
+                self.print_hfmt("`define RISCV_FORMAL_BLACKBOX_REGS\n")
+
+        # enable fairness guarantees
+        if Check.check in ("liveness", "hang"):
+            self.print_hfmt("`define RISCV_FORMAL_FAIRNESS\n")
+
+        # TODO bus mode
+
+        # [defines]
+        if "" in App.config.defines:
+            self.print_hfmt(App.config.defines[""])
+        filter_names = list(Check.filter_names)
+        filter_names.reverse()
+        # [defines <check>]
+        # most-specific match only
+        for check_name in filter_names:
+            if check_name in App.config.defines:
+                self.print_hfmt(App.config.defines[check_name])
+                break
+
+    def _file_assumes_section(self) -> None:
+        for statement in App.config.assume.statements:
+            if statement.is_enabled(Check.name):
+                print(statement.sv_statement, file=self.sby_file)
+
+    def _file_check_section(self) -> None:
+        self.print_hfmt(dedent("""
+            `include "defines.sv"
+            `include "rvfi_channel.sv"
+            `include "rvfi_testbench.sv"
+        """))
+
+    @property
+    def _sby_files_map(self) -> dict[str, Callable[[], None]]:
+        files_map = {
+            "defines.sv": self._file_defines_section,
+            f"{Check.name}.sv": self._file_check_section,
+        }
+
+        if App.config.assume:
+            files_map["assume_stmts.vh"] = self._file_assumes_section
+
+        return files_map
+
+    async def on_run(self) -> None:
+        depth_cfg = App.config.depth[Check.filter_names]
         if depth_cfg is None:
             tl.log_debug(f"no depth configured")
             return
 
+        expect_depth = self._expected_depth
+        if len(depth_cfg.depths) != expect_depth:
+            depth_cfg.incorrect_depths(expect_depth)
+
+        if not App.config.filter_checks.is_enabled(Check.name):
+            tl.log_debug(f"disabled by filter")
+            return
+
+        self._register(Check.name)
+        self._config_hargs(depth_cfg)
+
+        with (App.work_dir / f"{Check.name}.sby").open("w") as sby_file:
+            self.sby_file = sby_file
+            for sect, fun in self._sby_section_map.items():
+                print(f"[{sect}]", file=sby_file)
+                fun()
+                print("", file=sby_file)
+
+            for file, fun in self._sby_files_map.items():
+                print(f"[file {file}]", file=sby_file)
+                fun()
+                if file == "defines.sv":
+                    # rvfi_macros.vh is always last
+                    print('`include "rvfi_macros.vh"', file=sby_file)
+                print("", file=sby_file)
+            del self.sby_file
+                
+
+class GenConsCheck(GenShared):
+    @property
+    def _expected_depth(self) -> int:
         assert isinstance(Check.checker, Cons)
         expect_depth = 1
         if Check.checker.has_start:
             expect_depth += 1
         if Check.checker.has_trig:
             expect_depth += 1
-        if len(depth_cfg.depths) != expect_depth:
-            depth_cfg.incorrect_depths(expect_depth)
+        return expect_depth
 
-        if not App.config.filter_checks.is_enabled(name):
-            tl.log_debug(f"disabled by filter")
-            return
+    @property
+    def _register(self) -> Callable[[str], None]:
+        return Check.consistency_checks.add
 
-        tl.log_warning("not yet configured")
+    def _config_hargs(self, depth_cfg: CheckDepth):
+        super()._config_hargs(depth_cfg)
+        assert isinstance(Check.checker, Cons)
 
-        return
+        # depth_cfg.depths possible configurations:
+        # start, trig, depth
+        # start, depth
+        # depth
+        depths = list(depth_cfg.depths)
+        depth = depths.pop()
+        trig = depths.pop() if Check.checker.has_trig else None
+        start = depths.pop() if Check.checker.has_start else 1
+
+        # sanity checking
+        # TODO use InputError
+        if depth <= start:
+            raise NotImplementedError(f"Expected start ({start}) before depth ({depth})")
+        if trig is not None and depth <= trig:
+            raise NotImplementedError(f"Expected trig ({trig}) before depth ({depth})")
+
+        self.hargs["check"] = Check.check
+        self.hargs["start"] = str(start)
+
+        if Check.check == "cover" or "csrc_hpm" in Check.check:
+            self.hargs["mode"] = "cover"
+
+    def _files_section(self) -> None:
+        # TODO custom consistency checks
+        super()._files_section()
+        self.print_hfmt('@pkgdir@/cons/rvfi_@check@_check.sv')
+
+    def _file_check_section(self) -> None:
+        super()._file_check_section()
+        self.print_hfmt('`include "rvfi_@check@_check.sv"')
 
 
-class GenInsnCheck(tl.Task):
-    async def on_prepare(self) -> None:
-        tl.LogContext.scope = f"genchecks[{Check.name}]"
+class GenInsnCheck(GenShared):
+    _insn_check_wrapper: InstructionChecker | None = None
+    _legal_csr: bool = True
 
-    async def on_run(self):
-        filter_names = Check.filter_names
-        name = filter_names[-1]
+    @property
+    def _check_type(self) -> str:
+        return "insn" if isinstance(Check.checker, Instruction) else "csr"
 
-        depth_cfg = App.config.depth[filter_names]
-        if depth_cfg is None:
-            tl.log_debug(f"no depth configured")
-            return
-        if len(depth_cfg.depths) != 1:
-            depth_cfg.incorrect_depths(1)
-        if not App.config.filter_checks.is_enabled(name):
-            tl.log_debug(f"disabled by filter")
-            return
-        Check.instruction_checks.add(name)
+    @property
+    def _check_dir(self) -> str:
+        return self._check_type + "s"
 
-        hargs = dict(Check.hargs)
+    @property
+    def _register(self) -> Callable[[str], None]:
+        return Check.instruction_checks.add
 
-        hargs["insn"] = Check.checker.name
-        hargs["checkch"] = name
-        hargs["channel"] = str(Check.chanidx)
-        hargs["depth"] = str(depth_cfg.depths[0])
-        hargs["depth_plus"] = str(depth_cfg.depths[0] + 1)
-        hargs["skip"] = str(depth_cfg.depths[0])
+    def _config_hargs(self, depth_cfg: CheckDepth):
+        super()._config_hargs(depth_cfg)
+        self.hargs["check"] = self._check_type
+        self.hargs["insn"] = Check.checker.name
 
+    def _files_section(self) -> None:
+        super()._files_section()
+        self.print_hfmt(f'{self._check_dir}/{Check.checker.name}.sv')
+
+    def _file_check_section(self) -> None:
+        super()._file_check_section()
+        self.print_hfmt(f'`include "{Check.checker.name}.sv"\n')
+
+    async def _gen_check_source(self):
         if isinstance(Check.checker, Instruction):
-            insn_check_wrapper = InstructionChecker(
+            self._insn_check_wrapper = InstructionChecker(
                 name = "insn_check",
                 instructions = NamedSet([Check.checker]),
                 observers = App.rvfi.observers,
                 defined_checks = base_checks(),
                 channel = Check.chanidx,
             )
-            insn_check_wrapper.configure_io()
-            checker_module = "rvfi_insn_check"
-            checker_dir = "insns"
-            legal_csr = True
+            self._insn_check_wrapper.configure_io()
         else:
             assert isinstance(Check.checker, Csr)
-            insn_check_wrapper = None
-            checker_module = "rvfi_csr_check"
-            checker_dir = "csrs"
-            legal_csr = Check.checker.is_accessible
+            self._legal_csr = Check.checker.is_accessible
 
-        (App.work_dir / checker_dir).mkdir(exist_ok=True)
+        (App.work_dir / self._check_dir).mkdir(exist_ok=True)
         checker_name = Check.checker.name + '.sv'
         if isinstance(checker_name, SourceStr):
             # convert SourceStr to str
             checker_name = checker_name.as_plain_str()
-        checker_src = Path(checker_dir) / checker_name
+        checker_src = Path(self._check_dir) / checker_name
         with (App.work_dir / checker_src).open("w") as checker_file:
-            checker = insn_check_wrapper or Check.checker
+            checker = self._insn_check_wrapper or Check.checker
             print(checker.to_verilog(), file=checker_file)
 
-        with (App.work_dir / f"{name}.sby").open("w") as sby_file:
-            print_hfmt(
-                sby_file,
-                """
-                : [options]
-                : mode @mode@
-                : expect pass
-                : append @append@
-                : depth @depth_plus@
-                : #skip @skip@
-                :
-                : [engines]
-                : @engine@
-                :
-                : [script]
-            """,
-                **hargs,
-            )
+    def _define_csrs(self) -> tuple[Iterable[str], Iterable[str]]:
+        if self._insn_check_wrapper is not None:
+            csr_list = set()
+            for obs in self._insn_check_wrapper.get_used_io().names():
+                m = re.match(r"csr_([a-z0-9]+)_\w+", obs)
+                if m:
+                    csr_list.add(m.group(1))
+        else:
+            # TODO do we need an option to always define all enabled CSRs
+            # e.g. if someone has hardcoded their interfaces instead of using the macros
+            csr_list = [Check.checker.name]
 
-            if App.config.script_defines:
-                print_hfmt(sby_file, App.config.script_defines, **hargs)
-
-            sv_files = [f"{name}.sv"]
-            if App.config.verilog_files:
-                sv_files += hfmt(App.config.verilog_files, **hargs)
-
-            vhdl_files = []
-            if App.config.vhdl_files:
-                vhdl_files += hfmt(App.config.vhdl_files, **hargs)
-
-            if len(sv_files):
-                print(f"read -sv {' '.join(sv_files)}", file=sby_file)
-
-            if len(vhdl_files):
-                print(f"read -vhdl {' '.join(vhdl_files)}", file=sby_file)
-
-            if App.config.script_sources:
-                print_hfmt(sby_file, App.config.script_sources, **hargs)
-
-            print_hfmt(
-                sby_file,
-                """
-                : prep -flatten -nordff -top rvfi_testbench
-                """,
-                **hargs,
-            )
-
-            if App.config.script_link:
-                print_hfmt(sby_file, App.config.script_link, **hargs)
-
-            print_hfmt(
-                sby_file,
-                """
-                : chformal -early
-                :
-                : [files]
-                : @basedir@/checks/rvfi_macros.vh
-                : @pkgdir@/checks/rvfi_channel.sv
-                : @pkgdir@/checks/rvfi_testbench.sv
-                """,
-                **hargs,
-            )
-
-            print_hfmt(sby_file, str(checker_src), **hargs)
-
-            print_hfmt(
-                sby_file,
-                """
-                :
-                : [file defines.sv]
-                : `define RISCV_FORMAL
-                : `define RISCV_FORMAL_NRET @nret@
-                : `define RISCV_FORMAL_XLEN @xlen@
-                : `define RISCV_FORMAL_ILEN @ilen@
-                : `define RISCV_FORMAL_RESET_CYCLES 1
-                : `define RISCV_FORMAL_CHECK_CYCLE @depth@
-                : `define RISCV_FORMAL_CHANNEL_IDX @channel@
-                """,
-                **hargs,
-            )
-
-            if App.config.assume:
-                print("`define RISCV_FORMAL_ASSUME", file=sby_file)
-
-            if App.config.options.mode == "prove":
-                print("`define RISCV_FORMAL_UNBOUNDED", file=sby_file)
-
-            if insn_check_wrapper is not None:
-                csr_list = set()
-                for obs in insn_check_wrapper.get_used_io().names():
-                    m = re.match(r"csr_([a-z0-9]+)_\w+", obs)
-                    if m:
-                        csr_list.add(m.group(1))
+        standard_csrs: set[str] = set()
+        custom_csrs: set[str] = set()
+        for csr in sorted(csr_list):
+            if csr in App.config.options.csr_spec.custom_csrs:
+                if self._legal_csr:
+                    custom_csrs.add(csr)
             else:
-                # TODO do we need an option to always define all enabled CSRs
-                # e.g. if someone has hardcoded their interfaces instead of using the macros
-                csr_list = [Check.checker.name]
+                standard_csrs.add(csr)
 
-            custom_csrs: set[str] = set()
-            for csr in sorted(csr_list):
-                if csr in App.config.options.csr_spec.custom_csrs:
-                    if legal_csr:
-                        custom_csrs.add(csr)
-                else:
-                    print(f"`define RISCV_FORMAL_CSR_{csr.upper()}", file=sby_file)
+        # TODO figure out illegal csr modes
+        # if Check.illegal_csr:
+        #     print_hfmt(
+        #         sby_file,
+        #         """
+        #         : `define RISCV_FORMAL_CHECKER rvfi_csr_ill_check
+        #         : `define RISCV_FORMAL_ILL_CSR_ADDR @insn@
+        #         """,
+        #         **hargs,
+        #     )
+        #     if "m" in Check.illegal_csr.modes:
+        #         print("`define RISCV_FORMAL_ILL_MMODE", file=sby_file)
+        #     if "s" in Check.illegal_csr.modes:
+        #         print("`define RISCV_FORMAL_ILL_SMODE", file=sby_file)
+        #     if "u" in Check.illegal_csr.modes:
+        #         print("`define RISCV_FORMAL_ILL_UMODE", file=sby_file)
+        #     if "r" in Check.illegal_csr.rw:
+        #         print("`define RISCV_FORMAL_ILL_READ", file=sby_file)
+        #     if "w" in Check.illegal_csr.rw:
+        #         print("`define RISCV_FORMAL_ILL_WRITE", file=sby_file)
 
-            if custom_csrs:
-                print_custom_csrs(custom_csrs, sby_file)
+        return (standard_csrs, custom_csrs)
 
-            # TODO figure out illegal csr modes
-            # if Check.illegal_csr:
-            #     print_hfmt(
-            #         sby_file,
-            #         """
-            #         : `define RISCV_FORMAL_CHECKER rvfi_csr_ill_check
-            #         : `define RISCV_FORMAL_ILL_CSR_ADDR @insn@
-            #         """,
-            #         **hargs,
-            #     )
-            #     if "m" in Check.illegal_csr.modes:
-            #         print("`define RISCV_FORMAL_ILL_MMODE", file=sby_file)
-            #     if "s" in Check.illegal_csr.modes:
-            #         print("`define RISCV_FORMAL_ILL_SMODE", file=sby_file)
-            #     if "u" in Check.illegal_csr.modes:
-            #         print("`define RISCV_FORMAL_ILL_UMODE", file=sby_file)
-            #     if "r" in Check.illegal_csr.rw:
-            #         print("`define RISCV_FORMAL_ILL_READ", file=sby_file)
-            #     if "w" in Check.illegal_csr.rw:
-            #         print("`define RISCV_FORMAL_ILL_WRITE", file=sby_file)
-
-            print_hfmt(
-                sby_file,
-                f"""
-                : `define RISCV_FORMAL_CHECKER {checker_module}
-                """,
-                **hargs,
-            )
-
-            if App.config.options.blackbox:
-                print("`define RISCV_FORMAL_BLACKBOX_REGS", file=sby_file)
-
-            if App.config.options.isa.compressed:
-                print("`define RISCV_FORMAL_COMPRESSED", file=sby_file)
-
-            if App.config.defines.get("", ""):
-                print_hfmt(sby_file, App.config.defines[""], **hargs)
-
-            print_hfmt(
-                sby_file,
-                """
-                : `include "rvfi_macros.vh"
-                :
-                : [file @checkch@.sv]
-                : `include "defines.sv"
-                : `include "rvfi_channel.sv"
-                : `include "rvfi_testbench.sv"
-                """,
-                **hargs,
-            )
-
-            print_hfmt(
-                sby_file,
-                f"""
-                : `include "{checker_src.name}"
-                """,
-                **hargs,
-            )
-
-            if App.config.assume:
-                print("", file=sby_file)
-                print("[file assume_stmts.vh]", file=sby_file)
-                for statement in App.config.assume.statements:
-                    if statement.is_enabled(name):
-                        print(statement.sv_statement, file=sby_file)
+    async def on_run(self):
+        await self._gen_check_source()
+        await super().on_run()
 
 
 def print_custom_csrs(custom_csrs: Iterable[str], sby_file: TextIO):
