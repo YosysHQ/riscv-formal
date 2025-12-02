@@ -40,7 +40,7 @@ def print_hfmt(f: TextIO, text: str | Iterable[str], **kwargs: str):
 class Check:
     group: str | None
     checker: GenericChecker
-    chanidx: int
+    chanidx: int | None
 
     hargs: dict[str, str]
 
@@ -53,7 +53,10 @@ class Check:
 
     @property
     def check(self) -> str:
-        return self.filter_names[-2]
+        try:
+            return self.filter_names[-2]
+        except IndexError:
+            return self.name
 
     @property
     def name(self) -> str:
@@ -62,6 +65,11 @@ class Check:
     @property
     def filter_names(self) -> list[str]:
         pf, chanidx = self.prefix, self.chanidx
+
+        def maybe_channel(name: str) -> Iterable[str]:
+            yield name
+            if self.chanidx is not None:
+                yield name + f"_ch{self.chanidx:d}"
 
         if isinstance(self.checker, Csr):
             if self.checker.behavior is not None:
@@ -73,12 +81,12 @@ class Check:
                 check = "csr_ill"
         elif isinstance(self.checker, Cons):
             return [
-                f"{pf}{self.checker.name}",
-                f"{pf}{self.checker.name}_ch{chanidx:d}",
+                *maybe_channel(f"{pf}{self.checker.name}"),
             ]
         else:
             check = "insn"
 
+        assert chanidx is not None
         insn = self.checker.name
         
         if isinstance(self.checker, Csr) and self.checker.behavior is not None:
@@ -151,27 +159,26 @@ class GenChecks(tl.Task):
             )
             hargs["ilang_file"] = f"{App.core_name}-hier.il"
 
+        cons_spec = ConsSpec()
+        cons_spec.generate(App.config.options.isa)
+
         for grp in App.config.groups:
-            tl.log_debug(f"instructions for group {grp!r}")
+            tl.log_debug(f"checks for group {grp!r}")
             for checker in [
                 *App.config.options.isa.insns,
                 *App.config.options.csr_spec.csrs,
+                *cons_spec.cons,
             ]:
-                for chanidx in range(App.config.options.nret):
-                    gen_check = GenInsnCheck()
-                    with gen_check.as_current_task():
-                        Check.group = grp
-                        Check.checker = checker
-                        Check.chanidx = chanidx
-                        Check.hargs = hargs
-                    await gen_check.finished
-
-            tl.log_debug(f"consistency checks for group {grp!r}")
-            cons_spec = ConsSpec()
-            cons_spec.generate(App.config.options.isa)
-            for checker in cons_spec.cons:
-                for chanidx in range(App.config.options.nret):
-                    gen_check = GenConsCheck()
+                assert isinstance(checker, GenericChecker)
+                if checker.can_channelize:
+                    channels = range(App.config.options.nret)
+                else:
+                    channels = [None]
+                for chanidx in channels:
+                    if isinstance(checker, Cons):
+                        gen_check = GenConsCheck()
+                    else:
+                        gen_check = GenInsnCheck()
                     with gen_check.as_current_task():
                         Check.group = grp
                         Check.checker = checker
@@ -180,7 +187,6 @@ class GenChecks(tl.Task):
                     await gen_check.finished
 
                 # TODO CSR consistency checks
-                # TODO non-channelized checks (e.g.) cover
 
         checks = sorted(
             Check.consistency_checks | Check.instruction_checks,
@@ -462,6 +468,18 @@ class GenConsCheck(GenShared):
     def _file_check_section(self) -> None:
         super()._file_check_section()
         self.print_hfmt('`include "rvfi_@check@_check.sv"')
+
+    def _file_cover_section(self) -> None:
+        self.print_hfmt(App.config.cover)
+
+    @property
+    def _sby_files_map(self) -> dict[str, Callable[[], None]]:
+        files_map = super()._sby_files_map
+
+        if Check.check == "cover":
+            files_map["cover_stmts.vh"] = self._file_cover_section
+
+        return files_map
 
 
 class GenInsnCheck(GenShared):

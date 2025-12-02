@@ -23,6 +23,7 @@ class GenericChecker(NamedClass):
     name: str
     body: str = ""
 
+    can_channelize: bool = True
     channel: Optional[int] = None
     channelized: bool = False
 
@@ -43,6 +44,9 @@ class GenericChecker(NamedClass):
     def __post_init__(self):
         if self.channel is not None:
             self.channelized = True
+
+        if self.channelized and not self.can_channelize:
+            raise NotImplementedError(f"Check {self.name!r} channelized")
 
     def _v_modname(self) -> str:
         # module name

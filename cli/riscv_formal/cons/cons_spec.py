@@ -55,6 +55,7 @@ class ConsSpec:
 def base_cons(_) -> NamedSet[Cons]:
     return NamedSet([
         Cons(name= "reg", has_start = True),
+        Cons(name= "cover", has_start = True, can_channelize = False),
     ])
 
 """
