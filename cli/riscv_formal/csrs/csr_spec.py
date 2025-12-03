@@ -26,6 +26,7 @@ from riscv_formal.insns import Isa
 
 @dataclass
 class CsrConfig(NamedClass):
+    # TODO fix masks
     tests: dict[str, Optional[str]]
 
     @classmethod
@@ -36,7 +37,7 @@ class CsrConfig(NamedClass):
             case [name, tests_str]:
                 new = cls(name, {}, **kwds)
 
-                for test_str in ssre.findall(r"((?:\S*?\"[^\"]*\")+|\S+)", tests_str):
+                for test_str in ssre.findall(r'((?:\S*?"[^"]*")+|\S+)', tests_str):
                     new.parse_and_add_test(test_str)
                 return new
             case _:

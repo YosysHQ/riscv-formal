@@ -17,6 +17,8 @@ from riscv_formal.insns import Instruction
 from riscv_formal.named_set import NamedSet
 from riscv_formal.cons import ConsSpec, Cons, BusCons
 
+from riscv_formal.csrs import ConstValue
+
 
 def hfmt(text: str | Iterable[str], **kwargs: str):
     lines = []
@@ -162,31 +164,54 @@ class GenChecks(tl.Task):
         cons_spec = ConsSpec()
         cons_spec.generate(App.config.options.isa)
 
-        for grp in App.config.groups:
-            tl.log_debug(f"checks for group {grp!r}")
-            for checker in [
-                *App.config.options.isa.insns,
-                *App.config.options.csr_spec.csrs,
-                *cons_spec.cons,
-            ]:
-                assert isinstance(checker, GenericChecker)
-                if checker.can_channelize:
-                    channels = range(App.config.options.nret)
+        async def generate(grp: str | None, checker: GenericChecker):
+            channels = range(App.config.options.nret) if checker.can_channelize else [None]
+            for chanidx in channels:
+                if isinstance(checker, Cons):
+                    gen_check = GenConsCheck()
                 else:
-                    channels = [None]
-                for chanidx in channels:
-                    if isinstance(checker, Cons):
-                        gen_check = GenConsCheck()
-                    else:
-                        gen_check = GenInsnCheck()
-                    with gen_check.as_current_task():
-                        Check.group = grp
-                        Check.checker = checker
-                        Check.chanidx = chanidx
-                        Check.hargs = hargs
-                    await gen_check.finished
+                    gen_check = GenInsnCheck()
+                with gen_check.as_current_task():
+                    Check.group = grp
+                    Check.checker = checker
+                    Check.chanidx = chanidx
+                    Check.hargs = hargs
+                await gen_check.finished
 
-                # TODO CSR consistency checks
+        for grp in App.config.groups:
+            tl.log_debug(f"instruction checks for group {grp!r}")
+            for insn in App.config.options.isa.insns:
+                await generate(grp, insn)
+
+            tl.log_debug(f"csr checks for group {grp!r}")
+            for csr in App.config.options.csr_spec.csrs:
+                # TODO illegal csrs
+
+                # store default behavior
+                behavior = csr.behavior
+
+                # test RW access
+                if csr.rw_test:
+                    csr.behavior = None
+                    await generate(grp, csr)
+
+                # test behaviors from config
+                config = App.config.options.csr_spec.csr_configs[csr.name]
+                for test, value in config.tests.items():
+                    # TODO the other CSRC checks
+                    # preferably without hardcoding for behavior names
+                    if test == "const":
+                        csr.behavior = ConstValue(value)
+                        await generate(grp, csr)
+
+                # test default behavior (if there is one)
+                if behavior is not None:
+                    csr.behavior = behavior
+                    await generate(grp, csr)
+
+            tl.log_debug(f"consistency checks for group {grp!r}")
+            for checker in cons_spec.cons:
+                await generate(grp, checker)
 
         checks = sorted(
             Check.consistency_checks | Check.instruction_checks,
@@ -225,7 +250,7 @@ class GenShared(tl.Task):
 
     @property
     def _expected_depth(self) -> int:
-        return 1
+        raise NotImplementedError()
 
     @property
     def _register(self) -> Callable[[str], None]:
@@ -420,6 +445,7 @@ class GenShared(tl.Task):
                     # rvfi_macros.vh is always last
                     print('`include "rvfi_macros.vh"', file=sby_file)
                 print("", file=sby_file)
+            tl.log_debug(f"generated {sby_file.name}")
             del self.sby_file
                 
 
@@ -515,6 +541,13 @@ class GenInsnCheck(GenShared):
         return self._check_type + "s"
 
     @property
+    def _expected_depth(self) -> int:
+        if isinstance(Check.checker, Csr) and Check.checker.behavior is not None:
+            return 2
+        else:
+            return 1
+
+    @property
     def _register(self) -> Callable[[str], None]:
         return Check.instruction_checks.add
 
@@ -522,6 +555,8 @@ class GenInsnCheck(GenShared):
         super()._config_hargs(depth_cfg)
         self.hargs["check"] = self._check_type
         self.hargs["insn"] = Check.checker.name
+        if len(depth_cfg.depths) > 1:
+            self.hargs["start"] = str(depth_cfg.depths[0])
 
     def _files_section(self) -> None:
         super()._files_section()
