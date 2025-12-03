@@ -304,9 +304,9 @@ class GenShared(tl.Task):
             "files": self._files_section,
         }
 
-    def _define_csrs(self) -> tuple[Iterable[str], Iterable[str]]:
-        # TODO custom CSRs in consistency checks?
-        return ([], [])
+    @property
+    def _defined_csrs(self) -> NamedSet[Csr]:
+        return NamedSet(App.config.options.csr_spec.csrs)
 
     def _file_defines_section(self) -> None:
         # base riscv-formal defines
@@ -330,9 +330,15 @@ class GenShared(tl.Task):
             self.print_hfmt("`define RISCV_FORMAL_UNBOUNDED\n")
 
         # csrs
-        standard_csrs, custom_csrs = self._define_csrs()
-        for csr in standard_csrs:
-            self.print_hfmt(f"`define RISCV_FORMAL_CSR_{csr.upper()}")
+        custom_csrs: set[str] = set()
+        for csr in self._defined_csrs:
+            if not csr.is_accessible:
+                continue
+            csr = csr.name
+            if csr in App.config.options.csr_spec.custom_csrs:
+                custom_csrs.add(csr)
+            else:
+                self.print_hfmt(f"`define RISCV_FORMAL_CSR_{csr.upper()}")
         if custom_csrs:
             print_custom_csrs(custom_csrs, self.sby_file)
 
@@ -549,28 +555,26 @@ class GenInsnCheck(GenShared):
             checker = self._insn_check_wrapper or Check.checker
             print(checker.to_verilog(), file=checker_file)
 
-    def _define_csrs(self) -> tuple[Iterable[str], Iterable[str]]:
+    @property
+    def _defined_csrs(self) -> NamedSet[Csr]:
+        csrs = super()._defined_csrs
         if self._insn_check_wrapper is not None:
-            csr_list = set()
+            used_csrs = set()
             for obs in self._insn_check_wrapper.get_used_io().names():
                 m = re.match(r"csr_([a-z0-9]+)_\w+", obs)
                 if m:
-                    csr_list.add(m.group(1))
+                    used_csrs.add(m.group(1))
         else:
             # TODO do we need an option to always define all enabled CSRs
             # e.g. if someone has hardcoded their interfaces instead of using the macros
-            csr_list = [Check.checker.name]
+            used_csrs = [Check.checker.name]
 
-        standard_csrs: set[str] = set()
-        custom_csrs: set[str] = set()
-        for csr in sorted(csr_list):
-            if csr in App.config.options.csr_spec.custom_csrs:
-                if self._legal_csr:
-                    custom_csrs.add(csr)
-            else:
-                standard_csrs.add(csr)
+        available_csrs = list(csrs.names())
+        for csr in available_csrs:
+            if csr not in used_csrs:
+                csrs.pop(csr)
 
-        # TODO figure out illegal csr modes
+        # TODO figure out illegal_csrs
         # if Check.illegal_csr:
         #     print_hfmt(
         #         sby_file,
@@ -591,7 +595,7 @@ class GenInsnCheck(GenShared):
         #     if "w" in Check.illegal_csr.rw:
         #         print("`define RISCV_FORMAL_ILL_WRITE", file=sby_file)
 
-        return (standard_csrs, custom_csrs)
+        return csrs
 
     async def on_run(self):
         await self._gen_check_source()
