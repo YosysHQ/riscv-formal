@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from riscv_formal.generic_checker import GenericChecker
 
@@ -11,3 +11,7 @@ class Cons(GenericChecker):
         super().__post_init__()
         if self.has_trig and not self.has_start:
             raise NotImplementedError("has_trig only valid if has_start")
+
+@dataclass(kw_only=True)
+class BusCons(Cons):
+    has_start: bool = field(default=True)

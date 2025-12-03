@@ -15,7 +15,7 @@ from riscv_formal.checks.base_isa import base_checks
 from riscv_formal.csrs import Csr
 from riscv_formal.insns import Instruction
 from riscv_formal.named_set import NamedSet
-from riscv_formal.cons import ConsSpec, Cons
+from riscv_formal.cons import ConsSpec, Cons, BusCons
 
 
 def hfmt(text: str | Iterable[str], **kwargs: str):
@@ -347,8 +347,6 @@ class GenShared(tl.Task):
         if Check.check in ("liveness", "hang"):
             self.print_hfmt("`define RISCV_FORMAL_FAIRNESS\n")
 
-        # TODO bus mode
-
         # [defines]
         if "" in App.config.defines:
             self.print_hfmt(App.config.defines[""])
@@ -456,6 +454,8 @@ class GenConsCheck(GenShared):
 
         self.hargs["check"] = Check.check
         self.hargs["start"] = str(start)
+        if trig is not None:
+            self.hargs["trig"] = str(trig)
 
         if Check.check == "cover" or "csrc_hpm" in Check.check:
             self.hargs["mode"] = "cover"
@@ -464,6 +464,20 @@ class GenConsCheck(GenShared):
         # TODO custom consistency checks
         super()._files_section()
         self.print_hfmt('@pkgdir@/cons/rvfi_@check@_check.sv')
+
+    def _file_defines_section(self) -> None:
+        super()._file_defines_section()
+        assert isinstance(Check.checker, Cons)
+
+        if Check.checker.has_trig:
+            self.print_hfmt("`define RISCV_FORMAL_TRIG_CYCLE @trig@")
+
+        if isinstance(Check.checker, BusCons):
+            self.print_hfmt(dedent("""
+                `define RISCV_FORMAL_BUS
+                `define RISCV_FORMAL_NBUS @nbus@
+                `define RISCV_FORMAL_BUSLEN @buslen@
+            """))
 
     def _file_check_section(self) -> None:
         super()._file_check_section()

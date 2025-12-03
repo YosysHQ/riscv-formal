@@ -7,7 +7,7 @@ from typing import (
 
 from yosys_mau import task_loop as tl
 
-from .cons import Cons
+from .cons import Cons, BusCons
 from riscv_formal.named_set import NamedSet
 from riscv_formal.insns import Isa
 
@@ -54,37 +54,40 @@ class ConsSpec:
 
 def base_cons(_) -> NamedSet[Cons]:
     return NamedSet([
-        Cons(name= "reg", has_start = True),
-        Cons(name= "cover", has_start = True, can_channelize = False),
+        # depth only
+        Cons(name="ill"),
+        Cons(name="fault"),
+
+        # start + depth
+        Cons(name="reg", has_start=True),
+        Cons(name="pc_fwd", has_start=True),
+        Cons(name="pc_bwd", has_start=True),
+        Cons(name="causal", has_start=True),
+        Cons(name="causal_mem", has_start=True),
+        Cons(name="causal_io", has_start=True),
+
+        # start + trig + depth
+        Cons(name="liveness", has_start=True, has_trig=True),
+        Cons(name="unique", has_start=True, has_trig=True),
+
+        # non-channelized checks
+        Cons(name="cover", has_start=True, can_channelize=False),
+        Cons(name="hang", has_start=True, can_channelize=False),
+
+        # bus checks
+        BusCons(name="bus_imem"),
+        BusCons(name="bus_imem_fault"),
+        BusCons(name="bus_dmem"),
+        BusCons(name="bus_dmem_fault"),
+        BusCons(name="bus_dmem_io_read"),
+        BusCons(name="bus_dmem_io_read_fault"),
+        BusCons(name="bus_dmem_io_write"),
+        BusCons(name="bus_dmem_io_write_fault"),
+        BusCons(name="bus_dmem_io_order"),
     ])
 
 """
 for grp in groups:
-    for i in range(nret):
-        check_cons(grp, "reg", chanidx=i, start=0, depth=1)
-        check_cons(grp, "pc_fwd", chanidx=i, start=0, depth=1)
-        check_cons(grp, "pc_bwd", chanidx=i, start=0, depth=1)
-        check_cons(grp, "liveness", chanidx=i, start=0, trig=1, depth=2)
-        check_cons(grp, "unique", chanidx=i, start=0, trig=1, depth=2)
-        check_cons(grp, "causal", chanidx=i, start=0, depth=1)
-        check_cons(grp, "causal_mem", chanidx=i, start=0, depth=1)
-        check_cons(grp, "causal_io", chanidx=i, start=0, depth=1)
-        check_cons(grp, "ill", chanidx=i, depth=0)
-        check_cons(grp, "fault", chanidx=i, depth=0)
-
-        check_cons(grp, "bus_imem", chanidx=i, start=0, depth=1, bus_mode=True)
-        check_cons(grp, "bus_imem_fault", chanidx=i, start=0, depth=1, bus_mode=True)
-        check_cons(grp, "bus_dmem", chanidx=i, start=0, depth=1, bus_mode=True)
-        check_cons(grp, "bus_dmem_fault", chanidx=i, start=0, depth=1, bus_mode=True)
-        check_cons(grp, "bus_dmem_io_read", chanidx=i, start=0, depth=1, bus_mode=True)
-        check_cons(grp, "bus_dmem_io_read_fault", chanidx=i, start=0, depth=1, bus_mode=True)
-        check_cons(grp, "bus_dmem_io_write", chanidx=i, start=0, depth=1, bus_mode=True)
-        check_cons(grp, "bus_dmem_io_write_fault", chanidx=i, start=0, depth=1, bus_mode=True)
-        check_cons(grp, "bus_dmem_io_order", chanidx=i, start=0, depth=1, bus_mode=True)
-
-    check_cons(grp, "hang", start=0, depth=1)
-    check_cons(grp, "cover", start=0, depth=1)
-
     for csr in sorted(csrs):
         for chanidx in range(nret):
             for csr_test in csr_tests.get(csr, [None]):
