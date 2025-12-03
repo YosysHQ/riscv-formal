@@ -128,11 +128,11 @@ class NamedSet(Collection[NC]):
             self[val.name] = val
 
     @overload
-    def get(self, name: str) -> NC | None: ...
+    def get(self, name: str, /) -> NC | None: ...
     @overload
-    def get(self, name: str, default: NC) -> NC: ...
+    def get(self, name: str, default: NC, /) -> NC: ...
     @overload
-    def get(self, name: str, default: NC | None) -> NC | None: ...
+    def get(self, name: str, default: None = None, /) -> NC | None: ...
     def get(self, name: str, default: NC | None = None) -> NC | None:
         """Try return the named value if one exists, or default if not.
 
@@ -140,7 +140,17 @@ class NamedSet(Collection[NC]):
         :param default: The value to return if none found, defaults to None
         :return: value or default
         """
-        try:
-            return self[name]
-        except KeyError:
-            return default
+        return self._store.get(name, default)
+
+    @overload
+    def pop(self, name: str, /) -> NC: ...
+    @overload
+    def pop(self, name: str, default: NC, /) -> NC: ...
+    @overload
+    def pop(self, name: str, default: None, /) -> NC | None: ...
+    def pop(self, name: str, *args: NC | None) -> NC | None:
+        """Remove the named value, and return it if it exists.
+
+        :raises KeyError: Named value does not exist and no default provided.
+        """
+        return self._store.pop(name, *args)
