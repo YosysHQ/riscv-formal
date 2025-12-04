@@ -19,6 +19,16 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Source RiscV-Formal package environment
+        run: |
+          cd cli
+          uv sync
+          source .venv/bin/activate
+
       - name: Run checks
         run: |
           cd cores/nerv
@@ -67,6 +77,16 @@ jobs:
       - name: Build SBY
         run: |
           make -C sby install DESTDIR=${GITHUB_WORKSPACE}/.local PREFIX=
+
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Source RiscV-Formal package environment
+        run: |
+          cd cli
+          uv sync
+          source .venv/bin/activate
 
       - name: Run checks
         run: |
