@@ -34,9 +34,7 @@ jobs:
           cd cores/nerv
           make check -j$(nproc)
           cd ../picorv32
-          wget -O picorv32.v https://raw.githubusercontent.com/YosysHQ/picorv32/master/picorv32.v
-          python3 ../../checks/genchecks.py
-          make -C checks -j$(nproc)
+          make check -j$(nproc)
 
   test_verific:
     runs-on: [self-hosted, linux, x64]
@@ -93,6 +91,4 @@ jobs:
           cd cores/nerv
           make check -j$(nproc)
           cd ../picorv32
-          wget -O picorv32.v https://raw.githubusercontent.com/YosysHQ/picorv32/master/picorv32.v
-          python3 ../../checks/genchecks.py
-          make -C checks -j$(nproc)
+          make check -j$(nproc)
