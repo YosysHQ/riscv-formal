@@ -75,8 +75,7 @@ class Check:
 
         if isinstance(self.checker, Csr):
             if self.checker.behavior is not None:
-                short_name = self.checker.behavior.short_name
-                check = f"csrc_{short_name}"
+                check = f"csrc_{self.checker.behavior.NAME}"
             elif self.checker.is_accessible:
                 check = "csrw"
             else:
@@ -90,26 +89,13 @@ class Check:
 
         assert chanidx is not None
         insn = self.checker.name
-        
-        if isinstance(self.checker, Csr) and self.checker.behavior is not None:
-            short_name = self.checker.behavior.short_name
-            return [
-                f"{pf}{check}",
-                f"{pf}{check}_ch{chanidx:d}",
-                f"{pf}{check}_{insn}",
-                f"{pf}{check}_{insn}_ch{chanidx:d}",
-                f"{pf}csrc_{short_name}",
-                f"{pf}csrc_{short_name}_ch{chanidx:d}",
-                f"{pf}csrc_{short_name}_{insn}",
-                f"{pf}csrc_{short_name}_{insn}_ch{chanidx:d}",
-            ]
-        else:
-            return [
-                f"{pf}{check}",
-                f"{pf}{check}_ch{chanidx:d}",
-                f"{pf}{check}_{insn}",
-                f"{pf}{check}_{insn}_ch{chanidx:d}",
-            ]
+
+        return [
+            f"{pf}{check}",
+            f"{pf}{check}_ch{chanidx:d}",
+            f"{pf}{check}_{insn}",
+            f"{pf}{check}_{insn}_ch{chanidx:d}",
+        ]
 
 
 class GenChecks(tl.Task):
@@ -184,9 +170,14 @@ class GenChecks(tl.Task):
                 await generate(grp, insn)
 
             tl.log_debug(f"csr checks for group {grp!r}")
-            for csr in App.config.options.csr_spec.csrs:
+            csr_spec = App.config.options.csr_spec
+            for csr in csr_spec.csrs:
                 # store default behavior
-                behavior = csr.behavior
+                default_behavior = csr.behavior
+
+                # test default behavior (if there is one)
+                if csr.behavior is not None:
+                    await generate(grp, csr)
 
                 # test RW access
                 if csr.rw_test:
@@ -194,18 +185,19 @@ class GenChecks(tl.Task):
                     await generate(grp, csr)
 
                 # test behaviors from config
-                config = App.config.options.csr_spec.csr_configs[csr.name]
+                config = csr_spec.csr_configs[csr.name]
                 for test, value in config.tests.items():
-                    # TODO the other CSRC checks
-                    # preferably without hardcoding for behavior names
-                    if test == "const":
-                        csr.behavior = ConstValue(value)
-                        await generate(grp, csr)
-
-                # test default behavior (if there is one)
-                if behavior is not None:
-                    csr.behavior = behavior
+                    # TODO catch unknown behaviors
+                    behavior_type = csr_spec.get_behavior(test)
+                    if value is None:
+                        csr.behavior = behavior_type()
+                    else:
+                        # TODO catch invalid args
+                        csr.behavior = behavior_type(value) # type: ignore
                     await generate(grp, csr)
+
+                # restore default behavior
+                csr.behavior = default_behavior
 
             tl.log_debug(f"consistency checks for group {grp!r}")
             for checker in cons_spec.cons:

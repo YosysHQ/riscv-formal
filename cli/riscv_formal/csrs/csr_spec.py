@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import functools
-from typing import Optional, ClassVar, Iterable, Callable, Self, overload
+from typing import (
+    Callable,
+    ClassVar,
+    Iterable,
+    Optional,
+    Self,
+    Type,
+    overload,
+)
 
 from yosys_mau.source_str import report, re as ssre
 import yosys_mau.task_loop as tl
@@ -206,6 +214,7 @@ class CsrSpec:
 
     _generators: ClassVar[dict[str, Callable[[Iterable[str]], NamedSet[Csr]]]] = {}
     _aliased_by: ClassVar[dict[Callable, set[str]]] = {}
+    _behaviors: ClassVar[dict[str, Type[Behavior]]] = {}
 
     @property
     def csrs(self) -> Iterable[Csr]:
@@ -224,6 +233,14 @@ class CsrSpec:
         cls._aliased_by[generator] = set(mods)
         mods_str = ", ".join(mods)
         tl.log_debug(f"Registered csr callback for extensions: {mods_str}")
+
+    @classmethod
+    def register_behavior(cls, behavior: Type[Behavior]):
+        cls._behaviors[behavior.NAME] = behavior
+
+    @classmethod
+    def get_behavior(cls, name: str) -> Type[Behavior]:
+        return cls._behaviors[name]
 
     def __post_init__(self) -> None:
         self.csr_configs = NamedSet()
@@ -387,3 +404,14 @@ for mod, gen in builtins_map.items():
 
 Isa.register_dependency("Zicntr", "Zicsr")
 Isa.register_dependency("Zihpm", "Zicsr")
+
+builtin_behaviors: list[Type[Behavior]] = [
+    AnyValue,
+    ConstValue,
+    ZeroValue,
+    UpcntValue,
+    IncValue,
+]
+
+for behavior in builtin_behaviors:
+    CsrSpec.register_behavior(behavior)

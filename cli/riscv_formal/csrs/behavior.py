@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Optional
+from typing import Optional, ClassVar
 
 from ..named_set import NamedSet
 from ..rvfi import SpeculativeObserver
@@ -11,7 +11,12 @@ class BehavioralReg(SpeculativeObserver):
     default_value: str = "0"
 
 class Behavior(metaclass=ABCMeta):
-    short_name: str
+    NAME: ClassVar[str]
+
+    @classmethod
+    def __init_subclass__(cls, name: str, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+        cls.NAME = name
 
     @abstractmethod
     def regs(self, csr_width: str, csr_has_rvfi: bool) -> NamedSet[BehavioralReg]: pass
@@ -54,9 +59,7 @@ class Behavior(metaclass=ABCMeta):
     def __json__(self) -> str:
         return repr(self)
 
-class AnyValue(Behavior):
-    short_name = "any"
-
+class AnyValue(Behavior, name="any"):
     def regs(self, csr_width: str, csr_has_rvfi: bool) -> NamedSet[BehavioralReg]:
         regs = NamedSet([
             BehavioralReg("rsval_shadow", csr_width, "csr_rsval"),
@@ -101,9 +104,7 @@ class AnyValue(Behavior):
                 /* RC */ csr_mode == 2'b 11 ? csr_insn_cmask : '1;""")
         return assign
 
-class ConstValue(Behavior):
-    short_name = "const"
-
+class ConstValue(Behavior, name="const"):
     def __init__(self, const_value: Optional[str | int] = None):
         if isinstance(const_value, int):
             self.const_value = f"'h {const_value:X}"
@@ -143,18 +144,14 @@ class ConstValue(Behavior):
     def assign_condition(self) -> str:
         return "csr_read_valid && csr_insn_under_test"
 
-class ZeroValue(ConstValue):
-    short_name = "zero"
-
+class ZeroValue(ConstValue, name="zero"):
     def __init__(self):
         super().__init__(0)
 
     def _repr_args(self):
         return ""
 
-class UpcntValue(Behavior):
-    short_name = "upcnt"
-
+class UpcntValue(Behavior, name="upcnt"):
     def __init__(self):
         self.comparison = ">"
     
@@ -226,8 +223,6 @@ class UpcntValue(Behavior):
             end else
                 csr_written = 0;""")
 
-class IncValue(UpcntValue):
-    short_name = "inc"
-
+class IncValue(UpcntValue, name="inc"):
     def __init__(self):
         self.comparison = ">="
