@@ -31,8 +31,6 @@ firmware.hex: firmware.elf
 testbench: testbench.sv nerv.sv
 	iverilog -g2012 -o testbench -D STALL -D NERV_DBGREGS testbench.sv nerv.sv
 
-RISCV_ROOT ?= ../..
-CLI_ROOT ?= $(RISCV_ROOT)/cli
 RISCV_FORMAL ?= python3 -m riscv_formal
 RVF_OPTS ?=
 checks: checks.cfg

@@ -2,11 +2,17 @@
 picorv32.v:
 	wget -O picorv32.v https://raw.githubusercontent.com/YosysHQ/picorv32/master/picorv32.v
 
+RISCV_FORMAL ?= python3 -m riscv_formal
+RVF_OPTS ?=
 checks: picorv32.v
-	python3 ../../checks/genchecks.py
-	$(MAKE) -C checks
+	$(RISCV_FORMAL) checks.cfg genchecks $(RVF_OPTS)
 
-check: checks
+run_checks: checks
+	$(MAKE) -C checks
+	@touch $@
+
+.PHONY: check
+check: run_checks
 	bash cexdata.sh
 	cat cexdata-*/status.txt
 
