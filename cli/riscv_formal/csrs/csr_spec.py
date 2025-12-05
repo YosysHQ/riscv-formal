@@ -296,13 +296,13 @@ class CsrSpec:
                 #     ),
                 # )
                 csr_line("mscratch", "any")
-                csr_line("mcycle", "inc")
-                csr_line("minstret", "inc")
                 # TODO test hpms
                 # TODO test shadow registers
 
                 # TODO test restricted CSR addresses
                 restricted_csrs: dict[str, tuple[str | list[str], int, list[str]]] = {
+                    "mcycle": ("Zicntr", 0xB00, ["inc"]),
+                    "minstret": ("Zicntr", 0xB02, ["inc"]),
                     "medeleg": ("s", 0x302, []),
                     "mideleg": ("s", 0x303, []),
                     "mcounteren": ("u", 0x306, []),
