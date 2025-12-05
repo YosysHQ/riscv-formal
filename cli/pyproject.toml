@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "json-fix>=1.0.0",
+    "verilog-vcd>=1.11",
     "yosys-mau",
 ]
 

@@ -523,6 +523,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "json-fix" },
+    { name = "verilog-vcd" },
     { name = "yosys-mau" },
 ]
 
@@ -536,6 +537,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "json-fix", specifier = ">=1.0.0" },
+    { name = "verilog-vcd", specifier = ">=1.11" },
     { name = "yosys-mau", git = "https://github.com/YosysHQ/mau.git" },
 ]
 
@@ -858,6 +860,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/15/22/9ee70a2574a4f4599
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a7/c2/fe1e52489ae3122415c51f387e221dd0773709bad6c6cdaa599e8a2c5185/urllib3-2.5.0-py3-none-any.whl", hash = "sha256:e6b01673c0fa6a13e374b50871808eb3bf7046c4b125b216f6bf1cc604cff0dc", size = 129795, upload-time = "2025-06-18T14:07:40.39Z" },
 ]
+
+[[package]]
+name = "verilog-vcd"
+version = "1.11"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/57/80/b810c0b2b172bcb0bc2181b3a5b7c7b58854f8ed2d0bff1dfeb0885b6cfe/Verilog_VCD-1.11.tar.gz", hash = "sha256:2ffa5e3711c57d1312dc411a1918a1f8f171ff10f043c7749fb129ab7642683a", size = 6120, upload-time = "2016-10-31T22:54:03.968Z" }
 
 [[package]]
 name = "webencodings"
