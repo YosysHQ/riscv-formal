@@ -12,7 +12,7 @@ from yosys_mau import task_loop as tl
 from yosys_mau.source_str import report, read_file, re as ssre
 
 from riscv_formal.insns import Isa
-from riscv_formal.csrs import CsrSpec, CsrConfig
+from riscv_formal.csrs import CsrSpec, CsrConfig, Csr
 from riscv_formal.rvfi import Rvfi
 
 
@@ -320,7 +320,7 @@ class CustomCsrConfig(CsrConfig):
 class IllegalCsrConfig:
     addr: int
     modes: set[Literal["m", "s", "u"]]
-    rw: set[Literal["r", "w"]]
+    rw: bool
 
     @classmethod
     def parse(cls, line: str) -> Self:
@@ -328,12 +328,12 @@ class IllegalCsrConfig:
             case [addr_str, modes_str, rw_str]:
                 addr, modes = parse_csr_addr_and_mode(addr_str, modes_str)
 
-                rw = set()
-                for c in ssre.findall(r".", rw_str):
-                    if c in ("r", "w"):
-                        rw.add(c)
-                    else:
-                        raise report.InputError(c, f"unsupported access mode `{c}`")
+                if rw_str == "rw":
+                    rw = True
+                elif rw_str == "w":
+                    rw = False
+                else:
+                    raise report.InputError(rw_str, f"expected 'rw' or 'w' for illegal access mode")
                 return cls(addr, modes, rw)
             case _:
                 raise report.InputError(
@@ -453,7 +453,13 @@ def parse_config():
         App.config.options.csr_spec.config_csr(csr)
 
     for csr in App.config.illegal_csrs:
-        App.config.options.csr_spec.add_csr(csr.addr)
+        # TODO csr_ill for M-legal CSRs
+        App.config.options.csr_spec.add_csr(Csr(
+            name = f"{csr.addr:3x}",
+            width = "xlen",
+            index = csr.addr,
+            privilege = "MRW" if csr.rw else "MRO",
+        ))
         App.config.options.csr_spec.mark_illegal(csr.addr)
 
     App.rvfi = Rvfi()

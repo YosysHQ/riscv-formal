@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import functools
-from typing import Optional, ClassVar, Iterable, Callable, Self
+from typing import Optional, ClassVar, Iterable, Callable, Self, overload
 
 from yosys_mau.source_str import report, re as ssre
 import yosys_mau.task_loop as tl
@@ -316,17 +316,21 @@ class CsrSpec:
             case spec:
                 raise report.InputError(spec, f"unsupported CSR spec {spec!r}")
 
-    def add_csr(self, address: Optional[int] = None, name: Optional[str] = None, csr: Optional[Csr] = None):
-        if (address is None and csr is None) or (address is not None and csr is not None):
-            raise NotImplementedError("expected exactly one of address or csr to be set")
-
-        if csr is None:
+    @overload
+    def add_csr(self, address: int, name: Optional[str] = None, /) -> None: ...
+    @overload
+    def add_csr(self, csr: Csr, /) -> None: ...
+    def add_csr(self, csr_or_addr: int | Csr, name: Optional[str] = None):
+        if isinstance(csr_or_addr, Csr):
+            csr = csr_or_addr
+        else:
+            addr = csr_or_addr
             csr = Csr(
                 # use the address as a fallback if there is no name
-                name = name or f"{address:3x}",
+                name = name or f"{addr:3x}",
                 # only xlen-width custom CSRs are supported
                 width = "xlen",
-                index = address,
+                index = addr,
             )
 
         name = csr.name

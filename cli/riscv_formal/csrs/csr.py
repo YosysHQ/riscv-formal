@@ -157,15 +157,13 @@ class Csr(GenericChecker):
         return v_str
 
     def _v_ill_test(self) -> str:
-        # TODO maybe legal accesses?
         return dedent(f"""\
-            // no legal accesses
             always @* begin
                 if (!reset && check) begin
                     assume (csr_insn_valid);
                     assume (csr_access);
                     assert (!csr_write_valid);
-                    assert (!csr_read_valid);
+                    {"assert (!csr_read_valid);" if self.read_write else "// reads may be valid"}
                 end
             end
         """)

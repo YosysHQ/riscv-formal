@@ -185,8 +185,6 @@ class GenChecks(tl.Task):
 
             tl.log_debug(f"csr checks for group {grp!r}")
             for csr in App.config.options.csr_spec.csrs:
-                # TODO illegal csrs
-
                 # store default behavior
                 behavior = csr.behavior
 
