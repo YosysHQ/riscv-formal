@@ -172,16 +172,15 @@ class GenChecks(tl.Task):
             tl.log_debug(f"csr checks for group {grp!r}")
             csr_spec = App.config.options.csr_spec
             for csr in csr_spec.csrs:
-                # store default behavior
+                # store defaults
                 default_behavior = csr.behavior
+
+                # don't do RW testing in behavior tests
+                rw_test = csr.rw_test
+                csr.rw_test = False
 
                 # test default behavior (if there is one)
                 if csr.behavior is not None:
-                    await generate(grp, csr)
-
-                # test RW access
-                if csr.rw_test:
-                    csr.behavior = None
                     await generate(grp, csr)
 
                 # test behaviors from config
@@ -196,7 +195,13 @@ class GenChecks(tl.Task):
                         csr.behavior = behavior_type(value) # type: ignore
                     await generate(grp, csr)
 
-                # restore default behavior
+                # test RW access
+                if rw_test:
+                    csr.rw_test = True
+                    csr.behavior = None
+                    await generate(grp, csr)
+
+                # restore defaults
                 csr.behavior = default_behavior
 
             tl.log_debug(f"consistency checks for group {grp!r}")
@@ -550,13 +555,14 @@ class GenInsnCheck(GenShared):
 
     def _files_section(self) -> None:
         super()._files_section()
-        self.print_hfmt(f'{self._check_dir}/{Check.checker.name}.sv')
+        self.print_hfmt(f'{self._check_dir}/{Check.check}.sv')
 
     def _file_check_section(self) -> None:
         super()._file_check_section()
-        self.print_hfmt(f'`include "{Check.checker.name}.sv"\n')
+        self.print_hfmt(f'`include "{Check.check}.sv"\n')
 
     async def _gen_check_source(self):
+        # TODO can we limit this to only running once instead of for every channel?
         if isinstance(Check.checker, Instruction):
             self._insn_check_wrapper = InstructionChecker(
                 name = "insn_check",
@@ -571,10 +577,7 @@ class GenInsnCheck(GenShared):
             self._legal_csr = Check.checker.is_accessible
 
         (App.work_dir / self._check_dir).mkdir(exist_ok=True)
-        checker_name = Check.checker.name + '.sv'
-        if isinstance(checker_name, SourceStr):
-            # convert SourceStr to str
-            checker_name = checker_name.as_plain_str()
+        checker_name = Check.check + '.sv'
         checker_src = Path(self._check_dir) / checker_name
         with (App.work_dir / checker_src).open("w") as checker_file:
             checker = self._insn_check_wrapper or Check.checker
