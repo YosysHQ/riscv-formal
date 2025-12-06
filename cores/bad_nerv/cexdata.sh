@@ -25,6 +25,8 @@ for x in {checks,testbug[0-9][0-9][0-9]}/*.sby; do
 		printf "%-30s %s %10s\n" $x "  pass  " $(sed '/Elapsed process time/ { s/.*\]: //; s/ .*//; p; }; d;' $x/logfile.txt)
 	elif [ -f $x/FAIL ]; then
 		printf "%-30s %s %10s\n" $x "**FAIL**" $(sed '/Elapsed process time/ { s/.*\]: //; s/ .*//; p; }; d;' $x/logfile.txt)
+	elif [ -f $x/model/design.log ]; then
+		printf "%-30s" $x; echo $(grep "ERROR:" $x/model/design.log)
 	else
 		printf "%-30s %s\n" $x unknown
 	fi

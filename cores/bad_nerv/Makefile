@@ -11,8 +11,25 @@ endif
 	echo "/*" >> $*/.gitignore
 
 %/run: %
-	$(MAKE) -C $*
+	-$(MAKE) -C $*
 	touch $@
 
 check:
 	bash cexdata.sh
+
+TARGET ?=
+ifneq ($(TARGET),)
+.PHONY: run
+run: $(TARGET) $(TARGET)/run
+endif
+
+TESTBUGS := $(wildcard testbug*.cfg)
+TESTBUG_DIRS := $(basename $(TESTBUGS))
+TESTBUG_OUT ?= out.log
+.PHONY: testbugs
+testbugs: $(TESTBUG_DIRS) $(addsuffix /run,$(TESTBUG_DIRS))
+	bash cexdata.sh | tee $(TESTBUG_OUT)
+
+.PHONY: clean
+clean:
+	rm -rf $(TESTBUG_DIRS) checks/
