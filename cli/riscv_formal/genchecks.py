@@ -556,12 +556,13 @@ class GenInsnCheck(GenShared):
     def _files_section(self) -> None:
         super()._files_section()
         self.print_hfmt(f'{self._check_dir}/{Check.check}.sv')
+        self._gen_check_source()
 
     def _file_check_section(self) -> None:
         super()._file_check_section()
         self.print_hfmt(f'`include "{Check.check}.sv"\n')
 
-    async def _gen_check_source(self):
+    def _gen_check_source(self):
         # TODO can we limit this to only running once instead of for every channel?
         if isinstance(Check.checker, Instruction):
             self._insn_check_wrapper = InstructionChecker(
@@ -624,10 +625,6 @@ class GenInsnCheck(GenShared):
         #         print("`define RISCV_FORMAL_ILL_WRITE", file=sby_file)
 
         return csrs
-
-    async def on_run(self):
-        await self._gen_check_source()
-        await super().on_run()
 
 
 def print_custom_csrs(custom_csrs: Iterable[str], sby_file: TextIO):
