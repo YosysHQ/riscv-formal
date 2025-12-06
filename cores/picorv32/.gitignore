@@ -10,3 +10,4 @@
 /picorv32.v
 /disasm.s
 /disasm.o
+/run_checks
