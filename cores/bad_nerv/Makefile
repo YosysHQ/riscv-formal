@@ -28,7 +28,7 @@ TESTBUG_DIRS := $(basename $(TESTBUGS))
 TESTBUG_OUT ?= out.log
 .PHONY: testbugs
 testbugs: $(TESTBUG_DIRS) $(addsuffix /run,$(TESTBUG_DIRS))
-	bash cexdata.sh | tee $(TESTBUG_OUT)
+	bash cexdata.sh | sed 's%cores/bad_nerv/../../%%g' | tee $(TESTBUG_OUT)
 
 .PHONY: clean
 clean:
