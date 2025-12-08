@@ -6,10 +6,13 @@ from typing import Iterable
 
 import click
 
+# read-only class describing a given test configuration
 @dataclass(frozen=True)
 class BugCfg:
+    # between 100 and 999 inclusive
     id: int
-    checks: list[str] = field(default_factory=list)
+    # leave empty to include all checks
+    filter_checks: list[str] = field(default_factory=list)
 
     @property
     def id_str(self) -> str:
@@ -20,6 +23,7 @@ class BugCfg:
         return f"testbug{self.id_str}"
 
 
+# list of all available test configurations
 BUGS = [
     BugCfg(101, ["reg"]),
 ]
@@ -49,10 +53,10 @@ def run(testbug: str):
                     # enable testbug
                     click.echo(f"`define NERV_TESTBUG_{bug.id_str}", bug_cfg)
 
-            if bug.checks:
+            if bug.filter_checks:
                 click.echo("", bug_cfg)
                 click.echo("[filter-checks]", bug_cfg)
-                for check in bug.checks:
+                for check in bug.filter_checks:
                     click.echo(f"+ {check}", bug_cfg)
                 click.echo("- .*", bug_cfg)
 
