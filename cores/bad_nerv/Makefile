@@ -1,6 +1,13 @@
 RVF_CLI ?=
 RVF_OPTS ?=
 
+# make patch with git diff --output=bad_nerv.patch bad_nerv.sv
+.PHONY: patch unpatch
+patch:
+	git apply bad_nerv.patch
+unpatch:
+	git apply -R bad_nerv.patch
+
 # ./gen_test.py all will (re-)generate all test configs
 testbug%.cfg: gen_test.py
 	./$< $*

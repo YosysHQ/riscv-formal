@@ -1,0 +1,60 @@
+diff --git a/cores/bad_nerv/bad_nerv.sv b/cores/bad_nerv/bad_nerv.sv
+index f95bbde..8a2dd26 100644
+--- a/cores/bad_nerv/bad_nerv.sv
++++ b/cores/bad_nerv/bad_nerv.sv
+@@ -449,7 +449,11 @@ module nerv #(
+ 	wire [6:0] insn_opcode;
+ 
+ 	// rs1 and rs2 are source for the instruction
++`ifdef NERV_TESTBUG_301
++	wire [31:0] rs1_value = !insn_rs1 ? csr_mie_value : regfile[insn_rs1];
++`else
+ 	wire [31:0] rs1_value = !insn_rs1 ? 0 : regfile[insn_rs1];
++`endif
+ 	wire [31:0] rs2_value = !insn_rs2 ? 0 : regfile[insn_rs2];
+ 
+ 	// split R-type instruction - see section 2.2 of RiscV spec
+@@ -983,7 +987,17 @@ module nerv #(
+ 			// ALU instructions: Add, Subtract, Shift Left Logical, Set Left Than, Set Less Than Unsigned, XOR, Shift Right Logical,
+ 			// Shift Right Arithmetic, OR, AND
+ 				case ({insn_funct7, insn_funct3})
++				`ifdef NERV_TESTBUG_201
++					10'b 0000000_000 /* ADD  */: begin next_wr = 1; next_rd = insn_rs1 == 0 ? 0 : rs1_value + rs2_value; end
++				`elsif NERV_TESTBUG_202
++					10'b 0000000_000 /* ADD  */: begin next_wr = 1; next_rd = rs1_value[30:0] + rs2_value; end
++				`elsif NERV_TESTBUG_203
++					10'b 0000000_000 /* ADD  */: begin next_wr = (rs1_value + rs2_value) != 0; next_rd = rs1_value + rs2_value; end
++				`elsif NERV_TESTBUG_204
++					10'b 0000000_000 /* ADD  */: begin next_wr = 1; next_rd = insn == rvfi_insn ? rvfi_rd_wdata : rs1_value + rs2_value; end
++				`else
+ 					10'b 0000000_000 /* ADD  */: begin next_wr = 1; next_rd = rs1_value + rs2_value; end
++				`endif
+ 					10'b 0100000_000 /* SUB  */: begin next_wr = 1; next_rd = rs1_value - rs2_value; end
+ 					10'b 0000000_001 /* SLL  */: begin next_wr = 1; next_rd = rs1_value << rs2_value[4:0]; end
+ 					10'b 0000000_010 /* SLT  */: begin next_wr = 1; next_rd = $signed(rs1_value) < $signed(rs2_value); end
+@@ -1154,7 +1168,13 @@ module nerv #(
+ 
+ 	// mem read functions: Lower and Upper Bytes, signed and unsigned
+ 	always @* begin
++	`ifdef NERV_TESTBUG_401
++		mem_rdata = dmem_addr == 0 ? 0 : dmem_rdata >> (8*mem_rd_func_q[4:3]);
++	`elsif NERV_TESTBUG_402
++		mem_rdata = dmem_addr == 0 ? 0 : dmem_rdata >> (8*mem_rd_func_q[4:3]);
++	`else
+ 		mem_rdata = dmem_rdata >> (8*mem_rd_func_q[4:3]);
++	`endif
+ 		case (mem_rd_func_q[2:0])
+ 			3'b 000 /* LB  */: begin mem_rdata = $signed(mem_rdata[7:0]); end
+ 			3'b 001 /* LH  */: begin mem_rdata = $signed(mem_rdata[15:0]); end
+@@ -1182,7 +1202,11 @@ module nerv #(
+ 		if (cycle_insn || cycle_late_wr || cycle_trap) begin
+ 			rvfi_rd_addr <= next_wr ? wr_rd : 0;
+ 			rvfi_rd_wdata <= next_wr && wr_rd ? next_rd : 0;
++		`ifdef NERV_TESTBUG_401
++			rvfi_mem_rdata <= dmem_addr == 0 ? 0 : dmem_rdata;
++		`else
+ 			rvfi_mem_rdata <= dmem_rdata;
++		`endif
+ 		end
+ 
+ 		if (cycle_insn || cycle_trap) begin
