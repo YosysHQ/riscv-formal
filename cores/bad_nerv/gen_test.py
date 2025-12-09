@@ -16,16 +16,22 @@ class BugCfg:
 
     @property
     def id_str(self) -> str:
+        # since we reserve the 0xx range for custom configs, this is somewhat redundant
         return f"{self.id:03d}"
 
     @property
     def name(self) -> str:
         return f"testbug{self.id_str}"
 
+    @property
+    def file_name(self) -> str:
+        return f"{self.name}.cfg"
+
 
 # list of all available test configurations
 BUGS = [
-    BugCfg(101, ["reg"]),
+    *[BugCfg(x, ["insn_add"]) for x in [201, 202, 203, 204, 301]],
+    *[BugCfg(x, ["insn_lw", "bus_dmem"]) for x in [400, 401, 402]],
 ]
 
 def get_bugs(testbug: str) -> Iterable[BugCfg]:
@@ -45,7 +51,7 @@ def run(testbug: str):
 
     valid_bug = False
     for bug in get_bugs(testbug):
-        with open(f"{bug.name}.cfg", "w") as bug_cfg:
+        with open(bug.file_name, "w") as bug_cfg:
             click.echo(f"Writing to {bug_cfg.name}")
             for line in base_cfg:
                 click.echo(line, bug_cfg, nl=False)

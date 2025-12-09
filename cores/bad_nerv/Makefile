@@ -1,6 +1,7 @@
 RVF_CLI ?=
+RVF_OPTS ?=
 
-# make all.cfg will (re-)generate all test configs
+# ./gen_test.py all will (re-)generate all test configs
 testbug%.cfg: gen_test.py
 	./$< $*
 
@@ -8,9 +9,9 @@ testbug%: testbug%.cfg
 ifeq ($(RVF_CLI),)
 	python3 ../../checks/genchecks.py $@
 else
-	riscv_formal $< genchecks
-	sed -i "s%$(HOME)/riscv-formal/cli/.venv/lib/python3.11/cores/%$(HOME)/riscv-formal/cores/%g" $@/reg_ch0.sby
-	sed -i "s%$(HOME)/riscv-formal/cli/.venv/lib/python3.11/checks/%$(HOME)/riscv-formal/checks/%g" $@/reg_ch0.sby
+	riscv_formal $< genchecks $(RVF_OPTS)
+	sed -i "s%$(HOME)/riscv-formal/cli/.venv/lib/python3.11/cores/%$(HOME)/riscv-formal/cores/%g" $@/*.sby
+	sed -i "s%$(HOME)/riscv-formal/cli/.venv/lib/python3.11/checks/%$(HOME)/riscv-formal/checks/%g" $@/*.sby
 endif
 
 %/run: %
@@ -22,7 +23,9 @@ check:
 
 TARGET ?=
 ifneq ($(TARGET),)
-.PHONY: run
+.PHONY: clean-target run
+clean-target:
+	rm -rf $(TARGET)
 run: $(TARGET) $(TARGET)/run
 endif
 
