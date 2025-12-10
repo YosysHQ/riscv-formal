@@ -109,10 +109,13 @@ class GenChecks(tl.Task):
             shutil.rmtree(App.work_dir)
         App.work_dir.mkdir()
 
+        cfg_dir = App.cfg_file.resolve().parent
+
         hargs = dict()
         # TODO error on basedir
-        hargs["basedir"] = App.base_dir
-        hargs["cfgdir"] = App.cfg_file.resolve().parent
+        if cfg_dir.parent.name == "cores":
+            hargs["basedir"] = cfg_dir.parent.parent
+        hargs["cfgdir"] = cfg_dir
         hargs["pkgdir"] = App.pkg_dir
         hargs["coredir"] = App.core_dir
         hargs["core"] = App.core_name
@@ -309,6 +312,7 @@ class GenShared(tl.Task):
         self.print_hfmt("chformal -early")
 
     def _files_section(self) -> None:
+        # TODO migrate rvfi_macros.vh
         self.print_hfmt(dedent("""
             @basedir@/checks/rvfi_macros.vh
             @pkgdir@/cons/rvfi_channel.sv

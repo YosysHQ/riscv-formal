@@ -100,7 +100,6 @@ class App:
 
     cfg_file: Path
     work_dir: Path
-    base_dir: Path
     pkg_dir: Path
 
     core_dir: Path

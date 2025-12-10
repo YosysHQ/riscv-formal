@@ -18,8 +18,6 @@ def main() -> None:
 
     job.global_client(args.jobs)
 
-    # TODO remove base_dir
-    App.base_dir = Path(__file__).parent.parent.parent
     App.pkg_dir = Path(__file__).parent
 
     # Move command line arguments into the App context
