@@ -17,8 +17,6 @@ ifeq ($(RVF_CLI),)
 	python3 ../../checks/genchecks.py $@
 else
 	riscv_formal $< genchecks $(RVF_OPTS)
-	sed -i "s%$(HOME)/riscv-formal/cli/.venv/lib/python3.11/cores/%$(HOME)/riscv-formal/cores/%g" $@/*.sby
-	sed -i "s%$(HOME)/riscv-formal/cli/.venv/lib/python3.11/checks/%$(HOME)/riscv-formal/checks/%g" $@/*.sby
 endif
 
 %/run: %
