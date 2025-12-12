@@ -1,3 +1,7 @@
+.. default-role:: py:obj
+
+.. py:currentmodule:: riscv_formal
+
 Defining custom ISA extensions
 ==============================
 
@@ -88,7 +92,7 @@ Defining instructions
    def insn_imm(insn, funct3, expr, wmode=False, extension = "I"):
       return Instruction(
          name = insn,
-         insn_parts = FORMAT_I,
+         insn_format = FORMAT_I,
          opcode = "0011011" if wmode else "0010011",
          result = expr,
          extension = extension,
@@ -99,21 +103,6 @@ Defining instructions
          },
          imm = True,
       )
-
-- `Instruction.xlen_min` and `Instruction.xlen_max` provide the min and
-  max supported xlen respectively
-
-.. TODO the other fields
-
-- `Instruction.insn_parts` field can either be a list of the instruction parts
-  (with each entry being a tuple of the name to use, and the number of
-  bits), or an `Instruction_format`
-
-  + when using an `Instruction_format`, and `Instruction.imm` is set
-    when creating the instruction, the value used is
-    `Instruction_format.imm`
-  + otherwise `Instruction.imm` should be a SystemVerilog expression for
-    an immediate value embedded in the instruction
 
 .. code-block:: python
 
@@ -128,8 +117,10 @@ Defining instructions
       imm = "$signed(insn_imm12)",
    )
 
+Refer to `.Instruction` for more information about available arguments
+
 Subclassing `Instruction`
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - built in subclasses in ``riscv_formal/insns/model.py``:
 

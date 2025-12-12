@@ -36,6 +36,7 @@ autosectionlabel_maxdepth = 1
 autodoc_typehints = 'description'
 autoclass_content = 'both'
 autodoc_member_order = 'bysource'
+autodoc_typehints_description_target = 'documented'
 
 # -- Options for intersphinx ----------
 

@@ -5,3 +5,4 @@ riscv-formal python documentation
    :maxdepth: 2
 
    named_set
+   insns

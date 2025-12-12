@@ -5,10 +5,14 @@ import json
 import json_fix
 
 class KeyMismatchError(Exception):
-    """Mapping key does not match value.name."""
+    """Mapping key does not match value.name.
+
+    :param name: value.name
+    :param key: Mapping key
+    """
     name: str
     key: str
-    def __init__(self, name, key, *args):
+    def __init__(self, name: str, key: str, *args):
         self.name = name
         self.key = key
         super().__init__(*args)
@@ -37,7 +41,10 @@ def skip_empty_factory(mapping: list[tuple[str, Any]]) -> dict:
 
 @dataclass
 class NamedClass:
-    """A dataclass which supports json conversion and has a name property."""
+    """A dataclass which supports json conversion and has a name property.
+
+    :param name: The name of the object, used as the key during lookup
+    """
     name: str
 
     @classmethod
@@ -59,7 +66,10 @@ NC = TypeVar('NC', bound=NamedClass)
 
 @dataclass
 class ValuedClass(NamedClass):
-    """A :class:`NamedClass` with a value, mostly used for testing."""
+    """A :class:`NamedClass` with a value, mostly used for testing.
+
+    :param val:
+    """
     val: Any
 
 class NamedSet(Collection[NC]):
@@ -152,5 +162,6 @@ class NamedSet(Collection[NC]):
         """Remove the named value, and return it if it exists.
 
         :raises KeyError: Named value does not exist and no default provided.
+        :return: value or default
         """
         return self._store.pop(name, *args)

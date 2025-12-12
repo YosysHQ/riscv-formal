@@ -14,22 +14,6 @@ the value.  e.g.
    ns: NamedSet[ValuedClass] = NamedSet()
    ns.add(obj)
 
-.. module:: riscv_formal.named_set
-
-.. autoclass:: NamedSet
+.. automodule:: riscv_formal.named_set
    :show-inheritance:
    :members:
-
-.. autoclass:: NamedClass
-
-.. autoclass:: NC
-
-
-Exceptions
-----------
-
-.. autoclass:: KeyMismatchError
-   :show-inheritance:
-
-.. autoclass:: KeyExistsError
-   :show-inheritance:

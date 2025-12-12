@@ -1,24 +1,91 @@
 from dataclasses import dataclass, field
-from typing import Optional, ClassVar, Callable, Iterable
+from typing import Optional, ClassVar, Callable, Iterable, Literal
 from textwrap import dedent
 
 from riscv_formal.generic_checker import GenericChecker
 from ..rvfi import Observer
 from ..named_set import NamedSet
 
+InsnParts = tuple[str, int]
 
 @dataclass
 class Instruction_format:
+    """Dataclass for describing an instruction format type.
+
+    :param name: Optional name for the format type
+    :param insn_parts: List of parts in the instruction format, where each part
+        is composed of a name and the number of bits
+    :param imm: SystemVerilog expression for constructing an immediate value
+        embedded in the instruction
+    """
     name: Optional[str] = None
-    insn_parts: list[tuple[str, int]] = field(default_factory=list)
+    insn_parts: list[InsnParts] = field(default_factory=list)
     imm: Optional[str] = None
 
 
 @dataclass(kw_only=True)
 class Instruction(GenericChecker):
+    """Dataclass for generating an instruction check.
+
+    Accepts keyword args only.  ``name`` and ``opcode`` are required, as is one
+    of ``insn_format`` or ``insn_parts``.  If rd is written, the expected value
+    must be assigned with either ``result`` or ``raw_code``.  ``riscv_formal``
+    will only generate checks for instructions where
+    :meth:`Instruction.included_in()` returns ``True`` and the current XLEN is
+    between ``xlen_min`` and ``xlen_max`` (inclusive).
+
+    :param name: Mnemonic for instruction
+    :param opcode: A string of 1s and 0s or Verilog expression
+    :param opcode_width: Width of opcode (in bits); defaults to 7
+    :param op_values: Mapping of instruction part name to expected value such
+        that the current check is only applied to instructions where all
+        ``insn_<name> == <value>`` hold true; values are provided as a string of
+        1s and 0s or Verilog expression
+    :param check_valid: Optional list of Verilog expressions which must hold
+        true for the check to be applied; each check is placed in parentheses
+        (``(<check>)``) and all checks are combined with boolean 'and' (``&&``),
+        including checks for opcode and op_values
+
+    :param insn_format: Optional helper for assigning ``insn_parts`` and ``imm``
+    :param insn_parts: As in :class:`Instruction_format`, leave empty if setting
+        ``insn_format``; each part available as ``insn_<name>`` in Verilog code;
+        widths must sum to ``ilen``
+    :param imm: As in :class:`Instruction_format`, or a boolean ``True`` to use
+        ``imm`` from ``insn_format``; available as ``insn_imm`` if set
+    :param ilen: Width of instruction; defaults to 32
+
+    :param shamt: If set, the lower ``n`` bits of rs2 are assigned to a Verilog
+        signal ``shamt``, where ``n`` is 4/5/6 for 32/64/128 bit results
+        respectively
+    :param result: Optional verilog expression to assign to a wire named
+        ``result``; if not provided ``raw_code`` must create the signal and
+        assign a value.
+    :param sign_extend_from: If set, the value of rd will be checked against
+        ``$signed(result[sign_extend_from:0])``
+    :param zero_extend_from: If set, the value of rd will be checked against
+        ``$unsigned(result[sign_extend_from:0])``; only applies if
+        sign_extend_from is not set (i.e. ``None``)
+    :param raw_code: Each item in this list will be inserted into the generated
+        Verilog module followed by a new line; may include any number of signal
+        declarations, assignments and/or process blocks; the string
+        ``%RESULT_WIDTH%`` will be replaced with the result width everything
+        else is inserted verbatim, including indentation
+
+    :param next_pc: Optional Verilog expression to assign to a wire named
+        ``next_pc``, if set will also add ``pc_wdata`` and ``trap`` as check
+        outputs
+    :param read_pc: Whether ``pc_rdata`` is used
+
+    :param xlen_min: Minimum supported XLEN; defaults to 32
+    :param xlen_max: Maximum supported XLEN, must be greater than or equal to
+        ``xlen_min``; defaults to 128
+    :param extension: Space separated list of extensions which provide the given
+        instruction; first letter should be upper case, optionally followed by
+        lower case, e.g. "I Zicsr"
+    """
     opcode: str
 
-    insn_parts: list[tuple[str, int]] = field(default_factory=list)
+    insn_parts: list[InsnParts] = field(default_factory=list)
     insn_format: Optional[Instruction_format] = None
 
     result: Optional[str] = None
@@ -33,7 +100,7 @@ class Instruction(GenericChecker):
     raw_code: list[str] = field(default_factory=list)
     spec_map: dict[str, str] = field(default_factory=dict)
     check_valid: list[str] = field(default_factory=list)
-    imm: Optional[bool | str] = None
+    imm: Optional[Literal[True] | str] = None
     xlen_min: int = 32
     xlen_max: int = 128
     ilen: int = 32
