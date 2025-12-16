@@ -5,4 +5,6 @@ riscv-formal python documentation
    :maxdepth: 2
 
    named_set
+   checks
    insns
+   csrs

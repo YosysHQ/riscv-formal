@@ -20,6 +20,33 @@ class MissingVerilogArgError(Exception):
 
 @dataclass(kw_only=True)
 class GenericChecker(NamedClass):
+    """Generic checker base class.
+
+    Accepts keyword args only so that subclasses can provide additional required
+    args that get picked up correctly by a type checker.  ``name`` is required,
+    others are optional.
+
+    Currently ``GenericChecker.xlen`` must be set to the integer value of XLEN
+    checks are generated for (typically one of 32, 64, or 128).  Generating
+    Verilog without setting this value is an error.  Subclasses may provide
+    additional required arguments in the class declaration, e.g. ``class
+    MyChecker(GenericChecker, required_v_args=["my_field"])``.
+
+    :param name: Name of the check; appended to ``rvfi_`` as the module name for
+        generated Verilog by default
+    :param body: SystemVerilog code providing the body of the check; typically
+        overridden by subclasses to generate from class-specific fields
+    :param can_channelize: If the current check is able to be channelized; it is
+        an error to set ``channelized`` if unset
+    :param channelized: If the channelizing should be handled by this class
+        (i.e. at generation time) or by macro expansion of
+        ``RISCV_FORMAL_CHANNEL_IDX`` (i.e. at test run time); setting
+        ``channel`` will automatically set this to ``True``
+    :param channel: If set, the currently selected channel; if unset and
+        ``channelized=True`` then the check body will be generated for each
+        channel
+    """
+    #TODO formalize compile-time vs run-time terms/definitions
     name: str
     body: str = ""
 
@@ -86,6 +113,11 @@ class GenericChecker(NamedClass):
         return v_str
 
     def to_verilog(self) -> str:
+        """Return a SystemVerilog module for the current check.
+
+        Will raise an error if any required arguments (e.g. xlen) are not set on
+        the class.
+        """
         self._v_checks()
         v_str = f"module {self._v_modname()} (\n{self._v_format_block(self._v_io())});\n\n"
         body = self._v_body()

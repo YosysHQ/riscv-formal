@@ -109,8 +109,8 @@ class Instruction(GenericChecker):
     _default_pc_increment: ClassVar[str] = "rvfi_pc_rdata + 4"
     _next_pc_check: ClassVar[str] = "next_pc[1:0] != 0"
 
-    registered_inputs: Optional[NamedSet[Observer]] = None
-    registered_outputs: Optional[NamedSet[Observer]] = None
+    _registered_inputs: Optional[NamedSet[Observer]] = None
+    _registered_outputs: Optional[NamedSet[Observer]] = None
 
     registered_assigns: ClassVar[dict[str, Callable[['Instruction'], str]]] = {}
     registered_checks: ClassVar[set[str]] = set()
@@ -150,11 +150,27 @@ class Instruction(GenericChecker):
             Observer("mem_wdata", "`RISCV_FORMAL_XLEN"),
         ])
 
-    def get_inputs(self):
-        return self.registered_inputs if self.registered_inputs is not None else self._default_inputs()
+    def get_inputs(self) -> NamedSet[Observer]:
+        """Get the set of inputs expected by this check.
 
-    def get_outputs(self):
-        return self.registered_outputs if self.registered_outputs is not None else self._default_outputs()
+        Will return a default set if :meth:`select_inputs()` has not been
+        called.
+        """
+        if self._registered_inputs is None:
+            return self._default_inputs()
+        else:
+            return self._registered_inputs
+
+    def get_outputs(self) -> NamedSet[Observer]:
+        """Get the set of outputs expected by this check.
+
+        Will return a default set if :meth:`select_outputs()` has not been
+        called.
+        """
+        if self._registered_outputs is None:
+            return self._default_outputs()
+        else:
+            return self._registered_outputs
 
     def _inputs_used(self) -> set[str]:
         inputs = set([
@@ -183,18 +199,26 @@ class Instruction(GenericChecker):
         return outputs
 
     def select_inputs(self, observers: Iterable[Observer]):
-        self.registered_inputs = NamedSet()
+        """Register required inputs from those provided.
+
+        :param observers: All available inputs
+        """
+        self._registered_inputs = NamedSet()
         inputs_used = self._inputs_used()
         for observer in observers:
             if observer.name in inputs_used:
-                self.registered_inputs.add(observer)
+                self._registered_inputs.add(observer)
 
     def select_outputs(self, observers: Iterable[Observer]):
-        self.registered_outputs = NamedSet()
+        """Register required outputs from those provided.
+
+        :param observers: All available outputs
+        """
+        self._registered_outputs = NamedSet()
         outputs_used = self._outputs_used()
         for observer in observers:
             if observer.name in outputs_used:
-                self.registered_outputs.add(observer)
+                self._registered_outputs.add(observer)
 
     def _insn_fixup(self):
         if self.insn_format is not None:
@@ -227,6 +251,13 @@ class Instruction(GenericChecker):
         self._config_widths()
 
     def valid_xlen(self, xlen: int) -> bool:
+        """Check if the current instruction should be generated for the given XLEN.
+
+        Currently checks are only generated for a single value of XLEN, this may
+        change in future to allow specifying all supported XLEN values.
+
+        :param xlen: An integer value for XLEN (usually one of 32, 64, or 128)
+        """
         return xlen >= self.xlen_min and xlen <= self.xlen_max
 
     def _v_modname(self) -> str:
@@ -376,6 +407,12 @@ class Instruction(GenericChecker):
         return v_str
 
     def included_in(self, isa_mods: Iterable[str]) -> bool:
+        """Check if the current instruction should be generated for the provided set of extensions.
+
+        :param isa_mods: All available extensions and sub extensions, plus
+            (e.g.) "RV" and "32"; should include compositional duplicates e.g.
+            both "B" and "Zba"
+        """
         if self.extension is None:
             return False
         for ext in self.extension.split():

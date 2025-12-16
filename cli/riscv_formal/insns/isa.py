@@ -85,12 +85,20 @@ class Isa:
 
     @classmethod
     def register_composition(cls, mod: str, *composed_of: str) -> None:
-        # e.g. B is composed of Zba + Zbb + Zbs
+        """e.g. mod "B" is composed of "Zba", "Zbb", "Zbs"
+
+        :param mod: ISA extension
+        :param composed_of: One or more extensions
+        """
         cls._compositions[mod] = composed_of
 
     @classmethod
     def register_dependency(cls, mod: str, *depends_on: str) -> None:
-        # e.g. Zicntr depends on Zicsr
+        """e.g. mod "Zicntr" depends on "Zicsr"
+
+        :param mod: ISA extension
+        :param depends_on: One or more extensions
+        """
         cls._dependencies[mod] = depends_on
 
     @classmethod
@@ -98,14 +106,19 @@ class Isa:
         generator: Callable[[Iterable[str]], NamedSet[Instruction]],
         *mods: str,
     ) -> None:
-        # Aliasing allows the same generator to be used for multiple extensions
-        # (or sub extensions).  Aliases are tracked so that generators are only
-        # called once across all aliases.
-        # e.g. the bext generator returns all Zb* instructions
-        # Generators are called with the list of isa_mods currently in use.  This
-        # allows for conditionally generating instructions as needed.  Results are
-        # then filtered by Instruction.included_in(isa_mods), allowing generators to
-        # ignore the input list of isa_mods and return all available instructions.
+        """e.g. the ``bext`` generator returns "Zba", "Zbb", "Zbc", ...
+        
+        The same generator can be used for multiple extensions (or sub
+        extensions).  Generators are only called once across all aliases, taking
+        the list of ``isa_mods`` (extensions) currently in use and returning all
+        available :class:`Instruction` checks for that set of mods/extensions.
+        Results are then filtered by ``Instruction.included_in(isa_mods)``,
+        allowing generators to optionally ignore the input list of
+        mods/extensions and always return all instructions provided.
+
+        :param generator: Generator function (factory method?)
+        :param mods: All extensions which should trigger this generator
+        """
         for mod in mods:
             cls._generators[mod] = generator
         cls._aliased_by[generator] = set(mods)
@@ -113,9 +126,16 @@ class Isa:
         tl.log_debug(f"Registered instruction callback for extensions: {mods_str}")
 
     @classmethod
-    def register_non_insn_ext(cls, *args: str) -> None:
-        # Helper for registering extensions with no instruction checks
-        for mod in args:
+    def register_non_insn_ext(cls, *mods: str) -> None:
+        """Helper for registering extensions with no instruction checks.
+
+        If the current configuration includes any unsupported extensions an
+        error will be raised; this method allows registering extensions as
+        supported even if they don't have any instructions to check.
+
+        :param mods: One or more extensions
+        """
+        for mod in mods:
             cls._generators[mod] = _empty_insn_gen
             cls._aliased_by[_empty_insn_gen].add(mod)
 
