@@ -1,6 +1,8 @@
 Defining macros
 ~~~~~~~~~~~~~~~
 
+.. TODO:: Update for refactor, also add a way to generate sv only (i.e. no SBY/make)
+
 Configuration macros
 ====================
 

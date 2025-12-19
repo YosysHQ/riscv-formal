@@ -1,6 +1,8 @@
 Quick start guide
 =================
 
+.. TODO:: How much of this is still valid?
+
 So you want to get your hands dirty with riscv-formal? Install the tools
 and pick one of the exercises below.
 

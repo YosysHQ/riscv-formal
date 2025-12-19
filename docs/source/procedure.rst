@@ -1,6 +1,8 @@
 Verification procedure
 ======================
 
+.. TODO:: update procedure post refactoring
+
 The following formal test are performed to verify ISA compliance of
 RISC-V processors with ``riscv-formal``. Depending on aspects like the
 strength of safety properties present in the core, the overall
