@@ -60,7 +60,7 @@ class GenericChecker(NamedClass):
     @classmethod
     def __init_subclass__(cls, required_v_args: Iterable[str] = [], **kwargs) -> None:
         super().__init_subclass__(**kwargs)
-        cls._required_v_args = cls._required_v_args.union(required_v_args)
+        cls._required_v_args.update(required_v_args)
 
     @classmethod
     def check_v_args(cls) -> None:
