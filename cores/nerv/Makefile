@@ -45,6 +45,8 @@ check: run_checks
 	bash cexdata.sh
 	cat cexdata/warnings.txt
 	cat cexdata/status.txt
+	@grep -Eq '\\*\\*FAIL\\*\\*|unknown' cexdata/status.txt && \
+		{ echo "ERROR: one or more checks failed (see cexdata/status.txt)."; exit 1; } || true
 
 show:
 	gtkwave testbench.vcd testbench.gtkw >> gtkwave.log 2>&1 &
