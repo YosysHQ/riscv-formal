@@ -17,7 +17,7 @@
 #  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 from Verilog_VCD.Verilog_VCD import parse_vcd
-from os import system
+from os import system, getenv
 from sys import argv
 
 rvfi_valid = None
@@ -50,6 +50,6 @@ with open("disasm.s", "w") as f:
         else:
             print(".word 0x%08x # %d" % (tv_insn, tv_order), file=f)
 
-system("riscv64-unknown-elf-as -march=rv32i -o disasm.o disasm.s")
-system("riscv64-unknown-elf-objdump -d -M numeric,no-aliases disasm.o")
-
+toolchain_prefix = getenv("TOOLCHAIN_PREFIX", "riscv64-unknown-elf-")
+assert system(f"{toolchain_prefix}as -march=rv32i -o disasm.o disasm.s") == 0
+assert system(f"{toolchain_prefix}objdump -d -M numeric,no-aliases disasm.o") == 0
