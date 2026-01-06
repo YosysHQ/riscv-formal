@@ -18,7 +18,21 @@
 
 from Verilog_VCD.Verilog_VCD import parse_vcd
 from os import system, getenv
+from shutil import which
 from sys import argv
+import sys
+
+toolchain_prefix = getenv("TOOLCHAIN_PREFIX", "riscv64-unknown-elf-")
+as_bin = f"{toolchain_prefix}as"
+objdump_bin = f"{toolchain_prefix}objdump"
+if which(as_bin) is None or which(objdump_bin) is None:
+    print(
+        f"WARNING: missing toolchain binaries: {as_bin} or {objdump_bin}. "
+        "Skipping disassembly. ",
+        "Update your PATH and/or set TOOLCHAIN_PREFIX so that these binaries are found."
+        file=sys.stderr,
+    )
+    sys.exit(0)
 
 rvfi_valid = None
 rvfi_order = None
@@ -50,6 +64,5 @@ with open("disasm.s", "w") as f:
         else:
             print(".word 0x%08x # %d" % (tv_insn, tv_order), file=f)
 
-toolchain_prefix = getenv("TOOLCHAIN_PREFIX", "riscv64-unknown-elf-")
-assert system(f"{toolchain_prefix}as -march=rv32i -o disasm.o disasm.s") == 0
-assert system(f"{toolchain_prefix}objdump -d -M numeric,no-aliases disasm.o") == 0
+assert system(f"{as_bin} -march=rv32i -o disasm.o disasm.s") == 0
+assert system(f"{objdump_bin} -d -M numeric,no-aliases disasm.o") == 0
