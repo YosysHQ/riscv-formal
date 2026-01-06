@@ -45,7 +45,7 @@ check: run_checks
 	bash cexdata.sh
 	cat cexdata/warnings.txt
 	cat cexdata/status.txt
-	@grep -Eq '\\*\\*FAIL\\*\\*|unknown' cexdata/status.txt && \
+	@grep -Fq -e '**FAIL**' -e 'unknown' cexdata/status.txt && \
 		{ echo "ERROR: one or more checks failed (see cexdata/status.txt)."; exit 1; } || true
 
 show:
