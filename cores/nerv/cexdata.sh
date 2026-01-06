@@ -18,7 +18,7 @@
 
 set -exuo pipefail
 
-AWK_BIN=${AWK_BIN:-awk}
+AWK=${AWK:-awk}
 
 rm -rf cexdata
 mkdir cexdata
@@ -46,4 +46,4 @@ for x in {checks,testbug[0-9][0-9][0-9]}/*.sby; do
 	else
 		printf "%-30s %s\n" $x unknown
 	fi
-done | $AWK_BIN '{ print gensub(":", "", "g", $3), $0; }' | sort -n | cut -f2- -d' ' > cexdata/status.txt
+done | $AWK '{ print gensub(":", "", "g", $3), $0; }' | sort -n | cut -f2- -d' ' > cexdata/status.txt
