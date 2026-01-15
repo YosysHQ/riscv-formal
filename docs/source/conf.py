@@ -13,6 +13,7 @@ extensions: list[str] = [
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.todo',
     'sphinx_toolbox.more_autodoc.typevars',
     'sphinx_toolbox.more_autodoc.typehints',
 ]
