@@ -16,14 +16,23 @@
 #  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-checks:
-	python3 ../../checks/genchecks.py
-	$(MAKE) -C checks
+RISCV_FORMAL ?= python3 -m riscv_formal
+RVF_OPTS ?=
+checks: checks.cfg
+	$(RISCV_FORMAL) checks.cfg genchecks $(RVF_OPTS)
 
-check: checks
+run_checks: checks
+	$(MAKE) -C checks
+	@touch $@
+
+.PHONY: check
+check: run_checks
 	bash cexdata.sh
 	cat cexdata/warnings.txt
 	cat cexdata/status.txt
+	@grep -Fq -e '**FAIL**' -e 'unknown' cexdata/status.txt && \
+		{ echo "ERROR: one or more checks failed (see cexdata/status.txt)."; exit 1; } || true
+
 
 show:
 	gtkwave testbench.vcd testbench.gtkw >> gtkwave.log 2>&1 &

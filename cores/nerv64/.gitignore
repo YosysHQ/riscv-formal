@@ -3,3 +3,4 @@
 /disasm.o
 /disasm.s
 /gtkwave.log
+run_checks
