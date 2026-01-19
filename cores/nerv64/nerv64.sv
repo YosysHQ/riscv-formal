@@ -298,7 +298,11 @@
 
 module nerv #(
 	parameter [31:0] RESET_ADDR = 32'h 0000_0000,
-	parameter integer NUMREGS = 32
+	parameter integer NUMREGS = 32,
+	parameter Nb = 64,
+	parameter hNb = Nb >> 1,
+	parameter logNb = $clog2(Nb),
+	parameter NB = Nb >> 3
 ) (
 	input clock,
 	input reset,
@@ -316,12 +320,12 @@ module nerv #(
 	output reg [ 1:0] rvfi_ixl,
 	output reg [ 4:0] rvfi_rs1_addr,
 	output reg [ 4:0] rvfi_rs2_addr,
-	output reg [31:0] rvfi_rs1_rdata,
-	output reg [31:0] rvfi_rs2_rdata,
+	output reg [Nb - 1:0] rvfi_rs1_rdata,
+	output reg [Nb - 1:0] rvfi_rs2_rdata,
 	output reg [ 4:0] rvfi_rd_addr,
-	output reg [31:0] rvfi_rd_wdata,
-	output reg [31:0] rvfi_pc_rdata,
-	output reg [31:0] rvfi_pc_wdata,
+	output reg [Nb - 1:0] rvfi_rd_wdata,
+	output reg [Nb - 1:0] rvfi_pc_rdata,
+	output reg [Nb - 1:0] rvfi_pc_wdata,
 
 `ifdef NERV_CSR
 `define NERV_CSR_REG_MRW(NAME, ADDR, VALUE)			\
@@ -426,10 +430,10 @@ module nerv #(
 	assign dmem_wdata = mem_wr_enable ? mem_wr_data : 32'h x;
 
 	// registers, instruction reg, program counter, next pc
-	reg [31:0] regfile [0:NUMREGS-1];
+	reg [Nb - 1:0] regfile [0:NUMREGS-1];
 	wire [31:0] insn;
-	reg [31:0] npc;
-	reg [31:0] pc;
+	reg [Nb - 1:0] npc;
+	reg [Nb - 1:0] pc;
 
 	reg [31:0] imem_addr_q;
 
@@ -450,8 +454,8 @@ module nerv #(
 	wire [6:0] insn_opcode;
 
 	// rs1 and rs2 are source for the instruction
-	wire [31:0] rs1_value = !insn_rs1 ? 0 : regfile[insn_rs1];
-	wire [31:0] rs2_value = !insn_rs2 ? 0 : regfile[insn_rs2];
+	wire [Nb - 1:0] rs1_value = !insn_rs1 ? 0 : regfile[insn_rs1];
+	wire [Nb - 1:0] rs2_value = !insn_rs2 ? 0 : regfile[insn_rs2];
 
 	// split R-type instruction - see section 2.2 of RiscV spec
 	assign {insn_funct7, insn_rs2, insn_rs1, insn_funct3, insn_rd, insn_opcode} = insn;
@@ -473,10 +477,13 @@ module nerv #(
 	wire [20:0] imm_j;
 	assign {imm_j[20], imm_j[10:1], imm_j[11], imm_j[19:12], imm_j[0]} = {insn[31:12], 1'b0};
 
-	wire [31:0] imm_i_sext = $signed(imm_i);
-	wire [31:0] imm_s_sext = $signed(imm_s);
-	wire [31:0] imm_b_sext = $signed(imm_b);
-	wire [31:0] imm_j_sext = $signed(imm_j);
+	wire [Nb - 1:0] imm_i_sext = $signed(imm_i);
+	wire [Nb - 1:0] imm_s_sext = $signed(imm_s);
+	wire [Nb - 1:0] imm_b_sext = $signed(imm_b);
+	wire [Nb - 1:0] imm_j_sext = $signed(imm_j);
+
+	wire [Nb - 1:0] sext_rs1_32 = $signed(rs1_value[31:0]);
+	wire [Nb - 1:0] zext_rs1_32 = {'0, rs1_value[31:0]};
 
 	// opcodes - see section 19 of RiscV spec
 	localparam OPCODE_LOAD       = 7'b 00_000_11;
@@ -532,7 +539,7 @@ module nerv #(
 
 	// next write, next destination (rd) value & register
 	reg next_wr;
-	reg [31:0] next_rd;
+	reg [Nb - 1:0] next_rd;
 	reg [4:0] wr_rd;
 
 	// illegal instruction registers
@@ -947,36 +954,37 @@ module nerv #(
 					10'b zzzzzzz_100 /* XORI  */: begin next_wr = 1; next_rd = rs1_value ^ imm_i_sext; end
 					10'b zzzzzzz_110 /* ORI   */: begin next_wr = 1; next_rd = rs1_value | imm_i_sext; end
 					10'b zzzzzzz_111 /* ANDI  */: begin next_wr = 1; next_rd = rs1_value & imm_i_sext; end
-					10'b 0000000_001 /* SLLI  */: begin next_wr = 1; next_rd = rs1_value << insn[24:20]; end
+					10'b 000000z_001 /* SLLI  */: begin next_wr = 1; next_rd = rs1_value << insn[20+:logNb]; end
 					10'b 0000000_101 /* SRLI  */: begin next_wr = 1; next_rd = rs1_value >> insn[24:20]; end
 					10'b 0100000_101 /* SRAI  */: begin next_wr = 1; next_rd = $signed(rs1_value) >>> insn[24:20]; end
 					// Zbb: Basic bit-manipulation
 					10'b 0110000_001: begin
 						casez (insn[24:20])
-							5'b 00000 /* CLZ    */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = rs1_value[i] ? 0 : next_rd + 1; end
-							5'b 00001 /* CTZ    */: begin next_wr = 1; next_rd = 0; for (int i=32; i>0; i=i-1) next_rd = rs1_value[i-1] ? 0 : next_rd + 1; end
-							5'b 00010 /* CPOP   */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = next_rd + rs1_value[i]; end
+							5'b 00000 /* CLZ    */: begin next_wr = 1; next_rd = 0; for (int i=0; i<Nb; i=i+1) next_rd = rs1_value[i] ? 0 : next_rd + 1; end
+							5'b 00001 /* CTZ    */: begin next_wr = 1; next_rd = 0; for (int i=Nb; i>0; i=i-1) next_rd = rs1_value[i-1] ? 0 : next_rd + 1; end
+							5'b 00010 /* CPOP   */: begin next_wr = 1; next_rd = 0; for (int i=0; i<Nb; i=i+1) next_rd = next_rd + rs1_value[i]; end
 							5'b 00100 /* SEXT.B */: begin next_wr = 1; next_rd = $signed(rs1_value[7:0]); end
 							5'b 00101 /* SEXT.H */: begin next_wr = 1; next_rd = $signed(rs1_value[15:0]); end
 							default: illinsn = 1;
 						endcase
 					end
-					10'b 0110000_101 /* RORI  */: begin next_wr = 1; next_rd = rs1_value >> insn[24:20] | (rs1_value << (32 - insn[24:20])); end
-					10'b 0010100_101 /* ORC.B */: begin next_wr = insn[24:20] == 5'b 00111; illinsn = !next_wr; next_rd = 0; for (int i=0; i<4; i=i+1) next_rd[i*8 +: 8] = {8{|rs1_value[i*8 +: 8]}}; end
+					10'b 011000z_101 /* RORI  */: begin next_wr = 1; next_rd = rs1_value >> insn[20+:logNb] | (rs1_value << (Nb - insn[20+:logNb])); end
+					10'b 0010100_101 /* ORC.B */: begin next_wr = insn[24:20] == 5'b 00111; illinsn = !next_wr; next_rd = 0; for (int i=0; i<NB; i=i+1) next_rd[i*8 +: 8] = {8{|rs1_value[i*8 +: 8]}}; end
 					10'b 0110100_101: begin
 						casez (insn[24:20])
-							5'b 11000 /* REV8  */: begin next_wr = 1; next_rd = 0; for (int i=0; i<4; i=i+1) next_rd[i*8 +: 8] = rs1_value[(4-i)*8 - 1 -: 8]; end
-							5'b 00111 /* BREV8 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<4; i=i+1) for (int j=0; j<8; j=j+1) next_rd[i*8 + j] = rs1_value[i*8 + 7 - j]; end
+							5'b 11000 /* REV8(32) */: begin next_wr = 1; next_rd = 0; for (int i=0; i<4; i=i+1) next_rd[i*8 +: 8] = rs1_value[(4-i)*8 - 1 -: 8]; end
+							5'b 00111 /* BREV8 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<NB; i=i+1) for (int j=0; j<8; j=j+1) next_rd[i*8 + j] = rs1_value[i*8 + 7 - j]; end
 							default: illinsn = 1;
 						endcase
 					end
+					10'b 0110101_101 /* REV8(64) */: begin next_wr = insn[24:20] == 5'b 11000; illinsn = !next_wr; next_rd = 0; for (int i=0; i<8; i=i+1) next_rd[i*8 +: 8] = rs1_value[(8-i)*8 - 1 -: 8]; end
 					10'b 0000100_001 /* ZIP   */: begin next_wr = insn[24:20] == 5'b 01111; illinsn = !next_wr; next_rd = 0; for (int i=0; i<16; i=i+1) begin next_rd[2*i] = rs1_value[i]; next_rd[2*i+1] = rs1_value[i+16]; end end
 					10'b 0000100_101 /* UNZIP */: begin next_wr = insn[24:20] == 5'b 01111; illinsn = !next_wr; next_rd = 0; for (int i=0; i<16; i=i+1) begin next_rd[i] = rs1_value[2*i]; next_rd[i+16] = rs1_value[2*i+1]; end end
 					// Zbs: Single-bit instructions
-					10'b 0100100_001 /* BCLRI */: begin next_wr = 1; next_rd = rs1_value & ~(1 << insn[24:20]); end
-					10'b 0100100_101 /* BEXTI */: begin next_wr = 1; next_rd = (rs1_value >> insn[24:20]) & 1; end
-					10'b 0110100_001 /* BINVI */: begin next_wr = 1; next_rd = rs1_value ^ (1 << insn[24:20]); end
-					10'b 0010100_001 /* BSETI */: begin next_wr = 1; next_rd = rs1_value | (1 << insn[24:20]); end
+					10'b 010010z_001 /* BCLRI */: begin next_wr = 1; next_rd = rs1_value & ~(1 << insn[20+:logNb]); end
+					10'b 010010z_101 /* BEXTI */: begin next_wr = 1; next_rd = (rs1_value >> insn[20+:logNb]) & 1; end
+					10'b 011010z_001 /* BINVI */: begin next_wr = 1; next_rd = rs1_value ^ (1 << insn[20+:logNb]); end
+					10'b 001010z_001 /* BSETI */: begin next_wr = 1; next_rd = rs1_value | (1 << insn[20+:logNb]); end
 					default: illinsn = 1;
 				endcase
 			end
@@ -995,9 +1003,9 @@ module nerv #(
 					10'b 0000000_110 /* OR   */: begin next_wr = 1; next_rd = rs1_value | rs2_value; end
 					10'b 0000000_111 /* AND  */: begin next_wr = 1; next_rd = rs1_value & rs2_value; end
 					// Zba: Address generation
-					10'b 0010000_010 /* SH1ADD */: begin next_wr = 1; next_rd = rs2_value + {rs1_value[30:0], 1'b 0}; end
-					10'b 0010000_100 /* SH2ADD */: begin next_wr = 1; next_rd = rs2_value + {rs1_value[29:0], 2'b 0}; end
-					10'b 0010000_110 /* SH3ADD */: begin next_wr = 1; next_rd = rs2_value + {rs1_value[28:0], 3'b 0}; end
+					10'b 0010000_010 /* SH1ADD */: begin next_wr = 1; next_rd = rs2_value + {rs1_value[Nb - 2:0], 1'b 0}; end
+					10'b 0010000_100 /* SH2ADD */: begin next_wr = 1; next_rd = rs2_value + {rs1_value[Nb - 3:0], 2'b 0}; end
+					10'b 0010000_110 /* SH3ADD */: begin next_wr = 1; next_rd = rs2_value + {rs1_value[Nb - 4:0], 3'b 0}; end
 					// Zbb: Basic bit-manipulation
 					10'b 0100000_111 /* ANDN   */: begin next_wr = 1; next_rd = rs1_value & ~rs2_value; end
 					10'b 0100000_110 /* ORN    */: begin next_wr = 1; next_rd = rs1_value | ~rs2_value; end
@@ -1006,22 +1014,49 @@ module nerv #(
 					10'b 0000101_111 /* MAXU   */: begin next_wr = 1; next_rd = (rs1_value < rs2_value) ? rs2_value : rs1_value; end
 					10'b 0000101_100 /* MIN    */: begin next_wr = 1; next_rd = ($signed(rs1_value) < $signed(rs2_value)) ? rs1_value : rs2_value; end
 					10'b 0000101_101 /* MINU   */: begin next_wr = 1; next_rd = (rs1_value < rs2_value) ? rs1_value : rs2_value; end
-					10'b 0110000_001 /* ROL    */: begin next_wr = 1; next_rd = rs1_value << rs2_value[4:0] | (rs1_value >> (32 - rs2_value[4:0])); end
-					10'b 0110000_101 /* ROR    */: begin next_wr = 1; next_rd = rs1_value >> rs2_value[4:0] | (rs1_value << (32 - rs2_value[4:0])); end
-					10'b 0000100_100 /* PACK   */: begin next_wr = 1; next_rd = {rs2_value[15:0], rs1_value[15:0]}; end
-					10'b 0000100_111 /* PACKH  */: begin next_wr = 1; next_rd = {16'b0, rs2_value[7:0], rs1_value[7:0]}; end
+					10'b 0110000_001 /* ROL    */: begin next_wr = 1; next_rd = rs1_value << rs2_value[logNb-1:0] | (rs1_value >> (Nb - rs2_value[logNb-1:0])); end
+					10'b 0110000_101 /* ROR    */: begin next_wr = 1; next_rd = rs1_value >> rs2_value[logNb-1:0] | (rs1_value << (Nb - rs2_value[logNb-1:0])); end
+					10'b 0000100_100 /* PACK   */: begin next_wr = 1; next_rd = {rs2_value[hNb-1:0], rs1_value[hNb-1:0]}; end
+					10'b 0000100_111 /* PACKH  */: begin next_wr = 1; next_rd = {'0, rs2_value[7:0], rs1_value[7:0]}; end
 					// Zbc: Carry-less multiplication
-					10'b 0000101_001 /* CLMUL  */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = (rs2_value[i]) ? next_rd ^ (rs1_value << i) : next_rd; end
-					10'b 0000101_011 /* CLMULH */: begin next_wr = 1; next_rd = 0; for (int i=1; i<33; i=i+1) next_rd = ((rs2_value >> i) & 32'b1) ? next_rd ^ (rs1_value >> (32 - i)) : next_rd; end
-					10'b 0000101_010 /* CLMULR */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = (rs2_value[i]) ? next_rd ^ (rs1_value >> (32 - i - 1)) : next_rd; end
+					10'b 0000101_001 /* CLMUL  */: begin next_wr = 1; next_rd = 0; for (int i=0; i<Nb; i=i+1) next_rd = (rs2_value[i]) ? next_rd ^ (rs1_value << i) : next_rd; end
+					10'b 0000101_011 /* CLMULH */: begin next_wr = 1; next_rd = 0; for (int i=1; i<Nb+1; i=i+1) next_rd = ((rs2_value >> i) & {'0, 1'b1}) ? next_rd ^ (rs1_value >> (Nb - i)) : next_rd; end
+					10'b 0000101_010 /* CLMULR */: begin next_wr = 1; next_rd = 0; for (int i=0; i<Nb; i=i+1) next_rd = (rs2_value[i]) ? next_rd ^ (rs1_value >> (Nb - i - 1)) : next_rd; end
 					// Zbs: Single-bit instructions
-					10'b 0100100_001 /* BCLR */: begin next_wr = 1; next_rd = rs1_value & ~(1 << rs2_value[4:0]); end
-					10'b 0100100_101 /* BEXT */: begin next_wr = 1; next_rd = (rs1_value >> rs2_value[4:0]) & 1; end
-					10'b 0110100_001 /* BINV */: begin next_wr = 1; next_rd = rs1_value ^ (1 << rs2_value[4:0]); end
-					10'b 0010100_001 /* BSET */: begin next_wr = 1; next_rd = rs1_value | (1 << rs2_value[4:0]); end
+					10'b 0100100_001 /* BCLR */: begin next_wr = 1; next_rd = rs1_value & ~(1 << rs2_value[logNb-1:0]); end
+					10'b 0100100_101 /* BEXT */: begin next_wr = 1; next_rd = (rs1_value >> rs2_value[logNb-1:0]) & 1; end
+					10'b 0110100_001 /* BINV */: begin next_wr = 1; next_rd = rs1_value ^ (1 << rs2_value[logNb-1:0]); end
+					10'b 0010100_001 /* BSET */: begin next_wr = 1; next_rd = rs1_value | (1 << rs2_value[logNb-1:0]); end
 					// Zbkx: Crossbar permutations
-					10'b 0010100_010 /* XPERM4 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<8; i=i+1) next_rd[i*4+:4] = (rs1_value >> (rs2_value[i*4+:4])) & 4'h f; end
-					10'b 0010100_100 /* XPERM8 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<4; i=i+1) next_rd[i*8+:8] = (rs1_value >> (rs2_value[i*8+:8])) & 8'h ff; end
+					10'b 0010100_010 /* XPERM4 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<Nb; i=i+4) next_rd[i+:4] = (rs1_value >> (rs2_value[i+:4])) & 4'h f; end
+					10'b 0010100_100 /* XPERM8 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<Nb; i=i+8) next_rd[i+:8] = (rs1_value >> (rs2_value[i+:8])) & 8'h ff; end
+					default: illinsn = 1;
+				endcase
+			end
+			OPCODE_OP_IMM_32: begin
+				casez ({insn_funct7, insn_funct3})
+					10'b 0110000_001: begin
+						casez (insn[24:20])
+							5'b 00000 /* CLZW  */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = rs1_value[i] ? 0 : next_rd + 1; end
+							5'b 00001 /* CTZW  */: begin next_wr = 1; next_rd = 0; for (int i=32; i>0; i=i-1) next_rd = rs1_value[i-1] ? 0 : next_rd + 1; end
+							5'b 00010 /* CPOPW */: begin next_wr = 1; next_rd = 0; for (int i=0; i<32; i=i+1) next_rd = next_rd + rs1_value[i]; end
+							default: illinsn = 1;
+						endcase
+					end
+					10'b 0110000_101 /* RORIW   */: begin next_wr = 1; next_rd = zext_rs1_32 >> insn[24:20] | (zext_rs1_32 << (32 - insn[24:20])); next_rd[Nb-1:32] = {Nb-32{next_rd[31]}}; end
+					10'b 000010z_001 /* SLLI.UW */: begin next_wr = 1; next_rd = zext_rs1_32 << insn[25:20]; end
+					default: illinsn = 1;
+				endcase
+			end
+			OPCODE_OP_32: begin
+				case ({insn_funct7, insn_funct3})
+					10'b 0000100_000 /* ADD.UW     */: begin next_wr = 1; next_rd = rs2_value + zext_rs1_32; end
+					10'b 0010000_010 /* SH1ADD.UW  */: begin next_wr = 1; next_rd = rs2_value + {'0, rs1_value[31:0], 1'b 0}; end
+					10'b 0010000_100 /* SH2ADD.UW  */: begin next_wr = 1; next_rd = rs2_value + {'0, rs1_value[31:0], 2'b 0}; end
+					10'b 0010000_110 /* SH3ADD.UW  */: begin next_wr = 1; next_rd = rs2_value + {'0, rs1_value[31:0], 3'b 0}; end
+					10'b 0110000_001 /* ROLW       */: begin next_wr = 1; next_rd = zext_rs1_32 << rs2_value[4:0] | (zext_rs1_32 >> (32 - rs2_value[4:0])); next_rd[Nb-1:32] = {Nb-32{next_rd[31]}}; end
+					10'b 0110000_101 /* RORW       */: begin next_wr = 1; next_rd = zext_rs1_32 >> rs2_value[4:0] | (zext_rs1_32 << (32 - rs2_value[4:0])); next_rd[Nb-1:32] = {Nb-32{next_rd[31]}}; end
+					10'b 0000100_100 /* PACKW      */: begin next_wr = 1; next_rd = $signed({rs2_value[15:0], rs1_value[15:0]}); end
 					default: illinsn = 1;
 				endcase
 			end
