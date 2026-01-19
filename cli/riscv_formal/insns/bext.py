@@ -240,7 +240,7 @@ def insn_xperm(insn, funct3, width, extension = "Zbkx"):
                 result = 0;
                 for (i=0; i<%RESULT_WIDTH%; i=i+{width})
                 begin
-                    result[i+:{width}] = (rvfi_rs1_rdata >> rvfi_rs2_rdata[i+:{width}]) & {{{width}{{1'b1}}}};
+                    result[i+:{width}] = (rvfi_rs1_rdata >> {width}*rvfi_rs2_rdata[i+:{width}]) & {{{width}{{1'b1}}}};
                 end
             end""").splitlines()
     )
