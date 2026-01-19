@@ -28,8 +28,8 @@ objdump_bin = f"{toolchain_prefix}objdump"
 if which(as_bin) is None or which(objdump_bin) is None:
     print(
         f"WARNING: missing toolchain binaries: {as_bin} or {objdump_bin}. "
-        "Skipping disassembly. ",
-        "Update your PATH and/or set TOOLCHAIN_PREFIX so that these binaries are found."
+        "Skipping disassembly. "
+        "Update your PATH and/or set TOOLCHAIN_PREFIX so that these binaries are found.",
         file=sys.stderr,
     )
     sys.exit(0)
