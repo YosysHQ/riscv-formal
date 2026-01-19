@@ -1030,8 +1030,8 @@ module nerv #(
 					10'b 0110100_001 /* BINV */: begin next_wr = 1; next_rd = rs1_value ^ (1 << rs2_value[logNb-1:0]); end
 					10'b 0010100_001 /* BSET */: begin next_wr = 1; next_rd = rs1_value | (1 << rs2_value[logNb-1:0]); end
 					// Zbkx: Crossbar permutations
-					10'b 0010100_010 /* XPERM4 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<Nb; i=i+4) next_rd[i+:4] = (rs1_value >> (rs2_value[i+:4])) & 4'h f; end
-					10'b 0010100_100 /* XPERM8 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<Nb; i=i+8) next_rd[i+:8] = (rs1_value >> (rs2_value[i+:8])) & 8'h ff; end
+					10'b 0010100_010 /* XPERM4 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<Nb; i=i+4) next_rd[i+:4] = (rs1_value >> {rs2_value[i+:4], 2'b0}) & 4'h f; end
+					10'b 0010100_100 /* XPERM8 */: begin next_wr = 1; next_rd = 0; for (int i=0; i<Nb; i=i+8) next_rd[i+:8] = (rs1_value >> {rs2_value[i+:8], 3'b0}) & 8'h ff; end
 					default: illinsn = 1;
 				endcase
 			end
