@@ -39,6 +39,7 @@ def insn_count(insn, funct5, trailing=False, pop=False, wmode=False, extension =
         insn_format = FORMAT_I,
         opcode = "0011011" if wmode else "0010011",
         extension = extension, 
+        zero_extend_from = 32 if wmode else None,
         xlen_min = 64 if wmode else 32,
         op_values = {
             "imm12": "0110000_" + funct5,
