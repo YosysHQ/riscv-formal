@@ -18,7 +18,7 @@ Others tests passing :
 
 ### Quickstart guide:
 
-First install Yosys, SymbiYosys, and the solvers. See [here](http://symbiyosys.readthedocs.io/en/latest/quickstart.html#installing)
+First install Yosys, SBY, and the solvers. See [here](http://symbiyosys.readthedocs.io/en/latest/quickstart.html#installing)
 for instructions.
 
 To run all standards checks:
