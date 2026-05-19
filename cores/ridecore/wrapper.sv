@@ -1,3 +1,4 @@
+`include "defines.sv"
 `include "constants.vh"
 `include "rv32_opcodes.vh"
 
