@@ -6,7 +6,8 @@ for instructions. Then build the version of Ridecore with RVFI support and
 generate the formal checks:
 
 ```
-bash generate.sh
+git submodule update --init
+python3 ../../checks/genchecks.py
 ```
 
 Then run the formal checks:
