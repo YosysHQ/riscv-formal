@@ -49,14 +49,16 @@ jobs:
       - name: Build Yosys
         run: |
           cd yosys
-          make config-clang
-          echo "ENABLE_VERIFIC := 1" >> Makefile.conf
-          echo "ENABLE_VERIFIC_EDIF := 1" >> Makefile.conf
-          echo "ENABLE_VERIFIC_LIBERTY := 1" >> Makefile.conf
-          echo "ENABLE_VERIFIC_YOSYSHQ_EXTENSIONS := 1" >> Makefile.conf
-          echo "ENABLE_CCACHE := 1" >> Makefile.conf
-          make -j${{ env.procs }}
-          make install DESTDIR=${GITHUB_WORKSPACE}/.local PREFIX=
+          rm -rf build Configuration.cmake
+          echo 'set(CMAKE_C_COMPILER clang CACHE STRING "")' >> Configuration.cmake
+          echo 'set(CMAKE_CXX_COMPILER clang++ CACHE STRING "")' >> Configuration.cmake
+          echo 'set(YOSYS_COMPILER_LAUNCHER ccache CACHE STRING "")' >> Configuration.cmake
+          echo 'set(YOSYS_VERIFIC_DIR "/usr/local/src/verific_lib" CACHE STRING "")' >> Configuration.cmake
+
+          cmake -C Configuration.cmake -B build . -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/.local -DCMAKE_BUILD_TYPE=Debug
+
+          cmake --build build -j${{ env.procs }}
+          cmake --build build --target install
 
       - name: Checkout SBY
         uses: actions/checkout@v4
