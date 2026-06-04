@@ -24,7 +24,7 @@ For additional python requirements:
    python3 -m pip install Verilog_VCD
 
 Some of those tools are packaged for some of the major Linux
-distribution, but those packages are sometimes a few years old and do
+distributions, but those packages are sometimes a few years old and do
 not work with riscv-formal. Follow the descriptions linked above and
 install from the latest sources instead.
 

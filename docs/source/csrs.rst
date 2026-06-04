@@ -6,11 +6,11 @@ values observable via the ISA. But there are a few minor differences
 that are outlined here.
 
 Most importantly, for RV64 processors in RV32 mode, the values output
-via RVFI are still following RV64 CSR encondings, including some of the
+via RVFI are still following RV64 CSR encodings, including some of the
 information that is not available through the RV32 ISA, such as SXL and
 UXL in ``mstatus``.
 
-Counters are always output as singe 64-bit wide CSRs even on RV32
+Counters are always output as single 64-bit wide CSRs even on RV32
 targets.
 
 M-mode CSRs
@@ -69,7 +69,7 @@ mepc
 ^^^^
 
 The version of ``mepc`` observable through the ISA masks ``mepc[1]`` on
-CSR reads when the processor is in a mode that does not supprt 16-bit
+CSR reads when the processor is in a mode that does not support 16-bit
 instruction alignment. However, writes to that bit shall still modify
 the underlying architectural state.
 

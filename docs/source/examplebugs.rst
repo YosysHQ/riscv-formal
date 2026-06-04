@@ -36,7 +36,7 @@ JALR clears LSB after addition
 
 The JALR instruction adds an immediate to its source register, clears
 the LSB of the sum, and then jumps to the resulting address. (It also
-stores the address of the next instruction in the desitination
+stores the address of the next instruction in the destination
 register.)
 
 The code C compilers generate usually (always?) have the LSB of the sum

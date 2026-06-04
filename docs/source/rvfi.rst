@@ -368,7 +368,7 @@ RVFI TODOs and requests for comments
 ------------------------------------
 
 The following section contains notes on future extensions to RVFI. They
-will come part of the spec as soon as there is at least one core that
+will become part of the spec as soon as there is at least one core that
 implements the feature, and a matching formal check that utilises the
 feature. In many cases the additional ports will only be used (and
 expected from the core) when additional to-be-defined ``RISCV_FORMAL_*``
@@ -496,7 +496,7 @@ existing ``rvfi_mem_*`` interface by asserting bits in both
 There is also no extension to the RVFI port necessary to accommodate the
 ``LR``, ``SC``, ``FENCE`` and ``FENCE.I`` instructions.
 
-Verification of this instructions for a single-core systems can be done
+Verification of these instructions for single-core systems can be done
 using the RVFI port only. A strategy must be defined to verify their
 correct behavior in multicore systems.
 

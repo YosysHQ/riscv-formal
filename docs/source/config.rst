@@ -5,7 +5,7 @@ Configuration macros
 ====================
 
 The riscv-formal insn models and checkers are configured using a few
-Verilog pre-processor macros. They must be defined bofore reading any
+Verilog pre-processor macros. They must be defined before reading any
 riscv-formal verilog files. The first riscv-formal verilog file read
 after defining the macros must be ``rvfi_macros.vh``.
 
@@ -48,7 +48,7 @@ RISCV_FORMAL_ALIGNED_MEM
 
 Cores that only have hardware support for word-aligned memory access may
 choose to retire memory load/store operations for smaller units
-(half-words, bytes) word aligned with the appropiate ``rmask/wmask``
+(half-words, bytes) word aligned with the appropriate ``rmask/wmask``
 values to select the correct bytes. In this case the
 ``RISCV_FORMAL_ALIGNED_MEM`` macro must be defined.
 
@@ -239,7 +239,7 @@ RVFI_WIRES, RVFI_OUTPUTS, RVFI_INPUTS, RVFI_CONN
 
 Macros to declare wires, output ports, or input ports for all ``rvfi_*``
 signals. The last macro is for creating the proper connections on module
-instances. This macros can be useful for routing the ``rvfi_*`` signals
+instances. These macros can be useful for routing the ``rvfi_*`` signals
 through the design hierarchy.
 
 rvformal_rand_reg and rvformal_rand_const_reg
