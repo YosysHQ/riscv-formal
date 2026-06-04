@@ -1,7 +1,7 @@
 Verification procedure
 ======================
 
-The following formal test are performed to verify ISA compliance of
+The following formal tests are performed to verify ISA compliance of
 RISC-V processors with ``riscv-formal``. Depending on aspects like the
 strength of safety properties present in the core, the overall
 complexity of the core, and the verification requirements for the given
@@ -317,7 +317,7 @@ are instruction checks (one per RVFI channel and RISC-V instruction
 supported by the core).
 
 Instruction checks test if the instruction (``rvfi_insn``) matches the
-state transistion described by the other RVFI signals.
+state transition described by the other RVFI signals.
 
 PC checks
 ~~~~~~~~~
@@ -349,7 +349,7 @@ Register checks
 
 This checks if writes to and reads from the register file are consistent
 with each other, i.e. if the value written to a register matches the
-value read from the register file by a later instructions.
+value read from the register file by a later instruction.
 
 This check assumes that the last instruction at the end of the bounded
 model check, reads a register. It then checks that the value read is
@@ -381,7 +381,7 @@ if the instruction stream is causal with respect to i/o memory, where
 every i/o memory access is assumed to depend on all earlier i/o memory
 accesses.
 
-Which areas of the adress space are considered to be i/o memory can be
+Which areas of the address space are considered to be i/o memory can be
 configured using the ``RISCV_FORMAL_IOADDR(addr)`` macro.
 
 .. _depth-section-2:
@@ -402,7 +402,7 @@ the bounded model check. It then checks that the next instruction
 (``rvfi_order+1``) is also retired at some point during the span of the
 bounded model check.
 
-It might be neccessary to add some bounded fairness constraints to the
+It might be necessary to add some bounded fairness constraints to the
 design for this check to succeed.
 
 .. _depth-section-3:
@@ -430,7 +430,7 @@ is the trigger depth; and third is the execution depth.
 Faults
 ~~~~~~
 
-This check makes sure that dynamically occuring memory faults are
+This check makes sure that dynamically occurring memory faults are
 handled. It requires defining ``RISCV_FORMAL_MEM_FAULT`` and the
 ``rvfi_mem_fault``, ``rvfi_mem_fault_rmask`` and
 ``rvfi_mem_fault_wmask`` signals. When the ``mcause`` CSR is exposed via
@@ -490,7 +490,7 @@ unharmed.
 When the granularity of access faults as observed from the core is
 coarser than the width of the bus, ``RISCV_FORMAL_FAULT_WIDTH`` needs to
 be defined and set to the corresponding width in bytes. E.g. for a setup
-where a single word fault the monitored bus means that from the
+where a single word fault on the monitored bus means that from the
 perspective of the core, any access of the corresponding cache line will
 fault, you would define ``RISCV_FORMAL_FAULT_WIDTH`` to be the width of
 a cache line in bytes.
@@ -637,7 +637,7 @@ These checks perform multiple reads/writes and compare the values on
 ``check`` cycle.
 
 In each case, ``RISCV_FORMAL_CSRC_NAME <csrname>`` must be defined for
-the CSR under test, along with the corresponsing
+the CSR under test, along with the corresponding
 ``csr_{m,s,u}index_<csrname> <csraddr>``.
 
 CSR write-any
@@ -724,7 +724,7 @@ be run.
 
 The ``csrs`` config section lists all standard CSRs which can be tested.
 By default, all CSRs will be run through the CSR instruction check
-(``csrw``). Consistency checks can be defined as a space seperated list
+(``csrw``). Consistency checks can be defined as a space separated list
 after the csr name. For checks which expect a value, using quotation
 marks will allow for verbatim values.
 
@@ -783,7 +783,7 @@ separated values are expected; the first provides the address in
 hexadecimal, the second is the privilege modes to test, and the third
 indicates whether to test reads and writes or just writes.
 
-e.g. \ ``fff msu rw`` defines a test at address oxFFF for machine,
+e.g. \ ``fff msu rw`` defines a test at address 0xFFF for machine,
 supervisor, and user modes which should cause an illegal access
 exception on both reads and writes.
 
@@ -805,7 +805,7 @@ just the reserved bits.
 
 At present the only supported value for ``csr_spec`` is ``1.12``,
 corresponding to version 1.12 of the Machine ISA, as defined in the
-20211203 Priveleged Architecture document.
+20211203 Privileged Architecture document.
 
 Other checks
 ------------

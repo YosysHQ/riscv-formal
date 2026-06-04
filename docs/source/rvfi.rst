@@ -85,7 +85,7 @@ Integer register read/write
    output [NRET * XLEN - 1 : 0] rvfi_rs2_rdata
 
 ``rvfi_rs1_addr`` and ``rvfi_rs2_addr`` are the decoded ``rs1`` and
-``rs1`` register addresses for the retired instruction. For an
+``rs2`` register addresses for the retired instruction. For an
 instruction that reads no ``rs1``/``rs2`` register, this output can have
 an arbitrary value. However, if this output is nonzero then
 ``rvfi_rs1_rdata`` must carry the value stored in that register in the
@@ -285,9 +285,9 @@ the bus.
 
 To run these checks, the relevant busses of the core should be connected
 to an abstraction that implements the required bus signalling but
-provides unconstrai (This may be relaxed with an extensions )ned
-responses to the core. The accesses on the bus are then observed and
-constrained by these checks via the RVFI_BUS outputs.
+provides unconstrained responses to the core. The accesses on the bus
+are then observed and constrained by these checks via the RVFI_BUS
+outputs.
 
 Note: When implementing such an abstraction it should output the access
 using RVFI_BUS as soon as the access first appears on the bus, even when
@@ -309,7 +309,7 @@ width of the observed bus is independent of ``XLEN`` and is specified
 using ``BUSLEN``. If different channels observe busses of a different
 width, ``BUSLEN`` should be set to the maximum width in use.
 
-RVFI_BUS adds the following ouptuts:
+RVFI_BUS adds the following outputs:
 
 .. code-block:: systemverilog
 
@@ -345,7 +345,7 @@ and written data and are only valid for the bytes corresponding to the
 respective bits in ``rvfi_bus_rmask`` and ``rvfi_bus_wmask``.
 
 All accesses observed using RVFI_BUS are assumed to be in order,
-including acceses in the same cycle which are ordered by increasing
+including accesses in the same cycle which are ordered by increasing
 RVFI_BUS channel index. This may be relaxed by future extensions.
 
 RVFI_BUS observers for standard interfaces
@@ -368,7 +368,7 @@ RVFI TODOs and requests for comments
 ------------------------------------
 
 The following section contains notes on future extensions to RVFI. They
-will come part of the spec as soon as there is at least one core that
+will become part of the spec as soon as there is at least one core that
 implements the feature, and a matching formal check that utilises the
 feature. In many cases the additional ports will only be used (and
 expected from the core) when additional to-be-defined ``RISCV_FORMAL_*``
@@ -496,7 +496,7 @@ existing ``rvfi_mem_*`` interface by asserting bits in both
 There is also no extension to the RVFI port necessary to accommodate the
 ``LR``, ``SC``, ``FENCE`` and ``FENCE.I`` instructions.
 
-Verification of this instructions for a single-core systems can be done
+Verification of these instructions for single-core systems can be done
 using the RVFI port only. A strategy must be defined to verify their
 correct behavior in multicore systems.
 
@@ -540,7 +540,7 @@ instructions:
 
 When ``rvfi_skip`` is high the core may output arbitrary data on the
 ``*_rdata`` and ``*_wdata`` ports (excluding ``rvfi_pc_rdata`` and
-``rvfi_pc_wdata``). The register values written by such intrustions may
+``rvfi_pc_wdata``). The register values written by such instructions may
 only be observed by other skipped instructions. An additional formal
 proof must be added to check this property.
 
