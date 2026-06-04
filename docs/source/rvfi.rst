@@ -285,9 +285,9 @@ the bus.
 
 To run these checks, the relevant busses of the core should be connected
 to an abstraction that implements the required bus signalling but
-provides unconstrai (This may be relaxed with an extensions )ned
-responses to the core. The accesses on the bus are then observed and
-constrained by these checks via the RVFI_BUS outputs.
+provides unconstrained responses to the core. The accesses on the bus
+are then observed and constrained by these checks via the RVFI_BUS
+outputs.
 
 Note: When implementing such an abstraction it should output the access
 using RVFI_BUS as soon as the access first appears on the bus, even when
