@@ -1,0 +1,3 @@
+[submodule "cores/ridecore/ridecore-src"]
+	path = cores/ridecore/ridecore-src
+	url = https://github.com/gipsyh/ridecore-rvfi.git
