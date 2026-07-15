@@ -45,6 +45,11 @@ module rvfi_bus_dmem_fault_check (
 `endif
 
 	integer channel_idx, i, j;
+	// Anyseq acts as a universal quantifier for assert: the solver must
+	// find a counterexample for SOME value of k, which is equivalent to
+	// the unrolled for loop. Safe because RISCV_FORMAL_XLEN is 32 or 64,
+	// so every value of k[$clog2(XLEN/8)-1:0] is a valid byte index < XLEN/8.
+	`rvformal_rand_reg [$clog2(`RISCV_FORMAL_XLEN/8)-1:0] k;
 
 	always @(posedge clock) begin
 		if (!reset) begin
@@ -85,24 +90,24 @@ module rvfi_bus_dmem_fault_check (
 `endif
 
 				if (rvfi_valid[channel_idx] && mem_addr == dmem_addr && `rvformal_addr_valid(dmem_addr)) begin
-					for (i = 0; i < `RISCV_FORMAL_XLEN/8; i = i+1) begin
-						if (check && channel_idx == `RISCV_FORMAL_CHANNEL_IDX) begin
+					// for (i = 0; i < `RISCV_FORMAL_XLEN/8; i = i+1) begin
+					if (check && channel_idx == `RISCV_FORMAL_CHANNEL_IDX) begin
 `ifndef RISCV_FORMAL_MEM_FAULT
-							cover (1);
+						cover (1);
 `endif
 
-							assert (!mem_rmask[i]);
-							assert (!mem_wmask[i]);
+						assert (!mem_rmask[k]);
+						assert (!mem_wmask[k]);
 
 `ifdef RISCV_FORMAL_MEM_FAULT
-							cover (mem_fault_rmask[i]);
-							cover (mem_fault_wmask[i]);
-							if (mem_fault_rmask[i] || mem_fault_wmask[i]) begin
-								assert (rvfi_mem_fault[channel_idx]);
-							end
-`endif
+						cover (mem_fault_rmask[k]);
+						cover (mem_fault_wmask[k]);
+						if (mem_fault_rmask[k] || mem_fault_wmask[k]) begin
+							assert (rvfi_mem_fault[channel_idx]);
 						end
+`endif
 					end
+					// end
 				end
 			end
 		end

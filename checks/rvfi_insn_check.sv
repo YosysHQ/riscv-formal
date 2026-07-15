@@ -128,7 +128,11 @@ module rvfi_insn_check (
 				(spec_mem_rmask && !mem_pma_r) || (spec_mem_wmask && !mem_pma_w) ||
 				((spec_mem_rmask || spec_mem_wmask) && !`rvformal_addr_valid(spec_mem_addr));
 
-		integer i;
+		// Anyseq acts as a universal quantifier for assert: the solver must
+		// find a counterexample for SOME value of i, which is equivalent to
+		// the unrolled for loop. Safe because RISCV_FORMAL_XLEN is 32 or 64,
+		// so every value of i[$clog2(XLEN/8)-1:0] is a valid byte index < XLEN/8.
+		`rvformal_rand_reg [$clog2(`RISCV_FORMAL_XLEN/8)-1:0] i;
 
 		always @* begin
 			if (!reset) begin
@@ -181,18 +185,18 @@ module rvfi_insn_check (
 							assert(`rvformal_addr_eq(spec_mem_addr, mem_addr));
 						end
 
-						for (i = 0; i < `RISCV_FORMAL_XLEN/8; i = i+1) begin
-							if (spec_mem_wmask[i]) begin
-								assert(mem_wmask[i]);
-								assert(spec_mem_wdata[i*8 +: 8] == mem_wdata[i*8 +: 8]);
-							end else if (mem_wmask[i]) begin
-								assert(mem_rmask[i]);
-								assert(mem_rdata[i*8 +: 8] == mem_wdata[i*8 +: 8]);
-							end
-							if (spec_mem_rmask[i]) begin
-								assert(mem_rmask[i]);
-							end
+						// for (i = 0; i < `RISCV_FORMAL_XLEN/8; i = i+1) begin
+						if (spec_mem_wmask[i]) begin
+							assert(mem_wmask[i]);
+							assert(spec_mem_wdata[i*8 +: 8] == mem_wdata[i*8 +: 8]);
+						end else if (mem_wmask[i]) begin
+							assert(mem_rmask[i]);
+							assert(mem_rdata[i*8 +: 8] == mem_wdata[i*8 +: 8]);
 						end
+						if (spec_mem_rmask[i]) begin
+							assert(mem_rmask[i]);
+						end
+						// end
 					end
 
 					assert(spec_trap == trap);
