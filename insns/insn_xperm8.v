@@ -49,7 +49,7 @@ module rvfi_insn_xperm8 (
     result = 0;
     for (i=0; i<`RISCV_FORMAL_XLEN; i=i+8)
     begin
-      result[i+:8] = (rvfi_rs1_rdata >> rvfi_rs2_rdata[i+:8]) & {8{1'b1}};
+      result[i+:8] = (rvfi_rs1_rdata >> {rvfi_rs2_rdata[i+:8], 3'b000}) & {8{1'b1}};
     end
   end
   assign spec_valid = rvfi_valid && !insn_padding && insn_funct7 == 7'b 0010100 && insn_funct3 == 3'b 100 && insn_opcode == 7'b 01100_11;
