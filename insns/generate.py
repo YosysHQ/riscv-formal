@@ -698,6 +698,58 @@ def insn_alu(insn, funct7, funct3, expr, alt_add=None, alt_sub=None, shamt=False
 
         footer(f)
 
+def insn_signed_divrem(insn, funct3, operator, div_by_zero_result, overflow_result, alt_sub, wmode=False, misa=0):
+    with open("insn_%s.v" % insn, "w") as f:
+        header(f, insn)
+        format_r(f)
+        misa_check(f, misa)
+
+        if wmode:
+            result_range = "31:0"
+            result_width = "32"
+            operand1 = "rvfi_rs1_rdata[31:0]"
+            operand2 = "rvfi_rs2_rdata[31:0]"
+            min_value = "{1'b1, {31{1'b0}}}"
+            all_ones = "{32{1'b1}}"
+            one = "{{31{1'b0}}, 1'b1}"
+            opcode = "0111011"
+        else:
+            result_range = "`RISCV_FORMAL_XLEN-1:0"
+            result_width = "`RISCV_FORMAL_XLEN"
+            operand1 = "rvfi_rs1_rdata"
+            operand2 = "rvfi_rs2_rdata"
+            min_value = "{1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}}"
+            all_ones = "{`RISCV_FORMAL_XLEN{1'b1}}"
+            one = "{{`RISCV_FORMAL_XLEN-1{1'b0}}, 1'b1}"
+            opcode = "0110011"
+
+        print("", file=f)
+        print("  // %s instruction" % insn.upper(), file=f)
+        print("`ifdef RISCV_FORMAL_ALTOPS", file=f)
+        print("  wire [%s] altops_bitmask = 64'h%016x;" % (result_range, alt_sub), file=f)
+        print("  wire [%s] result = (rvfi_rs1_rdata - rvfi_rs2_rdata) ^ altops_bitmask;" % result_range, file=f)
+        print("`else", file=f)
+        print("  wire div_by_zero = %s == %s'b0;" % (operand2, result_width), file=f)
+        print("  wire div_overflow = %s == %s && %s == %s;" % (operand1, min_value, operand2, all_ones), file=f)
+        print("  wire signed [%s] signed_dividend = %s;" % (result_range, operand1), file=f)
+        print("  wire signed [%s] signed_divisor = (div_by_zero || div_overflow) ? %s : %s;" % (result_range, one, operand2), file=f)
+        print("  wire signed [%s] signed_result = signed_dividend %s signed_divisor;" % (result_range, operator), file=f)
+        print("  wire [%s] result = div_by_zero ? %s :" % (result_range, div_by_zero_result), file=f)
+        print("                         div_overflow ? %s :" % overflow_result, file=f)
+        print("                         signed_result;", file=f)
+        print("`endif", file=f)
+        assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct7 == 7'b 0000001 && insn_funct3 == 3'b %s && insn_opcode == 7'b %s" % (funct3, opcode))
+        assign(f, "spec_rs1_addr", "insn_rs1")
+        assign(f, "spec_rs2_addr", "insn_rs2")
+        assign(f, "spec_rd_addr", "insn_rd")
+        if wmode:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? {{`RISCV_FORMAL_XLEN-32{result[31]}}, result} : 0")
+        else:
+            assign(f, "spec_rd_wdata", "spec_rd_addr ? result : 0")
+        assign(f, "spec_pc_wdata", "rvfi_pc_rdata + 4")
+
+        footer(f)
+
 def insn_amo(insn, funct5, funct3, expr, misa=MISA_A):
     with open("insn_%s.v" % insn, "w") as f:
         header(f, insn)
@@ -1503,16 +1555,12 @@ insn_alu("mulhsu", "0000001", "010", "({{`RISCV_FORMAL_XLEN{rvfi_rs1_rdata[`RISC
         "\t\t{`RISCV_FORMAL_XLEN'b0, rvfi_rs2_rdata}) >> `RISCV_FORMAL_XLEN", alt_sub=0xea3969edecfbe137, misa=MISA_M)
 insn_alu("mulhu",  "0000001", "011", "({`RISCV_FORMAL_XLEN'b0, rvfi_rs1_rdata} * {`RISCV_FORMAL_XLEN'b0, rvfi_rs2_rdata}) >> `RISCV_FORMAL_XLEN", alt_add=0xd13db50d949ce5e8, misa=MISA_M)
 
-insn_alu("div",    "0000001", "100", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? {`RISCV_FORMAL_XLEN{1'b1}} :
-                                         rvfi_rs1_rdata == {1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}} && rvfi_rs2_rdata == {`RISCV_FORMAL_XLEN{1'b1}} ? {1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}} :
-                                         $signed(rvfi_rs1_rdata) / $signed(rvfi_rs2_rdata)""", alt_sub=0x29bbf66f7f8529ec, misa=MISA_M)
+insn_signed_divrem("div", "100", "/", "{`RISCV_FORMAL_XLEN{1'b1}}", "{1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}}", 0x29bbf66f7f8529ec, misa=MISA_M)
 
 insn_alu("divu",   "0000001", "101", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? {`RISCV_FORMAL_XLEN{1'b1}} :
                                          rvfi_rs1_rdata / rvfi_rs2_rdata""", alt_sub=0x8c629acb10e8fd70, misa=MISA_M)
 
-insn_alu("rem",    "0000001", "110", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? rvfi_rs1_rdata :
-                                         rvfi_rs1_rdata == {1'b1, {`RISCV_FORMAL_XLEN-1{1'b0}}} && rvfi_rs2_rdata == {`RISCV_FORMAL_XLEN{1'b1}} ? {`RISCV_FORMAL_XLEN{1'b0}} :
-                                         $signed(rvfi_rs1_rdata) % $signed(rvfi_rs2_rdata)""", alt_sub=0xf5b7d8538da68fa5, misa=MISA_M)
+insn_signed_divrem("rem", "110", "%", "rvfi_rs1_rdata", "{`RISCV_FORMAL_XLEN{1'b0}}", 0xf5b7d8538da68fa5, misa=MISA_M)
 
 insn_alu("remu",   "0000001", "111", """rvfi_rs2_rdata == `RISCV_FORMAL_XLEN'b0 ? rvfi_rs1_rdata :
                                          rvfi_rs1_rdata % rvfi_rs2_rdata""", alt_sub=0xbc4402413138d0e1, misa=MISA_M)
@@ -1521,16 +1569,12 @@ current_isa = ["rv64im"]
 
 insn_alu("mulw",    "0000001", "000", "rvfi_rs1_rdata[31:0] * rvfi_rs2_rdata[31:0]", alt_add=0x2cdf52a55876063e, wmode=True, misa=MISA_M)
 
-insn_alu("divw",    "0000001", "100", """rvfi_rs2_rdata[31:0] == 32'b0 ? {32{1'b1}} :
-                       rvfi_rs1_rdata == {1'b1, {31{1'b0}}} && rvfi_rs2_rdata == {32{1'b1}} ? {1'b1, {31{1'b0}}} :
-                       $signed(rvfi_rs1_rdata[31:0]) / $signed(rvfi_rs2_rdata[31:0])""", alt_sub=0x29bbf66f7f8529ec, wmode=True, misa=MISA_M)
+insn_signed_divrem("divw", "100", "/", "{32{1'b1}}", "{1'b1, {31{1'b0}}}", 0x29bbf66f7f8529ec, wmode=True, misa=MISA_M)
 
 insn_alu("divuw",   "0000001", "101", """rvfi_rs2_rdata[31:0] == 32'b0 ? {32{1'b1}} :
                        rvfi_rs1_rdata[31:0] / rvfi_rs2_rdata[31:0]""", alt_sub=0x8c629acb10e8fd70, wmode=True, misa=MISA_M)
 
-insn_alu("remw",    "0000001", "110", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdata :
-                       rvfi_rs1_rdata == {1'b1, {31{1'b0}}} && rvfi_rs2_rdata == {32{1'b1}} ? {32{1'b0}} :
-                       $signed(rvfi_rs1_rdata[31:0]) % $signed(rvfi_rs2_rdata[31:0])""", alt_sub=0xf5b7d8538da68fa5, wmode=True, misa=MISA_M)
+insn_signed_divrem("remw", "110", "%", "rvfi_rs1_rdata[31:0]", "{32{1'b0}}", 0xf5b7d8538da68fa5, wmode=True, misa=MISA_M)
 
 insn_alu("remuw",   "0000001", "111", """rvfi_rs2_rdata == 32'b0 ? rvfi_rs1_rdata :
                        rvfi_rs1_rdata[31:0] % rvfi_rs2_rdata[31:0]""", alt_sub=0xbc4402413138d0e1, wmode=True, misa=MISA_M)
