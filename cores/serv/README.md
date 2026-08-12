@@ -3,7 +3,7 @@ riscv-formal proofs for SErial RiscV (SERV)
 
 Quickstart guide:
 
-First install Yosys, SymbiYosys, and the solvers. See
+First install Yosys, SBY, and the solvers. See
 [here](http://symbiyosys.readthedocs.io/en/latest/quickstart.html#installing)
 for instructions. Then build the version of SERV with RVFI support and
 riscv-tools, and generate the formal checks:
