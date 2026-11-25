@@ -53,7 +53,7 @@ module rvfi_insn_bgeu (
   assign spec_rs1_addr = insn_rs1;
   assign spec_rs2_addr = insn_rs2;
   assign spec_pc_wdata = next_pc;
-  assign spec_trap = (ialign16 ? (next_pc[0] != 0) : (next_pc[1:0] != 0)) || !misa_ok;
+  assign spec_trap = (cond && (ialign16 ? (next_pc[0] != 0) : (next_pc[1:0] != 0))) || !misa_ok;
 
   // default assignments
   assign spec_rd_addr = 0;

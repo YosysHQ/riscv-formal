@@ -504,7 +504,7 @@ def insn_b(insn, funct3, expr, misa=0):
         assign(f, "spec_rs1_addr", "insn_rs1")
         assign(f, "spec_rs2_addr", "insn_rs2")
         assign(f, "spec_pc_wdata", "next_pc")
-        assign(f, "spec_trap", "(ialign16 ? (next_pc[0] != 0) : (next_pc[1:0] != 0)) || !misa_ok")
+        assign(f, "spec_trap", "(cond && (ialign16 ? (next_pc[0] != 0) : (next_pc[1:0] != 0))) || !misa_ok")
 
         footer(f)
 
@@ -1004,7 +1004,7 @@ def insn_c_b(insn, funct3, expr, misa=MISA_C):
         assign(f, "spec_valid", "rvfi_valid && !insn_padding && insn_funct3 == 3'b %s && insn_opcode == 2'b 01" % funct3)
         assign(f, "spec_rs1_addr", "insn_rs1")
         assign(f, "spec_pc_wdata", "next_pc")
-        assign(f, "spec_trap", "(next_pc[0] != 0) || !misa_ok")
+        assign(f, "spec_trap", "(cond && (next_pc[0] != 0)) || !misa_ok")
 
         footer(f)
 

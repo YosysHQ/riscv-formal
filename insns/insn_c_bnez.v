@@ -45,7 +45,7 @@ module rvfi_insn_c_bnez (
   assign spec_valid = rvfi_valid && !insn_padding && insn_funct3 == 3'b 111 && insn_opcode == 2'b 01;
   assign spec_rs1_addr = insn_rs1;
   assign spec_pc_wdata = next_pc;
-  assign spec_trap = (next_pc[0] != 0) || !misa_ok;
+  assign spec_trap = (cond && (next_pc[0] != 0)) || !misa_ok;
 
   // default assignments
   assign spec_rs2_addr = 0;
