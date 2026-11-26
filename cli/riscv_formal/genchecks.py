@@ -370,7 +370,7 @@ class GenShared(tl.Task):
         if App.config.options.blackbox:
             if Check.check != "liveness":
                 self.print_hfmt("`define RISCV_FORMAL_BLACKBOX_ALU\n")
-            if Check.check != "reg":
+            if Check.check not in ("reg", "reg_init"):
                 self.print_hfmt("`define RISCV_FORMAL_BLACKBOX_REGS\n")
 
         # enable fairness guarantees

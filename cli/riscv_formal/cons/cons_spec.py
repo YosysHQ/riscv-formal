@@ -60,6 +60,7 @@ def base_cons(_) -> NamedSet[Cons]:
 
         # start + depth
         Cons(name="reg", has_start=True),
+        Cons(name="reg_init", has_start=True),
         Cons(name="pc_fwd", has_start=True),
         Cons(name="pc_bwd", has_start=True),
         Cons(name="causal", has_start=True),

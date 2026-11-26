@@ -325,14 +325,25 @@ is the execution depth.
 Register checks
 ~~~~~~~~~~~~~~~
 
-This checks if writes to and reads from the register file are consistent
-with each other, i.e. if the value written to a register matches the
-value read from the register file by a later instructions.
+There are two register checks: ``reg`` and ``reg_init``. Both of them
+are run for each RVFI channel.
+
+The ``reg`` check tests if writes to and reads from the register file
+are consistent with each other, i.e. if the value written to a register
+matches the value read from the register file by a later instructions.
 
 This check assumes that the last instruction at the end of the bounded
 model check, reads a register. It then checks that the value read is
 consistent with the matching write to the same register by an earlier
 instruction.
+
+The ``reg_init`` check covers reads of a register before its first
+write, where the reset value is unspecified. The check assumes that the
+core retires an instruction at the end of the bounded model check. If
+that instruction reads a register that no earlier instruction wrote, the
+check asserts that the value read matches the first earlier read of that
+register, or if there was no earlier read, that ``rs1`` and ``rs2``
+agree when both read it.
 
 .. _depth-section-1:
 
